@@ -35,7 +35,6 @@ static void SetChaseStats( gclient_t *client ) {
 	client->ps.stats[STAT_CHASE] = CS_PLAYERSKINS + playernum;
 }
 
-#if 0
 static void UpdateChaseCamHack( gclient_t *client ) {
 	vec3_t o, ownerv, goal;
     edict_t *ent = client->edict;
@@ -43,11 +42,9 @@ static void UpdateChaseCamHack( gclient_t *client ) {
 	vec3_t forward, right;
 	trace_t trace;
 	int i;
-	vec3_t oldgoal;
 	vec3_t angles;
 
 	VectorCopy(targ->s.origin, ownerv);
-	VectorCopy(ent->s.origin, oldgoal);
 
 	ownerv[2] += targ->viewheight;
 
@@ -96,8 +93,9 @@ static void UpdateChaseCamHack( gclient_t *client ) {
 	client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
 
 	VectorCopy(goal, ent->s.origin);
+    VectorScale( goal, 8, client->ps.pmove.origin );
 	for (i=0 ; i<3 ; i++)
-		client->ps.pmove.delta_angles[i] = ANGLE2SHORT(targ->client->v_angle[i] - client->resp.cmd_angles[i]);
+		client->ps.pmove.delta_angles[i] = ANGLE2SHORT(targ->client->v_angle[i] - client->pers.cmd_angles[i]);
 
 	if (targ->deadflag) {
 		client->ps.viewangles[ROLL] = 40;
@@ -109,9 +107,8 @@ static void UpdateChaseCamHack( gclient_t *client ) {
 	}
 
 	ent->viewheight = 0;
-	gi.linkentity(ent);
+//	gi.linkentity(ent);
 }
-#endif
 
 static void UpdateChaseCam( gclient_t *client ) {
 	edict_t *targ = client->chase_target;
@@ -232,7 +229,11 @@ void ChaseEndServerFrame( edict_t *ent ) {
     }
    
     // camera
-    UpdateChaseCam( c );
+    if( serverFeatures & GAME_FEATURE_CLIENTNUM ) {
+        UpdateChaseCam( c );
+    } else {
+        UpdateChaseCamHack( c );
+    }
 
     // stats
     SetChaseStats( c );

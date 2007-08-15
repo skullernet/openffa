@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 game_locals_t	game;
 level_locals_t	level;
 game_import_t	gi;
+int             serverFeatures;
 game_export_t	globals;
 spawn_temp_t	st;
 
@@ -129,6 +130,11 @@ EXPORTED game_export_t *GetGameAPI (game_import_t *import)
 	globals.edict_size = sizeof(edict_t);
 
 	return &globals;
+}
+
+EXPORTED int GetGameFeatures( int features ) {
+    serverFeatures = features;
+    return GAME_FEATURE_CLIENTNUM;
 }
 
 #ifndef GAME_HARD_LINKED
