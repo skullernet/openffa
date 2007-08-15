@@ -54,6 +54,7 @@ qboolean CanDamage (edict_t *targ, edict_t *inflictor)
 	VectorCopy (targ->s.origin, dest);
 	dest[0] += 15.0;
 	dest[1] += 15.0;
+	dest[2] += 15.0;
 	gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
 	if (trace.fraction == 1.0)
 		return qtrue;
@@ -61,6 +62,7 @@ qboolean CanDamage (edict_t *targ, edict_t *inflictor)
 	VectorCopy (targ->s.origin, dest);
 	dest[0] += 15.0;
 	dest[1] -= 15.0;
+	dest[2] += 15.0;
 	gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
 	if (trace.fraction == 1.0)
 		return qtrue;
@@ -68,6 +70,7 @@ qboolean CanDamage (edict_t *targ, edict_t *inflictor)
 	VectorCopy (targ->s.origin, dest);
 	dest[0] -= 15.0;
 	dest[1] += 15.0;
+	dest[2] += 15.0;
 	gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
 	if (trace.fraction == 1.0)
 		return qtrue;
@@ -75,6 +78,39 @@ qboolean CanDamage (edict_t *targ, edict_t *inflictor)
 	VectorCopy (targ->s.origin, dest);
 	dest[0] -= 15.0;
 	dest[1] -= 15.0;
+	dest[2] += 15.0;
+	gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
+	if (trace.fraction == 1.0)
+		return qtrue;
+
+	VectorCopy (targ->s.origin, dest);
+	dest[0] += 15.0;
+	dest[1] += 15.0;
+	dest[2] -= 15.0;
+	gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
+	if (trace.fraction == 1.0)
+		return qtrue;
+
+	VectorCopy (targ->s.origin, dest);
+	dest[0] += 15.0;
+	dest[1] -= 15.0;
+	dest[2] -= 15.0;
+	gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
+	if (trace.fraction == 1.0)
+		return qtrue;
+
+	VectorCopy (targ->s.origin, dest);
+	dest[0] -= 15.0;
+	dest[1] += 15.0;
+	dest[2] -= 15.0;
+	gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
+	if (trace.fraction == 1.0)
+		return qtrue;
+
+	VectorCopy (targ->s.origin, dest);
+	dest[0] -= 15.0;
+	dest[1] -= 15.0;
+	dest[2] -= 15.0;
 	gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
 	if (trace.fraction == 1.0)
 		return qtrue;
@@ -373,9 +409,15 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 	if (take)
 	{
 		if ((targ->svflags & SVF_MONSTER) || (client))
-			SpawnDamage (TE_BLOOD, point, normal, take);
+			if(targ == attacker)
+				SpawnDamage (TE_BLOOD, targ->s.origin, normal, take);
+			else
+				SpawnDamage (TE_BLOOD, point, normal, take);
 		else
-			SpawnDamage (te_sparks, point, normal, take);
+			if(targ == attacker)
+				SpawnDamage (TE_SPARKS, targ->s.origin, normal, take);
+			else
+				SpawnDamage (TE_SPARKS, point, normal, take);
 
 		targ->health -= take;
 			
