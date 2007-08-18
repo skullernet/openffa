@@ -1137,7 +1137,7 @@ static const vote_proposal_t vote_proposals[] = {
     { "kick", VOTE_KICK, Vote_Victim },
     { "mute", VOTE_MUTE, Vote_Victim },
     { "map", VOTE_MAP, Vote_Map },
-    {}
+    { "" }
 };
 
 static void Cmd_Vote_f( edict_t *ent ) {
