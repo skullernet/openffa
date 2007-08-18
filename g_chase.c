@@ -33,6 +33,10 @@ static void SetChaseStats( gclient_t *client ) {
 		client->ps.stats[STAT_LAYOUTS] |= 2;
 
 	client->ps.stats[STAT_CHASE] = CS_PLAYERSKINS + playernum;
+
+    // STAT_FRAGS is no longer used for HUD,
+    // but the server reports it in status responses
+	client->ps.stats[STAT_FRAGS] = 0;
 }
 
 static void UpdateChaseCamHack( gclient_t *client ) {
@@ -41,7 +45,6 @@ static void UpdateChaseCamHack( gclient_t *client ) {
 	edict_t *targ = client->chase_target;
 	vec3_t forward, right;
 	trace_t trace;
-	int i;
 	vec3_t angles;
 
 	VectorCopy(targ->s.origin, ownerv);
@@ -94,15 +97,14 @@ static void UpdateChaseCamHack( gclient_t *client ) {
 
 	VectorCopy(goal, ent->s.origin);
     VectorScale( goal, 8, client->ps.pmove.origin );
-	for (i=0 ; i<3 ; i++)
-		client->ps.pmove.delta_angles[i] = ANGLE2SHORT(targ->client->v_angle[i] - client->pers.cmd_angles[i]);
 
 	if (targ->deadflag) {
 		client->ps.viewangles[ROLL] = 40;
 		client->ps.viewangles[PITCH] = -15;
 		client->ps.viewangles[YAW] = targ->client->killer_yaw;
 	} else {
-		VectorCopy(targ->client->v_angle, client->ps.viewangles);
+        G_SetDeltaAngles( ent, targ->client->v_angle );
+        VectorCopy(targ->client->v_angle, ent->client->ps.viewangles);
 		VectorCopy(targ->client->v_angle, client->v_angle);
 	}
 
@@ -134,10 +136,7 @@ void SetChaseTarget( edict_t *ent, edict_t *targ ) {
     	ent->client->ps.pmove.pm_flags = 0;
     	ent->client->ps.pmove.pm_type = PM_SPECTATOR;
         ent->client->ps.viewangles[ROLL] = 0;
-	    for( i = 0; i < 3; i++ ) {
-		    ent->client->ps.pmove.delta_angles[i] = ANGLE2SHORT(
-                ent->client->ps.viewangles[i] - ent->client->pers.cmd_angles[i] );
-	    }
+        G_SetDeltaAngles( ent, ent->client->ps.viewangles );
         VectorCopy( ent->client->ps.viewangles, ent->s.angles );
         VectorCopy( ent->client->ps.viewangles, ent->client->v_angle );
         VectorScale( ent->client->ps.pmove.origin, 0.125f, ent->s.origin );
@@ -145,7 +144,7 @@ void SetChaseTarget( edict_t *ent, edict_t *targ ) {
     } else {
         ent->client->clientNum = ( targ - g_edicts ) - 1;
         for( i = 0; i < MAX_PRIVATE; i++ ) {
-            G_PrivateString( ent, i, targ->client->resp.strings[i] );
+            G_PrivateString( ent, i, targ->client->level.strings[i] );
         }
 	    ChaseEndServerFrame( ent );
     }

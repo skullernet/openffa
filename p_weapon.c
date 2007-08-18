@@ -765,8 +765,6 @@ void Blaster_Fire (edict_t *ent, vec3_t g_offset, int damage, qboolean hyper, in
 		gi.WriteByte (MZ_BLASTER | is_silenced);
 	gi.multicast (ent->s.origin, MULTICAST_PVS);
 
-    ent->client->resp.stats[WEAP_BLASTER].atts++;
-
     if (ent->client->silencer_shots) {
         ent->client->silencer_shots--;
     }
@@ -776,6 +774,7 @@ void Blaster_Fire (edict_t *ent, vec3_t g_offset, int damage, qboolean hyper, in
 void Weapon_Blaster_Fire (edict_t *ent)
 {
 	Blaster_Fire (ent, vec3_origin, 15, qfalse, EF_BLASTER);
+    ent->client->resp.stats[WEAP_BLASTER].atts++;
 	ent->client->ps.gunframe++;
 }
 
@@ -1057,7 +1056,7 @@ void Chaingun_Fire (edict_t *ent)
         ent->client->silencer_shots--;
     }
 
-	if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
+	if (!DF(INFINITE_AMMO) )
 		ent->client->inventory[ent->client->ammo_index] -= shots;
 
     ent->client->resp.stats[WEAP_CHAINGUN].atts++;
@@ -1182,7 +1181,7 @@ void weapon_supershotgun_fire (edict_t *ent)
         ent->client->silencer_shots--;
     }
 
-	if (! ( (int)dmflags->value & DF_INFINITE_AMMO ) )
+	if (!DF(INFINITE_AMMO) )
 		ent->client->inventory[ent->client->ammo_index] -= 2;
 
     ent->client->resp.stats[WEAP_SUPERSHOTGUN].atts++;

@@ -117,8 +117,6 @@ void G_ScoreChanged( edict_t *ent ) {
     }
 
     G_PrivateString( ent, PCS_FRAGS, buffer );
-
-    G_UpdateRanks();
 }
 
 qboolean G_IsSameView( edict_t *ent, edict_t *other ) {
@@ -131,9 +129,29 @@ qboolean G_IsSameView( edict_t *ent, edict_t *other ) {
     return qfalse;
 }
 
+static int ModToWeapon( int mod ) {
+    switch( mod ) {
+    case MOD_BLASTER: return WEAP_BLASTER;
+    case MOD_SHOTGUN: return WEAP_SHOTGUN;
+    case MOD_SSHOTGUN: return WEAP_SUPERSHOTGUN;
+    case MOD_MACHINEGUN: return WEAP_MACHINEGUN;
+    case MOD_CHAINGUN: return WEAP_CHAINGUN;
+    case MOD_GRENADE:
+    case MOD_G_SPLASH: return WEAP_GRENADELAUNCHER;
+    case MOD_ROCKET:
+    case MOD_R_SPLASH: return WEAP_ROCKETLAUNCHER;
+    case MOD_HYPERBLASTER: return WEAP_HYPERBLASTER;
+    case MOD_RAILGUN: return WEAP_RAILGUN;
+    case MOD_HANDGRENADE:
+    case MOD_HG_SPLASH:
+    case MOD_HELD_GRENADE: return WEAP_GRENADES;
+    default: return WEAP_NONE;
+    }
+}
+
 void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 {
-	int			mod;
+	int			mod, weapon;
 	char		*message, *name;
 	char		*message2, *name2;
 	qboolean	ff;
@@ -256,6 +274,7 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
         self->client->resp.score--;
         self->enemy = NULL;
         G_ScoreChanged( self );
+        G_UpdateRanks();
         return;
     }
 
@@ -357,10 +376,14 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
             if (ff) {
                 attacker->client->resp.score--;
             } else {
+                weapon = ModToWeapon( mod );
                 attacker->client->resp.score++;
+                attacker->client->resp.stats[weapon].frags++;
                 self->client->resp.deaths++;
+                self->client->resp.stats[weapon].deaths++;
             }
             G_ScoreChanged( attacker );
+            G_UpdateRanks();
             return;
         }
     }
@@ -369,64 +392,22 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 	self->client->resp.score--;
 
     G_ScoreChanged( self );
+    G_UpdateRanks();
 }
 
-void G_AccountDamage( edict_t *targ, edict_t *attacker, int points ) {
-    int mod, weapon;
+void G_AccountDamage( edict_t *targ, edict_t *inflictor, edict_t *attacker, int points ) {
+    int weapon;
 
-    if( targ == attacker ) {
-        return;
-    }
-    if( targ->client ) {
-        targ->client->resp.damage_recvd += points;
-    }
-    if( !attacker->client ) {
-        return;
-    }
-    
+    targ->client->resp.damage_recvd += points;
     attacker->client->resp.damage_given += points;
 
-    mod = meansOfDeath & ~MOD_FRIENDLY_FIRE;
-
-    switch( mod ) {
-    case MOD_BLASTER:
-        weapon = WEAP_BLASTER;
-        break;
-    case MOD_SHOTGUN:
-        weapon = WEAP_SHOTGUN;
-        break;
-    case MOD_SSHOTGUN:
-        weapon = WEAP_SUPERSHOTGUN;
-        break;
-    case MOD_MACHINEGUN:
-        weapon = WEAP_MACHINEGUN;
-        break;
-    case MOD_CHAINGUN:
-        weapon = WEAP_CHAINGUN;
-        break;
-    case MOD_GRENADE:
-    case MOD_G_SPLASH:
-        weapon = WEAP_GRENADELAUNCHER;
-        break;
-    case MOD_ROCKET:
-    case MOD_R_SPLASH:
-        weapon = WEAP_ROCKETLAUNCHER;
-        break;
-    case MOD_HYPERBLASTER:
-        weapon = WEAP_HYPERBLASTER;
-        break;
-    case MOD_RAILGUN:
-        weapon = WEAP_RAILGUN;
-        break;
-    case MOD_HANDGRENADE:
-    case MOD_HG_SPLASH:
-    case MOD_HELD_GRENADE:
-        weapon = WEAP_GRENADES;
-        break;
-    default:
+    if( inflictor->spawnflags & 4096 ) {
         return;
     }
 
+    inflictor->spawnflags |= 4096;
+
+    weapon = ModToWeapon( meansOfDeath & ~MOD_FRIENDLY_FIRE );
     attacker->client->resp.stats[weapon].hits++;
 }
 
@@ -766,7 +747,7 @@ void	SelectSpawnPoint (edict_t *ent, vec3_t origin, vec3_t angles)
 {
 	edict_t	*spot = NULL;
 
-	if ( (int)(dmflags->value) & DF_SPAWN_FARTHEST)
+	if ( DF(SPAWN_FARTHEST) )
 		spot = SelectFarthestDeathmatchSpawnPoint ();
 	else
 		spot = SelectRandomDeathmatchSpawnPoint ();
@@ -935,6 +916,16 @@ void spectator_respawn (edict_t *ent)
 
 //==============================================================
 
+void G_SetDeltaAngles( edict_t *ent, vec3_t angles ) {
+    int i;
+
+    for( i = 0; i < 3; i++ ) {
+    	ent->client->ps.pmove.delta_angles[i] = ANGLE2SHORT(
+            angles[i] - ent->client->level.cmd_angles[i] );
+    }
+}
+
+
 /*
 ===========
 PutClientInServer
@@ -948,9 +939,9 @@ void PutClientInServer (edict_t *ent)
 	int		index;
 	vec3_t	spawn_origin, spawn_angles;
 	gclient_t	*client;
-	int		i;
 	client_persistant_t	pers;
 	client_respawn_t	resp;
+    client_level_t      lvl;
 
 	index = ent-g_edicts-1;
 	client = ent->client;
@@ -968,14 +959,16 @@ void PutClientInServer (edict_t *ent)
 	// deathmatch wipes most client data every spawn
     resp = client->resp;
 	pers = client->pers;
+    lvl = client->level;
 
 	// clear everything but the persistant data
 	memset (client, 0, sizeof(*client));
 	client->pers = pers;
 	client->resp = resp;
+    client->level = lvl;
     client->edict = ent;
     client->clientNum = index;
-    client->activeframe = level.framenum;
+    client->activity_framenum = level.framenum;
 
 	client->selected_item = ITEM_BLASTER;
 	client->inventory[ITEM_BLASTER] = 1;
@@ -1043,11 +1036,7 @@ void PutClientInServer (edict_t *ent)
 	spawn_angles[ROLL] = 0;
 
 	// set the delta angle
-	for (i=0 ; i<3 ; i++)
-	{
-		client->ps.pmove.delta_angles[i] =
-            ANGLE2SHORT( spawn_angles[i] - client->pers.cmd_angles[i] );
-	}
+    G_SetDeltaAngles( ent, spawn_angles );
 
     VectorCopy( spawn_angles, ent->s.angles );
 	VectorCopy( spawn_angles, client->ps.viewangles );
@@ -1076,13 +1065,22 @@ void PutClientInServer (edict_t *ent)
 }
 
 int G_WriteTime( void ) {
+    char buffer[16];
     int remaining = timelimit->value*60 - level.time;
     int sec = remaining % 60;
     int min = remaining / 60;
+    int i;
+
+    sprintf( buffer, "%2d:%02d", min, sec );
+    if( remaining <= 30 && ( sec & 1 ) == 0 ) {
+        for( i = 0; buffer[i]; i++ ) {
+            buffer[i] |= 128;
+        }
+    }
 
     gi.WriteByte( svc_configstring );
     gi.WriteShort( CS_TIME );
-    gi.WriteString( va( "%2d:%02d", min, sec ) );
+    gi.WriteString( buffer );
 
     return remaining;
 }
@@ -1105,18 +1103,18 @@ void ClientBegin (edict_t *ent)
 
     memset( &ent->client->resp, 0, sizeof( ent->client->resp ) );
 
-    if( ent->client->pers.connected == CONN_CONNECTED ) {
+    if( ent->client->level.first_time ) {
     	gi.bprintf (PRINT_HIGH, "%s connected\n", ent->client->pers.netname);
     }
 
-	ent->client->pers.enterframe = level.framenum;
+	ent->client->level.enter_framenum = level.framenum;
 
 	ent->client->pers.connected = CONN_PREGAME;
 
 	// locate ent at a spawn point
 	PutClientInServer (ent);
 
-	if (level.intermissiontime) {
+	if (level.intermission_framenum) {
 		MoveClientToIntermission (ent);
 	} else if( timelimit->value > 0 ) {
         G_WriteTime();
@@ -1211,9 +1209,10 @@ qboolean ClientConnect (edict_t *ent, char *userinfo) {
 	// they can connect
 	ent->client = game.clients + (ent - g_edicts - 1);
 
-	memset( ent->client, 0, sizeof( ent->client ) );
+	memset( ent->client, 0, sizeof( gclient_t ) );
     ent->client->edict = ent;
 	ent->client->pers.connected = CONN_CONNECTED;
+    ent->client->level.first_time = qtrue;
 
 	return qtrue;
 }
@@ -1249,6 +1248,8 @@ void ClientDisconnect (edict_t *ent)
             ent->client->pers.netname );
     }
 
+    G_CheckVote();
+
 	gi.unlinkentity (ent);
 	ent->s.modelindex = 0;
     ent->s.sound = 0;
@@ -1259,6 +1260,7 @@ void ClientDisconnect (edict_t *ent)
 	ent->classname = "disconnected";
     ent->svflags = SVF_NOCLIENT;
 	ent->client->pers.connected = CONN_DISCONNECTED;
+	ent->client->ps.stats[STAT_FRAGS] = 0;
 
 	playernum = ent-g_edicts-1;
 	gi.configstring (CS_PLAYERSKINS+playernum, "");
@@ -1301,21 +1303,24 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 	level.current_entity = ent;
 	client = ent->client;
 
-	client->pers.cmd_angles[0] = SHORT2ANGLE(ucmd->angles[0]);
-	client->pers.cmd_angles[1] = SHORT2ANGLE(ucmd->angles[1]);
-	client->pers.cmd_angles[2] = SHORT2ANGLE(ucmd->angles[2]);
+	client->level.cmd_angles[0] = SHORT2ANGLE(ucmd->angles[0]);
+	client->level.cmd_angles[1] = SHORT2ANGLE(ucmd->angles[1]);
+	client->level.cmd_angles[2] = SHORT2ANGLE(ucmd->angles[2]);
 
     if( ucmd->forwardmove >= 10 || ucmd->upmove >= 10 || ucmd->sidemove >= 10 ) {
-        client->activeframe = level.framenum;
+        client->activity_framenum = level.framenum;
     }
 
-	if (level.intermissiontime)
+	if (level.intermission_framenum)
 	{
 		client->ps.pmove.pm_type = PM_FREEZE;
 		// can exit intermission after five seconds
-		if (level.time > level.intermissiontime + 5.0 
-			&& (ucmd->buttons & BUTTON_ANY) )
-			level.exitintermission = qtrue;
+		// auto exit after 20 minutes
+		j = level.framenum - level.intermission_framenum;
+        if( j > 5 * HZ ) {
+            if( ( ucmd->buttons & BUTTON_ANY ) || j > 1200 * HZ )
+	    		G_ExitLevel();
+        }
 		return;
 	}
 
@@ -1467,7 +1472,7 @@ void ClientBeginServerFrame (edict_t *ent)
 {
 	gclient_t	*client;
 
-	if (level.intermissiontime)
+	if (level.intermission_framenum)
 		return;
 
 	client = ent->client;
@@ -1480,7 +1485,7 @@ void ClientBeginServerFrame (edict_t *ent)
             client->weapon_thunk = qfalse;
 
         if( g_idletime->value > 0 ) {
-            if( level.framenum - client->activeframe > g_idletime->value * HZ ) {
+            if( level.framenum - client->activity_framenum > g_idletime->value * HZ ) {
                 gi.bprintf( PRINT_HIGH, "%s inactive for %d seconds\n",
                     client->pers.netname, ( int )g_idletime->value );
                 client->pers.connected = CONN_SPECTATOR;

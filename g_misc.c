@@ -340,15 +340,15 @@ void path_corner_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface
 
 	if (self->wait)
 	{
-		other->monsterinfo.pausetime = level.time + self->wait;
-		other->monsterinfo.stand (other);
+	//	other->monsterinfo.pausetime = level.time + self->wait;
+	//	other->monsterinfo.stand (other);
 		return;
 	}
 
 	if (!other->movetarget)
 	{
-		other->monsterinfo.pausetime = level.time + 100000000;
-		other->monsterinfo.stand (other);
+	//	other->monsterinfo.pausetime = level.time + 100000000;
+	//	other->monsterinfo.stand (other);
 	}
 	else
 	{
@@ -1285,7 +1285,6 @@ void SP_func_clock (edict_t *self)
 void teleporter_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
 	edict_t		*dest;
-	int			i;
 
 	if (!other->client)
 		return;
@@ -1313,11 +1312,7 @@ void teleporter_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_
 	other->s.event = EV_PLAYER_TELEPORT;
 
 	// set angles
-	for (i=0 ; i<3 ; i++)
-	{
-		other->client->ps.pmove.delta_angles[i] = ANGLE2SHORT(
-            dest->s.angles[i] - other->client->pers.cmd_angles[i]);
-	}
+    G_SetDeltaAngles( other, dest->s.angles );
 
 	VectorClear (other->s.angles);
 	VectorClear (other->client->ps.viewangles);

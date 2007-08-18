@@ -272,6 +272,8 @@ typedef struct {
 #define IT_POWERUP		32
 
 // gitem_t->weapmodel for weapons indicates model index
+#define WEAP_NONE   			0
+
 #define WEAP_BLASTER			1 
 #define WEAP_SHOTGUN			2 
 #define WEAP_SUPERSHOTGUN		3 
@@ -324,11 +326,6 @@ typedef struct gitem_s
 //
 typedef struct
 {
-	char		helpmessage1[512];
-	char		helpmessage2[512];
-	int			helpchanged;	// flash F1 icon if non 0, play sound
-								// and increment only if 1, 2, or 3
-
 	gclient_t	*clients;		// [maxclients]
 
 	// can't store spawnpoint in level, because
@@ -341,9 +338,14 @@ typedef struct
 
 	// cross level triggers
 	int			serverflags;
-
-	qboolean	autosaved;
 } game_locals_t;
+
+#define VOTE_TIMELIMIT  1 
+#define VOTE_FRAGLIMIT  2
+#define VOTE_ITEMS      4
+#define VOTE_KICK       8
+#define VOTE_MUTE       16
+#define VOTE_MAP        32
 
 
 //
@@ -360,9 +362,7 @@ typedef struct
 	char		nextmap[MAX_QPATH];		// go here when fraglimit is hit
 
 	// intermission state
-	float		intermissiontime;		// time the intermission was started
-	char		*changemap;
-	int			exitintermission;
+	int 		intermission_framenum;		// time the intermission was started
 	vec3_t		intermission_origin;
 	vec3_t		intermission_angle;
 
@@ -397,6 +397,11 @@ typedef struct
         int     gurp[2];
         int     jump;
         int     pain[4][2];
+
+        int     secret;
+        int     count;
+        int     xian;
+        int     makron;
     } sounds;
 
     struct {
@@ -405,6 +410,15 @@ typedef struct
         int     head;
         int     arm, leg, chest, bones[2];
     } models;
+
+    struct {
+        int     proposal;
+        int     index;
+        int     framenum;
+
+        int     value;
+        struct gclient_s *victim;
+    } vote;
 
 	edict_t		*current_entity;	// entity running from G_RunFrame
 	int			body_que;			// dead bodies
@@ -466,56 +480,6 @@ typedef struct
 	float		decel_distance;
 	void		(*endfunc)(edict_t *);
 } moveinfo_t;
-
-
-typedef struct
-{
-	void	(*aifunc)(edict_t *self, float dist);
-	float	dist;
-	void	(*thinkfunc)(edict_t *self);
-} mframe_t;
-
-typedef struct
-{
-	int			firstframe;
-	int			lastframe;
-	mframe_t	*frame;
-	void		(*endfunc)(edict_t *self);
-} mmove_t;
-
-typedef struct
-{
-	mmove_t		*currentmove;
-	int			aiflags;
-	int			nextframe;
-	float		scale;
-
-	void		(*stand)(edict_t *self);
-	void		(*idle)(edict_t *self);
-	void		(*search)(edict_t *self);
-	void		(*walk)(edict_t *self);
-	void		(*run)(edict_t *self);
-	void		(*dodge)(edict_t *self, edict_t *other, float eta);
-	void		(*attack)(edict_t *self);
-	void		(*melee)(edict_t *self);
-	void		(*sight)(edict_t *self, edict_t *other);
-	qboolean	(*checkattack)(edict_t *self);
-
-	float		pausetime;
-	float		attack_finished;
-
-	vec3_t		saved_goal;
-	float		search_time;
-	float		trail_time;
-	vec3_t		last_sighting;
-	int			attack_state;
-	int			lefty;
-	float		idle_time;
-	int			linkcount;
-
-	int			power_armor_type;
-	int			power_armor_power;
-} monsterinfo_t;
 
 extern	const gitem_t	g_itemlist[ITEM_TOTAL];
 
@@ -587,6 +551,10 @@ extern	cvar_t	*fraglimit;
 extern	cvar_t	*timelimit;
 extern	cvar_t	*g_select_empty;
 extern	cvar_t	*g_idletime;
+extern  cvar_t	*g_vote_mask;
+extern  cvar_t	*g_vote_time;
+extern  cvar_t	*g_vote_treshold;
+extern  cvar_t	*g_vote_limit;
 extern	cvar_t	*dedicated;
 
 extern	cvar_t	*filterban;
@@ -755,17 +723,21 @@ void fire_rail (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick
 void fire_bfg (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius);
 
 //
-// g_client.c
+// p_client.c
 //
 void respawn (edict_t *ent);
-void BeginIntermission (edict_t *targ);
+void spectator_respawn (edict_t *ent);
+void BeginIntermission (void);
 void PutClientInServer (edict_t *ent);
 void InitClientPersistant (gclient_t *client);
 void InitClientResp (gclient_t *client);
 void InitBodyQue (void);
 void ClientBeginServerFrame (edict_t *ent);
 int G_WriteTime( void ); 
-void G_AccountDamage( edict_t *targ, edict_t *attacker, int points ); 
+void G_AccountDamage( edict_t *targ, edict_t *inflictor, edict_t *attacker, int points ); 
+void G_SetDeltaAngles( edict_t *ent, vec3_t angles ); 
+void G_ScoreChanged( edict_t *ent );
+int G_UpdateRanks( void ); 
 
 //
 // g_player.c
@@ -807,6 +779,9 @@ void G_RunEntity (edict_t *ent);
 //
 void SaveClientData (void);
 void FetchClientEntData (edict_t *ent);
+qboolean G_CheckVote( void ); 
+void G_ExitLevel( void );
+void G_StartSound( int index ); 
 
 //
 // g_chase.c
@@ -876,11 +851,6 @@ typedef struct {
     float       fov;
     gender_t    gender;
 	conn_t	    connected;
-
-    // cleared on level change
-    // FIXME: move to different structure?
-	int			enterframe;		// level.framenum the client entered the game
-	vec3_t		cmd_angles;			// angles sent over in the last command
 } client_persistant_t;
 
 // client data that stays across deathmatch respawns,
@@ -890,8 +860,21 @@ typedef struct {
     int         deaths;
     weapstat_t  stats[WEAP_TOTAL];
     int         damage_given, damage_recvd;
-    char        strings[MAX_PRIVATE][MAX_NETNAME];
 } client_respawn_t;
+
+// client data that stays across respawns, 
+// but cleared on level changes
+typedef struct {
+	int			enter_framenum;		// level.framenum the client entered the game
+    qboolean    first_time;         // qtrue when just connected
+	vec3_t		cmd_angles;			// angles sent over in the last command
+    char        strings[MAX_PRIVATE][MAX_NETNAME]; // private configstrings
+    struct {
+        int         index;
+        qboolean    accepted;
+        int         count;
+    } vote;
+} client_level_t;
 
 // this structure is cleared on each PutClientInServer(),
 // except for 'client->pers'
@@ -907,6 +890,7 @@ struct gclient_s
 	// private to game
 	client_persistant_t	pers;
 	client_respawn_t	resp;
+    client_level_t      level;
 	pmove_state_t		old_pmove;	// for detecting out-of-pmove changes
 
     edict_t         *edict;
@@ -921,7 +905,7 @@ struct gclient_s
 	int			buttons;
 	int			oldbuttons;
 	int			latched_buttons;
-    int         activeframe;    // last activity seen
+    int         activity_framenum;    // last activity seen
 
 	qboolean	weapon_thunk;
 
@@ -967,6 +951,7 @@ struct gclient_s
 	int 		invincible_framenum;
 	int 		breather_framenum;
 	int 		enviro_framenum;
+	int 		powerarmor_framenum;
 
 	qboolean	grenade_blew_up;
 	int 		grenade_framenum;
@@ -975,9 +960,10 @@ struct gclient_s
 
 	int 		pickup_framenum;
 
-	float		flood_locktill;		// locked from talking
-	float		flood_when[10];		// when messages were said
-	int			flood_whenhead;		// head pointer for when said
+#define FLOOD_MSGS  10
+	int		    flood_locktill;		    // locked from talking
+	int		    flood_when[FLOOD_MSGS];	// when messages were said
+	int			flood_whenhead;		    // head pointer for when said
 
 	int 		respawn_framenum;	// can respawn when time > this
 
@@ -1001,9 +987,6 @@ struct gclient_s
 
 	gitem_t		*weapon;
 	gitem_t		*lastweapon;
-
-	int			game_helpchanged;
-	int			helpchanged;
 };
 
 
@@ -1101,8 +1084,6 @@ struct edict_s
 	int			deadflag;
 	qboolean	show_hostile;
 
-	float		powerarmor_time;
-
 	char		*map;			// target_changelevel
 
 	int			viewheight;		// height above origin where eyesight is determined
@@ -1152,6 +1133,5 @@ struct edict_s
 
 	// common data blocks
 	moveinfo_t		moveinfo;
-	monsterinfo_t	monsterinfo;
 };
 

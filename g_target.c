@@ -166,7 +166,7 @@ Changes level to "map" when fired
 */
 void use_target_changelevel (edict_t *self, edict_t *other, edict_t *activator)
 {
-	if (level.intermissiontime)
+	if (level.intermission_framenum)
 		return;		// already activated
 
 	// if noexit, do a ton of damage to other
@@ -184,7 +184,8 @@ void use_target_changelevel (edict_t *self, edict_t *other, edict_t *activator)
 	if (strstr(self->map, "*"))	
 		game.serverflags &= ~(SFL_CROSS_TRIGGER_MASK);
 
-	BeginIntermission (self);
+    Q_strncpyz( level.nextmap, self->map, sizeof( level.nextmap ) );
+	BeginIntermission ();
 }
 
 void SP_target_changelevel (edict_t *ent)

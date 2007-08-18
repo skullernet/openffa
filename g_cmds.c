@@ -732,7 +732,7 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 	int		i, j;
 	edict_t	*other;
 	char	text[150];
-	gclient_t *cl;
+	gclient_t *cl = ent->client;
 
 	if (gi.argc () < 2 && !arg0)
 		return;
@@ -741,9 +741,9 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 		team = qfalse;
 
 	if (team)
-		Com_sprintf (text, sizeof(text), "(%s): ", ent->client->pers.netname);
+		Com_sprintf (text, sizeof(text), "(%s): ", cl->pers.netname);
 	else
-		Com_sprintf (text, sizeof(text), "%s: ", ent->client->pers.netname);
+		Com_sprintf (text, sizeof(text), "%s: ", cl->pers.netname);
 
 	if (arg0) {
 		Q_strcat (text, sizeof(text), gi.argv(0));
@@ -751,27 +751,22 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
     }
 	Q_strcat (text, sizeof(text), gi.args());
 
-	if (flood_msgs->value) {
-		cl = ent->client;
-
-        if (level.time < cl->flood_locktill) {
+    j = flood_msgs->value;
+	if (j > 0) {
+        if (level.framenum < cl->flood_locktill) {
 			gi.cprintf(ent, PRINT_HIGH, "You can't talk for %d more seconds\n",
-				(int)(cl->flood_locktill - level.time));
+				( cl->flood_locktill - level.framenum ) / HZ );
             return;
         }
-        i = cl->flood_whenhead - flood_msgs->value + 1;
-        if (i < 0)
-            i = (sizeof(cl->flood_when)/sizeof(cl->flood_when[0])) + i;
-		if (cl->flood_when[i] && 
-			level.time - cl->flood_when[i] < flood_persecond->value) {
-			cl->flood_locktill = level.time + flood_waitdelay->value;
-			gi.cprintf(ent, PRINT_CHAT, "Flood protection:  You can't talk for %d seconds.\n",
-				(int)flood_waitdelay->value);
+        i = cl->flood_whenhead - j + 1;
+		if (i >= 0 && level.framenum - cl->flood_when[i % FLOOD_MSGS] < flood_persecond->value*HZ) {
+            j = flood_waitdelay->value;
+			cl->flood_locktill = level.framenum + j*HZ;
+			gi.cprintf(ent, PRINT_CHAT, "Flood protection: "
+                "You can't talk for %d seconds.\n", j);
             return;
         }
-		cl->flood_whenhead = (cl->flood_whenhead + 1) %
-			(sizeof(cl->flood_when)/sizeof(cl->flood_when[0]));
-		cl->flood_when[cl->flood_whenhead] = level.time;
+		cl->flood_when[++cl->flood_whenhead % FLOOD_MSGS] = level.framenum;
 	}
 
 	if (dedicated->value)
@@ -793,8 +788,6 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 	}
 }
 
-void spectator_respawn (edict_t *ent);
-
 void Cmd_Observe_f(edict_t *ent) {
     if( level.framenum - ent->client->respawn_framenum < 5*HZ ) {
         return;
@@ -812,47 +805,96 @@ void Cmd_Observe_f(edict_t *ent) {
     spectator_respawn( ent );
 }
 
-static const char *const weapnames[WEAP_TOTAL] = {
-    "None",
-    "Blaster",
-    "Shotgun",
-    "S.Shotgun",
-    "Machinegun",
-    "Chaingun",
-    "Grenades",
-    "G.Launcher",
-    "R.Launcher",
-    "H.Blaster",
-    "Railgun",
-    "BFG10K"
+edict_t *G_SetPlayer( edict_t *ent, int arg ) {
+    edict_t     *other;
+	int			i;
+	char		*s;
+
+	s = gi.argv(arg);
+
+	// numeric values are just slot numbers
+	for( i = 0; s[i]; i++ ) {
+		if( !Q_isdigit( s[i] ) ) {
+			break;
+		}
+	} 
+	if( !s[i] ) {
+		i = atoi(s);
+		if (i < 0 || i >= game.maxclients) {
+			gi.cprintf (ent, PRINT_HIGH, "Bad client slot number: %d\n", i);
+			return NULL;
+		}
+
+        other = &g_edicts[ i + 1 ];
+		if (!other->client || other->client->pers.connected <= CONN_CONNECTED) {
+			gi.cprintf (ent, PRINT_HIGH, "Client #%d is not active.\n", i);
+			return NULL;
+		}
+		return other;
+	}
+
+	// check for a name match
+    for( i = 0; i < game.maxclients; i++ ) {
+        other = &g_edicts[ i + 1 ];
+		if (!other->client ) {
+            continue;
+        }
+        if( other->client->pers.connected <= CONN_CONNECTED) {
+            continue;
+        }
+		if (!strcmp(other->client->pers.netname, s)) {
+			return other;
+		}
+	}
+
+	Com_Printf ("Client \"%s\" is not on the server.\n", s);
+	return NULL;
+}
+
+static const char weapnames[WEAP_TOTAL][16] = {
+    "None", "Blaster", "Shotgun", "S.Shotgun", "Machinegun",
+    "Chaingun", "Grenades", "G.Launcher", "R.Launcher",
+    "H.Blaster", "Railgun", "BFG10K"
 };
 
-void Cmd_Stats_f( edict_t *ent ) {
+static void Cmd_Stats_f( edict_t *ent ) {
     int i;
     weapstat_t *s;
     char acc[16];
     char hits[16];
     char frgs[16];
     char dths[16];
+    edict_t *other;
 
-    for( i = 1; i < WEAP_TOTAL; i++ ) {
-        s = &ent->client->resp.stats[i];
+    if( gi.argc() > 1 ) {
+        other = G_SetPlayer( ent, 1 );
+        if( !other ) {
+            return;
+        }
+    } else {
+        other = ent;
+    }
+
+    for( i = WEAP_SHOTGUN; i < WEAP_BFG; i++ ) {
+        s = &other->client->resp.stats[i];
         if( s->atts || s->deaths ) {
             break;
         }
     }
-    if( i == WEAP_TOTAL ) {
-        gi.cprintf( ent, PRINT_HIGH, "No weapon statistics available.\n" );
+    if( i == WEAP_BFG ) {
+        gi.cprintf( ent, PRINT_HIGH, "No stats available for %s.\n",
+            other->client->pers.netname );
         return;
     }
 
     gi.cprintf( ent, PRINT_HIGH,
-        "/------------+------+-----------+------+------\\\n"
-        "| Weapon     | Acc%% | Hits/Atts | Frgs | Dths |\n"
-        "+------------+------+-----------+------+------+\n" );
+        "Statistics for %s:\n"
+        "Weapon     Acc%% Hits/Atts Frgs Dths\n"
+        "---------- ---- --------- ---- ----\n",
+        other->client->pers.netname );
 
-    for( i = 1; i < WEAP_TOTAL; i++ ) {
-        s = &ent->client->resp.stats[i];
+    for( i = WEAP_SHOTGUN; i < WEAP_BFG; i++ ) {
+        s = &other->client->resp.stats[i];
         if( !s->atts && !s->deaths ) {
             continue;
         }
@@ -872,16 +914,337 @@ void Cmd_Stats_f( edict_t *ent ) {
         }
 
         gi.cprintf( ent, PRINT_HIGH,
-            "| %-10s | %s | %s | %s | %s |\n",
+            "%-10s %s %s %s %s\n",
             weapnames[i], acc, hits, frgs, dths );
     }
 
     gi.cprintf( ent, PRINT_HIGH,
-        "\\------------+------+-----------+------+------/\n"
-        "Total damage given: %d\n"
-        "Total damage recvd: %d\n",
-        ent->client->resp.damage_given,
-        ent->client->resp.damage_recvd );
+        "Total damage given/recvd: %d/%d\n",
+        other->client->resp.damage_given,
+        other->client->resp.damage_recvd );
+}
+
+static void Cmd_CastVote_f( edict_t *ent, qboolean accepted ) {
+    if( !level.vote.framenum ) {
+        gi.cprintf( ent, PRINT_HIGH, "There is no vote in progress.\n" );
+        return;
+    }
+    if( ent->client->level.vote.index == level.vote.index ) {
+        gi.cprintf( ent, PRINT_HIGH, "You have already voted.\n" );
+        return;
+    }
+
+    ent->client->level.vote.index = level.vote.index;
+    ent->client->level.vote.accepted = accepted;
+
+    if( G_CheckVote() ) {
+        return;
+    }
+    
+    gi.cprintf( ent, PRINT_HIGH, "Vote cast.\n" );
+}
+
+typedef struct {
+    char name[16];
+    int bit;
+    qboolean (*func)( edict_t * );
+} vote_proposal_t;
+
+static qboolean Vote_Timelimit( edict_t *ent ) {
+    int num = atoi( gi.argv( 2 ) );
+
+    if( num < 0 ) {
+        gi.cprintf( ent, PRINT_HIGH, "Timelimit %d is invalid.\n", num );
+        return qfalse;
+    }
+    if( num == timelimit->value ) {
+        gi.cprintf( ent, PRINT_HIGH, "Timelimit is already set to %d.\n", num );
+        return qfalse;
+    }
+    level.vote.value = num;
+    return qtrue;
+}
+
+static qboolean Vote_Fraglimit( edict_t *ent ) {
+    int num = atoi( gi.argv( 2 ) );
+
+    if( num < 0 ) {
+        gi.cprintf( ent, PRINT_HIGH, "Fraglimit %d is invalid.\n", num );
+        return qfalse;
+    }
+    if( num == fraglimit->value ) {
+        gi.cprintf( ent, PRINT_HIGH, "Fraglimit is already set to %d.\n", num );
+        return qfalse;
+    }
+    level.vote.value = num;
+    return qtrue;
+}
+
+int G_CalcVote( int *acc, int *rej ) {
+    int i;
+    gclient_t *client;
+    int total = 0, accepted = 0, rejected = 0;
+
+    for( i = 0, client = game.clients; i < game.maxclients; i++, client++ ) {
+        if( client->pers.connected <= CONN_CONNECTED ) {
+            continue;
+        }
+        total++;
+        if( client->level.vote.index == level.vote.index ) {
+            if( client->level.vote.accepted ) {
+                accepted++;
+            } else {
+                rejected++;
+            }
+        }
+    }
+
+    if( !total ) {
+        *acc = *rej = 0;
+        return 0;
+    }
+
+    *acc = accepted * 100 / total;
+    *rej = rejected * 100 / total;
+
+    return total;
+}
+
+qboolean G_CheckVote( void ) {
+    int treshold = g_vote_treshold->value;
+    int acc, rej;
+    
+    // is our victim gone?
+    if( level.vote.victim && !level.vote.victim->pers.connected ) {
+        gi.bprintf( PRINT_HIGH, "Vote aborted.\n" );
+        goto finish;
+    }
+
+    if( !G_CalcVote( &acc, &rej ) ) {
+        goto finish;
+    }
+
+    if( acc > treshold ) {
+        switch( level.vote.proposal ) {
+        case VOTE_TIMELIMIT:
+            gi.bprintf( PRINT_HIGH, "Vote passed. Timelimit set to %d.\n", level.vote.value );
+            gi.AddCommandString( va( "set timelimit %d\n", level.vote.value ) );
+            break;
+        case VOTE_FRAGLIMIT:
+            gi.bprintf( PRINT_HIGH, "Vote passed. Fraglimit set to %d.\n", level.vote.value );
+            gi.AddCommandString( va( "set fraglimit %d\n", level.vote.value ) );
+            break;
+        case VOTE_KICK:
+            gi.bprintf( PRINT_HIGH, "Vote passed. Kicking %s...\n", level.vote.victim->pers.netname );
+            gi.AddCommandString( va( "kick %d\n", level.vote.victim - game.clients ) );
+            break;
+        case VOTE_MUTE:
+            gi.bprintf( PRINT_HIGH, "Vote passed. Muting %s...\n", level.vote.victim->pers.netname );
+//            level.vote.victim->pers.muted = qtrue;
+            break;
+        case VOTE_MAP:
+            gi.bprintf( PRINT_HIGH, "Vote passed. Next map set to %s.\n", level.nextmap );
+            BeginIntermission();
+            break;
+        default:
+            break;
+        }
+        goto finish;
+    }
+
+    if( rej > treshold ) {
+        gi.bprintf( PRINT_HIGH, "Vote failed.\n" );
+        goto finish;
+    }
+
+    return qfalse;
+
+finish:
+    level.vote.proposal = 0;
+    level.vote.framenum = level.framenum;
+    return qtrue;
+}
+
+
+void G_BuildProposal( char *buffer ) {
+    switch( level.vote.proposal ) {
+    case VOTE_TIMELIMIT:
+        sprintf( buffer, "set timelimit to %d", level.vote.value );
+        break;
+    case VOTE_FRAGLIMIT:
+        sprintf( buffer, "set fraglimit to %d", level.vote.value );
+        break;
+    case VOTE_KICK:
+        sprintf( buffer, "kick player \"%s\"", level.vote.victim->pers.netname );
+        break;
+    case VOTE_MUTE:
+        sprintf( buffer, "mute player \"%s\"", level.vote.victim->pers.netname );
+        break;
+    case VOTE_MAP:
+        sprintf( buffer, "change map to \"%s\"", level.nextmap );
+        break;
+    default:
+        strcpy( buffer, "unknown" );
+        break;
+    }
+}
+
+#if 0
+static void Vote_Items( edict_t *ent ) {
+    if( *s == '+' || *s == '-' ) {
+        for( v = vote_subjects; v->bit; v++ ) {
+            if( !( v->bit & VOTE_TOGGLE ) ) {
+                continue;
+            }
+            if( !strcmp( s + 1, v->name ) ) {
+                break;
+            }
+        }
+        if( !v->bit ) {
+            gi.cprintf( ent, PRINT_HIGH,
+                "Unknown item '%s'. Type 'vote help' for usage.\n", s + 1 );
+            return;
+        }
+    }
+}
+#endif
+
+static qboolean Vote_Victim( edict_t *ent ) {
+    edict_t *other = G_SetPlayer( ent, 2 );
+    if( !other ) {
+        return qfalse;
+    }
+
+    if( other == ent ) {
+        gi.cprintf( ent, PRINT_HIGH, "You can't kick yourself.\n" );
+        return qfalse;
+    }
+
+    level.vote.victim = other->client;
+    return qtrue;
+}
+
+static qboolean Vote_Map( edict_t *ent ) {
+    return qfalse;
+}
+
+static const vote_proposal_t vote_proposals[] = {
+    { "timelimit", VOTE_TIMELIMIT, Vote_Timelimit },
+    { "tl", VOTE_TIMELIMIT, Vote_Timelimit },
+    { "fraglimit", VOTE_FRAGLIMIT, Vote_Fraglimit },
+    { "fl", VOTE_FRAGLIMIT, Vote_Fraglimit },
+//    { "items", VOTE_ITEMS, Vote_Items },
+    { "kick", VOTE_KICK, Vote_Victim },
+    { "mute", VOTE_MUTE, Vote_Victim },
+    { "map", VOTE_MAP, Vote_Map },
+    {}
+};
+
+static void Cmd_Vote_f( edict_t *ent ) {
+    char buffer[MAX_QPATH];
+    const vote_proposal_t *v;
+    int mask = g_vote_mask->value;
+    int limit = g_vote_limit->value;
+    int treshold = g_vote_treshold->value;
+    int argc = gi.argc();
+    int acc, rej;
+    char *s;
+
+    if( !mask ) {
+        gi.cprintf( ent, PRINT_HIGH, "Voting is disabled.\n" );
+        return;
+    }
+
+    if( argc < 2 ) {
+        if( !level.vote.proposal ) {
+            gi.cprintf( ent, PRINT_HIGH, "No vote in progress.\n" );
+            return;
+        }
+        G_BuildProposal( buffer );
+        G_CalcVote( &acc, &rej );
+        gi.cprintf( ent, PRINT_HIGH,
+            "Proposal: %s\n"
+            "Accepted: %d%%\n"
+            "Rejected: %d%%\n"
+            "Treshold: %d%%\n",
+            ( level.vote.framenum - level.framenum ) / HZ,
+            buffer, acc, rej, treshold );
+        return;
+    }
+
+    s = gi.argv( 1 );
+
+//
+// generic commands
+//
+    if( !strcmp( s, "help" ) ) {
+        return;
+    }
+    if( !strcmp( s, "yes" ) || !strcmp( s, "y" ) ) {
+        Cmd_CastVote_f( ent, qtrue );
+        return;
+    }
+    if( !strcmp( s, "no" ) || !strcmp( s, "n" ) ) {
+        Cmd_CastVote_f( ent, qfalse );
+        return;
+    }
+
+//
+// proposals
+//
+    if( level.vote.proposal ) {
+        gi.cprintf( ent, PRINT_HIGH, "Vote is already in progress.\n" );
+        return;
+    }
+
+    if( level.framenum - level.vote.framenum < 5*HZ ) {
+        gi.cprintf( ent, PRINT_HIGH, "You may not initiate votes too soon.\n" );
+        return;
+    }
+
+    if( limit > 0 && ent->client->level.vote.count >= limit ) {
+        gi.cprintf( ent, PRINT_HIGH, "You may not initiate too many votes.\n" );
+        return;
+    }
+
+    for( v = vote_proposals; v->bit; v++ ) {
+        if( !strcmp( s, v->name ) ) {
+            break;
+        }
+    }
+    if( !v->bit ) {
+        gi.cprintf( ent, PRINT_HIGH, "Unknown proposal. Try 'vote help'.\n" );
+        return;
+    }
+
+    if( !( mask & v->bit ) ) {
+        gi.cprintf( ent, PRINT_HIGH, "Voting on '%s' is disabled.\n", v->name );
+        return;
+    }
+
+    if( argc < 3 ) {
+        gi.cprintf( ent, PRINT_HIGH, "Insufficient arguments. Try 'vote help'.\n" );
+        return;
+    }
+
+    if( !v->func( ent ) ) {
+        return;
+    }
+
+    level.vote.proposal = v->bit;
+    level.vote.framenum = level.framenum + g_vote_time->value * HZ;
+    level.vote.index++;
+
+    G_BuildProposal( buffer );
+
+    gi.bprintf( PRINT_CHAT, "%s has initiated a vote!\n",
+        ent->client->pers.netname );
+    gi.bprintf( PRINT_HIGH, "Proposal: %s\n", buffer );
+    ent->client->level.vote.index = level.vote.index;
+    ent->client->level.vote.accepted = qtrue;
+    ent->client->level.vote.count++;
+
+    G_CheckVote();
 }
 
 
@@ -924,7 +1287,7 @@ void ClientCommand (edict_t *ent)
 		return;
 	}
 
-	if (level.intermissiontime)
+	if (level.intermission_framenum)
 		return;
 
 	if (Q_stricmp (cmd, "use") == 0)
@@ -973,6 +1336,12 @@ void ClientCommand (edict_t *ent)
 		Cmd_Observe_f(ent);
 	else if (Q_stricmp(cmd, "stats") == 0)
 		Cmd_Stats_f(ent);
+	else if (Q_stricmp(cmd, "vote") == 0)
+		Cmd_Vote_f(ent);
+	else if (Q_stricmp(cmd, "yes") == 0)
+		Cmd_CastVote_f(ent, qtrue);
+	else if (Q_stricmp(cmd, "no") == 0)
+		Cmd_CastVote_f(ent, qfalse);
 	else	// anything that doesn't match a command will be a chat
 		Cmd_Say_f (ent, qfalse, qtrue);
 }

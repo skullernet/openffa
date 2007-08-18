@@ -68,15 +68,13 @@ void MoveClientToIntermission (edict_t *ent)
 	gi.unicast (ent, qtrue);
 }
 
-void BeginIntermission (edict_t *targ)
+void BeginIntermission (void)
 {
 	int		i;
 	edict_t	*ent, *client;
 
-	if (level.intermissiontime)
+	if (level.intermission_framenum)
 		return;		// already activated
-
-	game.autosaved = qfalse;
 
 	// respawn any dead clients
 	for (i=0 ; i<maxclients->value ; i++)
@@ -88,10 +86,7 @@ void BeginIntermission (edict_t *targ)
 			respawn(client);
 	}
 
-	level.intermissiontime = level.time;
-	level.changemap = targ->map;
-
-	level.exitintermission = 0;
+	level.intermission_framenum = level.framenum;
 
 	// find an intermission spot
 	ent = G_Find (NULL, FOFS(classname), "info_player_intermission");
@@ -193,13 +188,17 @@ void DeathmatchScoreboardMessage( edict_t *ent, edict_t *killer ) {
 	for( i = 0; i < total; i++ ) {
 		c = ranks[i];
 
-        sec = ( level.framenum - c->pers.enterframe ) / HZ;
+        sec = ( level.framenum - c->level.enter_framenum ) / HZ;
         if( !sec ) {
             sec = 1;
         }
 
-        j = c->resp.score + c->resp.deaths;
-        eff = j ? c->resp.score * 100 / j : 100;
+        if( c->resp.score ) {
+            j = c->resp.score + c->resp.deaths;
+            eff = j ? c->resp.score * 100 / j : 100;
+        } else {
+            eff = 0;
+        }
 
 		j = Com_sprintf( entry, sizeof( entry ),
 		    "yv %d string%s \"%2d %-15s %3d %3d %3d %4d %4d %4d\"",
@@ -221,7 +220,7 @@ void DeathmatchScoreboardMessage( edict_t *ent, edict_t *killer ) {
             continue;
         }
 
-        sec = ( level.framenum - c->pers.enterframe ) / HZ;
+        sec = ( level.framenum - c->level.enter_framenum ) / HZ;
         if( !sec ) {
             sec = 1;
         }
@@ -306,12 +305,12 @@ void G_PrivateString( edict_t *ent, int index, const char *string ) {
         gi.error( "G_PrivateString: index %d out of range", index );
     }
 
-    if( !strcmp( ent->client->resp.strings[index], string ) ) {
+    if( !strcmp( ent->client->level.strings[index], string ) ) {
         return; // not changed
     }
 
     // save new string
-    Q_strncpyz( ent->client->resp.strings[index], string, MAX_NETNAME );
+    Q_strncpyz( ent->client->level.strings[index], string, MAX_NETNAME );
 
     gi.WriteByte( svc_configstring );
     gi.WriteShort( CS_PRIVATE + index );
@@ -453,7 +452,7 @@ void G_SetStats (edict_t *ent)
 	//
 	ent->client->ps.stats[STAT_LAYOUTS] = 0;
 
-    if (ent->client->health <= 0 || level.intermissiontime || ent->client->showscores)
+    if (ent->client->health <= 0 || level.intermission_framenum || ent->client->showscores)
         ent->client->ps.stats[STAT_LAYOUTS] |= 1;
     if (ent->client->showinventory && ent->client->health > 0)
         ent->client->ps.stats[STAT_LAYOUTS] |= 2;
@@ -474,7 +473,7 @@ void G_SetStats (edict_t *ent)
 	ent->client->ps.stats[STAT_SPECTATOR] = 0;
 	ent->client->ps.stats[STAT_CHASE] = 0;
 
-    if( level.intermissiontime ) {
+    if( level.intermission_framenum ) {
 	    ent->client->ps.stats[STAT_TIME_STRING] = 0;
         ent->client->ps.stats[STAT_FRAGS_STRING] = 0;
         ent->client->ps.stats[STAT_DELTA_STRING] = 0;

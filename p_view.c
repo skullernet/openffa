@@ -748,10 +748,10 @@ void G_SetClientEffects (edict_t *ent)
 	ent->s.effects = 0;
 	ent->s.renderfx = 0;
 
-	if (ent->health <= 0 || level.intermissiontime)
+	if (ent->health <= 0 || level.intermission_framenum)
 		return;
 
-	if (ent->powerarmor_time > level.time)
+	if (ent->client->powerarmor_framenum > level.framenum)
 	{
 		pa_type = PowerArmorType (ent);
 		if (pa_type == POWER_ARMOR_SCREEN)
@@ -813,20 +813,6 @@ G_SetClientSound
 void G_SetClientSound (edict_t *ent)
 {
     int weap;
-
-	if (ent->client->game_helpchanged != game.helpchanged)
-	{
-		ent->client->game_helpchanged = game.helpchanged;
-		ent->client->helpchanged = 1;
-	}
-
-	// help beep (no more than three times)
-	if (ent->client->helpchanged && ent->client->helpchanged <= 3 && !(level.framenum&63) )
-	{
-		ent->client->helpchanged++;
-		gi.sound (ent, CHAN_VOICE, gi.soundindex ("misc/pc_up.wav"), 1, ATTN_STATIC, 0);
-	}
-
 
 	if (ent->client->weapon)
 		weap = ent->client->weapon->weapmodel;

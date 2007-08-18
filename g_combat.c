@@ -33,6 +33,8 @@ qboolean CanDamage (edict_t *targ, edict_t *inflictor)
 {
 	vec3_t	dest;
 	trace_t	trace;
+    vec_t *bounds[2];
+    int i;
 
 // bmodels need special checking because their origin is 0,0,0
 	if (targ->movetype == MOVETYPE_PUSH)
@@ -50,71 +52,18 @@ qboolean CanDamage (edict_t *targ, edict_t *inflictor)
 	gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, targ->s.origin, inflictor, MASK_SOLID);
 	if (trace.fraction == 1.0)
 		return qtrue;
+    
+    bounds[0] = targ->absmin;
+    bounds[1] = targ->absmax;
+    for( i = 0; i < 8; i++ ) {
+		dest[0] = bounds[(i>>0)&1][0];
+		dest[1] = bounds[(i>>1)&1][1];
+		dest[2] = bounds[(i>>2)&1][2];
 
-	VectorCopy (targ->s.origin, dest);
-	dest[0] += 15.0;
-	dest[1] += 15.0;
-	dest[2] += 15.0;
-	gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
-	if (trace.fraction == 1.0)
-		return qtrue;
-
-	VectorCopy (targ->s.origin, dest);
-	dest[0] += 15.0;
-	dest[1] -= 15.0;
-	dest[2] += 15.0;
-	gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
-	if (trace.fraction == 1.0)
-		return qtrue;
-
-	VectorCopy (targ->s.origin, dest);
-	dest[0] -= 15.0;
-	dest[1] += 15.0;
-	dest[2] += 15.0;
-	gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
-	if (trace.fraction == 1.0)
-		return qtrue;
-
-	VectorCopy (targ->s.origin, dest);
-	dest[0] -= 15.0;
-	dest[1] -= 15.0;
-	dest[2] += 15.0;
-	gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
-	if (trace.fraction == 1.0)
-		return qtrue;
-
-	VectorCopy (targ->s.origin, dest);
-	dest[0] += 15.0;
-	dest[1] += 15.0;
-	dest[2] -= 15.0;
-	gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
-	if (trace.fraction == 1.0)
-		return qtrue;
-
-	VectorCopy (targ->s.origin, dest);
-	dest[0] += 15.0;
-	dest[1] -= 15.0;
-	dest[2] -= 15.0;
-	gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
-	if (trace.fraction == 1.0)
-		return qtrue;
-
-	VectorCopy (targ->s.origin, dest);
-	dest[0] -= 15.0;
-	dest[1] += 15.0;
-	dest[2] -= 15.0;
-	gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
-	if (trace.fraction == 1.0)
-		return qtrue;
-
-	VectorCopy (targ->s.origin, dest);
-	dest[0] -= 15.0;
-	dest[1] -= 15.0;
-	dest[2] -= 15.0;
-	gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
-	if (trace.fraction == 1.0)
-		return qtrue;
-
+        gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
+        if (trace.fraction == 1.0)
+            return qtrue;
+    }
 
 	return qfalse;
 }
@@ -191,25 +140,18 @@ static int CheckPowerArmor (edict_t *ent, vec3_t point, vec3_t normal, int damag
 		return 0;
 
 	client = ent->client;
+	if (!client) {
+        return 0;
+    }
 
 	if (dflags & DAMAGE_NO_ARMOR)
 		return 0;
 
-	if (client)
-	{
-		power_armor_type = PowerArmorType (ent);
-		if (power_armor_type != POWER_ARMOR_NONE)
-		{
-			power = client->inventory[ITEM_CELLS];
-		}
-	}
-	else if (ent->svflags & SVF_MONSTER)
-	{
-		power_armor_type = ent->monsterinfo.power_armor_type;
-		power = ent->monsterinfo.power_armor_power;
-	}
-	else
-		return 0;
+    power_armor_type = PowerArmorType (ent);
+    if (power_armor_type != POWER_ARMOR_NONE)
+    {
+        power = client->inventory[ITEM_CELLS];
+    }
 
 	if (power_armor_type == POWER_ARMOR_NONE)
 		return 0;
@@ -248,14 +190,11 @@ static int CheckPowerArmor (edict_t *ent, vec3_t point, vec3_t normal, int damag
 		save = damage;
 
 	SpawnDamage (pa_te_type, point, normal, save);
-	ent->powerarmor_time = level.time + 0.2;
+	client->powerarmor_framenum = level.framenum + 2;
 
 	power_used = save / damagePerCell;
 
-	if (client)
-		client->inventory[ITEM_CELLS] -= power_used;
-	else
-		ent->monsterinfo.power_armor_power -= power_used;
+	client->inventory[ITEM_CELLS] -= power_used;
 	return save;
 }
 
@@ -403,7 +342,10 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 	if (!(dflags & DAMAGE_NO_PROTECTION) && CheckTeamDamage (targ, attacker))
 		return;
 
-    G_AccountDamage( targ, attacker, take );
+    // add to client weapon statistics
+    if( attacker->client && targ->client && targ != attacker ) {
+        G_AccountDamage( targ, inflictor, attacker, take );
+    }
 
 // do the damage
 	if (take)

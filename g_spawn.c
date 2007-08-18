@@ -517,8 +517,8 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 	memset (&level, 0, sizeof(level));
 	memset (g_edicts, 0, game.maxentities * sizeof (g_edicts[0]));
 
-	strncpy (level.mapname, mapname, sizeof(level.mapname)-1);
-	strncpy (game.spawnpoint, spawnpoint, sizeof(game.spawnpoint)-1);
+	Q_strncpyz(level.mapname, mapname, sizeof(level.mapname));
+	Q_strncpyz(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint));
 
 	// set client fields on player ents
 	for( i = 0; i < game.maxclients; i++ ) {
@@ -537,7 +537,6 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
         client->edict = ent;
         client->clientNum = i;
         client->pers.connected = CONN_CONNECTED;
-        VectorClear( client->pers.cmd_angles );
 	    gi.configstring( CS_PLAYERSKINS + i, client->pers.skin );
     }
 
@@ -773,8 +772,8 @@ void SP_worldspawn (edict_t *ent)
 
 	gi.soundindex ("misc/pc_up.wav");
 	gi.soundindex ("misc/talk1.wav");
-	gi.soundindex ("misc/secret.wav");
-	gi.soundindex ("world/10_0.wav");
+	level.sounds.secret = gi.soundindex ("misc/secret.wav");
+	level.sounds.count = gi.soundindex ("world/10_0.wav");
 
 	level.sounds.udeath = gi.soundindex ("misc/udeath.wav");
 
@@ -840,6 +839,9 @@ void SP_worldspawn (edict_t *ent)
 	level.sounds.noammo = gi.soundindex ("weapons/noammo.wav");
 
 	gi.soundindex ("infantry/inflies1.wav");
+
+    level.sounds.xian = gi.soundindex("world/xian1.wav");
+    level.sounds.makron = gi.soundindex("makron/laf4.wav");
 
     // gibs
 	level.models.meat = gi.modelindex ("models/objects/gibs/sm_meat/tris.md2");

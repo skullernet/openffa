@@ -41,6 +41,10 @@ cvar_t	*maxclients;
 cvar_t	*maxentities;
 cvar_t	*g_select_empty;
 cvar_t	*g_idletime;
+cvar_t	*g_vote_mask;
+cvar_t	*g_vote_time;
+cvar_t	*g_vote_treshold;
+cvar_t	*g_vote_limit;
 cvar_t	*dedicated;
 
 cvar_t	*filterban;
@@ -201,7 +205,7 @@ void ClientEndServerFrames (void) {
 	int		i;
     gclient_t *c;
 
-	if( level.intermissiontime ) {
+	if( level.intermission_framenum ) {
         // if the end of unit layout is displayed, don't give
         // the player any normal movement attributes
         for( i = 0, c = game.clients; i < game.maxclients; i++, c++ ) {
@@ -235,23 +239,6 @@ void ClientEndServerFrames (void) {
 
 }
 
-/*
-=================
-CreateTargetChangeLevel
-
-Returns the created target changelevel
-=================
-*/
-edict_t *CreateTargetChangeLevel(char *map)
-{
-	edict_t *ent;
-
-	ent = G_Spawn ();
-	ent->classname = "target_changelevel";
-	Com_sprintf(level.nextmap, sizeof(level.nextmap), "%s", map);
-	ent->map = level.nextmap;
-	return ent;
-}
 
 char *CopyString( const char *in ) {
 	char	*out;
@@ -282,10 +269,11 @@ void EndDMLevel (void)
 	char *s, *t, *f;
 	static const char *seps = " ,\n\r";
 
+    strcpy( level.nextmap, level.mapname );
+
 	// stay on same level flag
-	if ((int)dmflags->value & DF_SAME_LEVEL)
-	{
-		BeginIntermission (CreateTargetChangeLevel (level.mapname) );
+	if( DF(SAME_LEVEL) ) {
+		BeginIntermission ();
 		return;
 	}
 
@@ -299,12 +287,11 @@ void EndDMLevel (void)
 				// it's in the list, go to the next one
 				t = strtok(NULL, seps);
 				if (t == NULL) { // end of list, go to first one
-					if (f == NULL) // there isn't a first one, same level
-						BeginIntermission (CreateTargetChangeLevel (level.mapname) );
-					else
-						BeginIntermission (CreateTargetChangeLevel (f) );
+					if (f != NULL) // there isn't a first one, same level
+						strcpy( level.nextmap, f );
 				} else
-					BeginIntermission (CreateTargetChangeLevel (t) );
+					strcpy( level.nextmap, t );
+                BeginIntermission ();
 				gi.TagFree(s);
 				return;
 			}
@@ -315,22 +302,17 @@ void EndDMLevel (void)
 		gi.TagFree(s);
 	}
 
-	if (level.nextmap[0]) // go to a specific map
-		BeginIntermission (CreateTargetChangeLevel (level.nextmap) );
-	else {	// search for a changelevel
-		ent = G_Find (NULL, FOFS(classname), "target_changelevel");
-		if (!ent)
-		{	// the map designer didn't include a changelevel,
-			// so create a fake ent that goes back to the same level
-			BeginIntermission (CreateTargetChangeLevel (level.mapname) );
-			return;
-		}
-		BeginIntermission (ent);
-	}
+	// search for a changelevel
+    ent = G_Find (NULL, FOFS(classname), "target_changelevel");
+    if (ent) {
+//        strcpy(level.nextmap, ent->);
+    }
+	
+    BeginIntermission ();
 }
 
-void G_StartSound( const char *name ) {
-    gi.sound( &g_edicts[0], 0, gi.soundindex( name ), 1, ATTN_NONE, 0 );
+void G_StartSound( int index ) {
+    gi.sound( &g_edicts[0], 0, index, 1, ATTN_NONE, 0 );
 }
 
 /*
@@ -348,7 +330,7 @@ static void CheckDMRules( void ) {
 			EndDMLevel();
 			return;
 		}
-        if( ( level.framenum % HZ ) == 0 ) {
+        if( timelimit->modified || ( level.framenum % HZ ) == 0 ) {
             remaining = G_WriteTime();
             gi.multicast( NULL, MULTICAST_ALL );
 
@@ -356,23 +338,23 @@ static void CheckDMRules( void ) {
             switch( remaining ) {
             case 10:
 			    gi.bprintf( PRINT_HIGH, "10 seconds remaining in match.\n" );
-                G_StartSound( "world/10_0.wav" );
+                G_StartSound( level.sounds.count );
                 break;
             case 60:
 			    gi.bprintf( PRINT_HIGH, "1 minute remaining in match.\n" );
-                G_StartSound( "misc/secret.wav" );
+                G_StartSound( level.sounds.secret );
                 break;
             case 300:
 			    gi.bprintf( PRINT_HIGH, "5 minutes remaining in match.\n" );
-                G_StartSound( "misc/secret.wav" );
+                G_StartSound( level.sounds.secret );
                 break;
             case 600:
 			    gi.bprintf( PRINT_HIGH, "10 minutes remaining in match.\n" );
-                G_StartSound( "misc/secret.wav" );
+                G_StartSound( level.sounds.secret );
                 break;
             case 900:
 			    gi.bprintf( PRINT_HIGH, "15 minutes remaining in match.\n" ); 
-                G_StartSound( "misc/secret.wav" );
+                G_StartSound( level.sounds.secret );
                 break;
             }
         }
@@ -390,37 +372,32 @@ static void CheckDMRules( void ) {
 			}
 		}
 	}
-}
 
+    if( fraglimit->modified ) {
+		for( i = 0, c = game.clients; i < game.maxclients; i++, c++ ) {
+            if( c->pers.connected != CONN_SPAWNED ) {
+                continue;
+            }
+            G_ScoreChanged( c->edict );
+        }
+        G_UpdateRanks();
+    }
+
+
+    timelimit->modified = qfalse;
+    fraglimit->modified = qfalse;
+}
 
 /*
 =============
 ExitLevel
 =============
 */
-void ExitLevel (void)
-{
-	int		i;
-	edict_t	*ent;
+void G_ExitLevel (void) {
 	char	command [256];
 
-	Com_sprintf (command, sizeof(command), "gamemap \"%s\"\n", level.changemap);
+	Com_sprintf (command, sizeof(command), "gamemap \"%s\"\n", level.nextmap);
 	gi.AddCommandString (command);
-	level.changemap = NULL;
-	level.exitintermission = 0;
-	level.intermissiontime = 0;
-	ClientEndServerFrames ();
-
-	// clear some things before going to next level
-	for (i=0 ; i<maxclients->value ; i++)
-	{
-		ent = g_edicts + 1 + i;
-		if (!ent->inuse)
-			continue;
-		if (ent->health > ent->client->max_health)
-			ent->health = ent->client->max_health;
-	}
-
 }
 
 /*
@@ -437,12 +414,6 @@ void G_RunFrame (void)
 
 	level.framenum++;
 	level.time = level.framenum*FRAMETIME;
-
-	// exit intermissions
-	if (level.exitintermission) {
-		ExitLevel ();
-		return;
-	}
 
 	//
 	// treat each object in turn
@@ -470,14 +441,30 @@ void G_RunFrame (void)
 		G_RunEntity (ent);
 	}
 
-	// see if it is time to end a deathmatch
-	if( !level.intermissiontime ) {
+	if( level.intermission_framenum ) {
+        if( level.framenum == level.intermission_framenum + 1*HZ ) {
+            if( rand() & 1 ) {
+                G_StartSound( level.sounds.xian );
+            } else {
+                G_StartSound( level.sounds.makron );
+            }
+        }
+    } else {
+	    // see if it is time to end a deathmatch
 	    CheckDMRules();
+
+        // check vote timeout
+        if( level.vote.proposal && level.framenum > level.vote.framenum ) {
+            gi.bprintf( PRINT_HIGH, "Vote failed.\n" );
+            level.vote.proposal = 0;
+        }
     }
 
 	// build the playerstate_t structures for all players
 	ClientEndServerFrames ();
 }
+
+
 
 /*
 ============
@@ -523,6 +510,10 @@ void InitGame (void)
 
 	g_select_empty = gi.cvar ("g_select_empty", "0", CVAR_ARCHIVE);
 	g_idletime = gi.cvar ("g_idletime", "0", 0);
+	g_vote_mask = gi.cvar ("g_vote_mask", "0", 0);
+	g_vote_time = gi.cvar ("g_vote_time", "120", 0);
+	g_vote_treshold = gi.cvar ("g_vote_treshold", "50", 0);
+	g_vote_limit = gi.cvar ("g_vote_limit", "0", 0);
 
 	run_pitch = gi.cvar ("run_pitch", "0.002", 0);
 	run_roll = gi.cvar ("run_roll", "0.005", 0);
@@ -537,9 +528,6 @@ void InitGame (void)
 
 	// dm map list
 	sv_maplist = gi.cvar ("sv_maplist", "", 0);
-
-	game.helpmessage1[0] = 0;
-    game.helpmessage2[0] = 0;
 
     // force deathmatch
     gi.cvar_set( "coop", "0" );
