@@ -31,10 +31,8 @@ int meansOfDeath;
 
 edict_t		*g_edicts;
 
-//cvar_t	*deathmatch;
-//cvar_t	*coop;
-cvar_t	*midair;
-cvar_t	*ctf;
+cvar_t	*g_midair;
+cvar_t	*g_ctf;
 cvar_t	*dmflags;
 cvar_t	*skill;
 cvar_t	*fraglimit;
@@ -500,11 +498,8 @@ void InitGame (void)
 	gi.cvar ("gamedate", __DATE__ , CVAR_SERVERINFO | CVAR_LATCH);
 
 	maxclients = gi.cvar ("maxclients", "4", CVAR_SERVERINFO | CVAR_LATCH);
-	//deathmatch = gi.cvar ("deathmatch", "1", CVAR_LATCH); //atu
-	//coop = gi.cvar ("coop", "0", CVAR_LATCH);
-	midair = gi.cvar ("midair", "0", CVAR_LATCH); //atu
-	ctf = gi.cvar ("ctf", "0", CVAR_LATCH); //atu
-	//skill = gi.cvar ("skill", "1", CVAR_LATCH); //atu
+	g_midair = gi.cvar ("g_midair", "0", CVAR_LATCH);
+	g_ctf = gi.cvar ("g_ctf", "0", CVAR_LATCH);
 	maxentities = gi.cvar ("maxentities", "1024", CVAR_LATCH);
 
 	// change anytime vars

@@ -44,6 +44,13 @@ typedef unsigned int memtag_t;
 #define	svc_configstring	13
 
 //==================================================================
+#define MATCH_STATE_NONE 1
+#define MATCH_STATE_WARMUP 2
+#define MATCH_STATE_COUNTDOWN 3
+#define MATCH_STATE_PLAYTIME 4
+#define MATCH_STATE_PAUSE 5
+#define MATCH_STATE_OVERTIME 6
+#define MATCH_STATE_WAITEXIT 7
 
 // ugly GCC/MSC ABI incompatibility hack
 #if ( defined _WIN32 ) && ( defined __GNUC__ )
@@ -362,6 +369,8 @@ typedef struct
 	char		nextmap[MAX_QPATH];		// go here when fraglimit is hit
 
 	// intermission state
+	int			status;
+	char		*nextmap;
 	int 		intermission_framenum;		// time the intermission was started
 	vec3_t		intermission_origin;
 	vec3_t		intermission_angle;
@@ -543,10 +552,8 @@ extern	edict_t			*g_edicts;
 #define DF( x )     ( ( ( int )dmflags->value & DF_ ## x ) != 0 )
 
 extern	cvar_t	*maxentities;
-//extern	cvar_t	*deathmatch; //atu
-//extern	cvar_t	*coop;
-extern	cvar_t	*midair;	//
-extern	cvar_t	*ctf;		// на всяк случай =)
+extern	cvar_t	*g_midair;	
+extern	cvar_t	*g_ctf;		
 extern	cvar_t	*dmflags;
 extern	cvar_t	*skill;
 extern	cvar_t	*fraglimit;

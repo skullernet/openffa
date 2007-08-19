@@ -259,9 +259,6 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 	if (!targ->takedamage)
 		return;
 
-//	if (targ == attacker)    //atu Думает
-//		damage *= 0.5;
-
 	// friendly fire avoidance
 	// if enabled you can't hurt teammates (but you can hurt yourself)
 	// knockback still occurs
@@ -290,7 +287,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 		knockback = 0;
 
 	//--------------------------------------------------------midair-------------------------------------------
-	if (midair->value)
+	if (g_midair->value)
 	{	
 		float		playerheight, minheight = 45, midheight = 0;
 		qboolean	lowheight = qfalse, midairshot = qtrue;
@@ -299,7 +296,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 		midheight = targ->s.origin[2] - inflictor->s.old_origin[2];
 
         if (!knockback&&(mod==MOD_ROCKET))
-			knockback=damage; //ну если демедж от ракеты то всётаки мы будем отбрасывать
+			knockback=damage; //If the player receives damage from a rocket He should be knocked out
 
 		if ((knockback) && (targ->movetype != MOVETYPE_NONE) && (targ->movetype != MOVETYPE_BOUNCE) && (targ->movetype != MOVETYPE_PUSH) && (targ->movetype != MOVETYPE_STOP))
 		{
@@ -319,7 +316,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 
 			knockback = damage;
 
-			push = 1600.0f * ((float)knockback / mass); //типа как в QW
+			push = 1600.0f * ((float)knockback / mass);
 				
 	        VectorMA( targ->velocity, push, dir, targ->velocity );
 			//gi.bprintf (PRINT_MEDIUM,"targ mass: %i .\n", (int)mass) ;
@@ -393,7 +390,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 		}
 	}
 
-//	if (midair->value && level.status != MATCH_STATE_PLAYTIME) //во время вармапа в мидейре нельзя нанести дамадж
+//	if (midair->value && level.status != MATCH_STATE_PLAYTIME) // Midar: Damage can be received only during a match
 //	{
 //		take = 0;
 //		save = damage;
@@ -503,7 +500,7 @@ void T_RadiusDamage (edict_t *inflictor, edict_t *attacker, float damage, edict_
 	edict_t	*ent = NULL;
 	vec3_t	v;
 	vec3_t	dir;
-	if (midair->value)
+	if (g_midair->value)
 		radius = damage + 40;
 
 	while ((ent = findradius(ent, inflictor->s.origin, radius)) != NULL)
