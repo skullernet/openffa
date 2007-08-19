@@ -254,8 +254,13 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 	int			psave;
 	int			te_sparks;
 
+
+
 	if (!targ->takedamage)
 		return;
+
+//	if (targ == attacker)    //atu Думает
+//		damage *= 0.5;
 
 	// friendly fire avoidance
 	// if enabled you can't hurt teammates (but you can hurt yourself)
@@ -284,30 +289,120 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 	if (targ->flags & FL_NO_KNOCKBACK)
 		knockback = 0;
 
-// figure momentum add
-	if (!(dflags & DAMAGE_NO_KNOCKBACK))
-	{
+	//--------------------------------------------------------midair-------------------------------------------
+	if (midair->value)
+	{	
+		float		playerheight, minheight = 45, midheight = 0;
+		qboolean	lowheight = qfalse, midairshot = qtrue;
+
+		playerheight = MidAir_Height(targ);
+		midheight = targ->s.origin[2] - inflictor->s.old_origin[2];
+
+        if (!knockback&&(mod==MOD_ROCKET))
+			knockback=damage; //ну если демедж от ракеты то всётаки мы будем отбрасывать
+
 		if ((knockback) && (targ->movetype != MOVETYPE_NONE) && (targ->movetype != MOVETYPE_BOUNCE) && (targ->movetype != MOVETYPE_PUSH) && (targ->movetype != MOVETYPE_STOP))
 		{
-			vec3_t	kvel;
-			float	mass;
+			float	mass = 50.0;
+			float   push;
 
-			if (targ->mass < 50)
-				mass = 50;
+			if ( playerheight < minheight )
+				lowheight = qtrue;
 			else
+			{
+				damage *= ( 1 + ( playerheight - minheight ) / 64 );
+				lowheight = qfalse;
+			}
+
+			if (targ->mass > 50)
 				mass = targ->mass;
 
-			if (targ->client  && attacker == targ)
-				VectorScale (dir, 1600.0 * (float)knockback / mass, kvel);	// the rocket jump hack...
-			else
-				VectorScale (dir, 500.0 * (float)knockback / mass, kvel);
+			knockback = damage;
 
-			VectorAdd (targ->velocity, kvel, targ->velocity);
+			push = 1600.0f * ((float)knockback / mass); //типа как в QW
+				
+	        VectorMA( targ->velocity, push, dir, targ->velocity );
+			//gi.bprintf (PRINT_MEDIUM,"targ mass: %i .\n", (int)mass) ;
+			//gi.bprintf (PRINT_MEDIUM,"Vector Length: %i .   Vertical Scalar : %i .\n", (int)VectorLength (targ->velocity), (int)targ->velocity[2]) ;
+
+			if (lowheight)
+			{
+				targ->velocity[2] *= 1.5;
+			}
+			if(inflictor != world)
+			{  
+				if ((playerheight>minheight) && (attacker!=targ) && ((mod==MOD_ROCKET) || (mod==MOD_GRENADE)))
+				{
+					char		*message;
+					//gi.bprintf (PRINT_HIGH, "%1.f (midheight)\n", midheight) ;
+					if (midheight > 190)
+					{
+						if ( midheight > 900 )
+						{
+						//if (level.status ==  MATCH_STATE_PLAYTIME)
+							attacker->client->resp.score += 8;
+						message = "d1am0nd midair";
+						}
+						else if ( midheight > 500 )
+						{
+							//if (level.status ==  MATCH_STATE_PLAYTIME)
+								attacker->client->resp.score += 4;
+							message = "g0ld midair";
+						}
+						else if ( midheight > 380 )
+						{
+							//if (level.status ==  MATCH_STATE_PLAYTIME)
+								attacker->client->resp.score += 2;
+							message = "s1lver midair";
+						}
+						else
+						{
+							//if (level.status ==  MATCH_STATE_PLAYTIME)
+								attacker->client->resp.score++;
+							message = "midair";
+						}
+						gi.bprintf (PRINT_CHAT, "%s got %s. %1.f (midheight)\n", attacker->client->pers.netname, message, midheight) ;
+					}
+				}
+			}
+			else return;
+		}
+	}
+	else //-------------------------------------------------End of Midair------------------------------------------
+	{
+	// figure momentum add
+		if (!(dflags & DAMAGE_NO_KNOCKBACK))
+		{
+			if ((knockback) && (targ->movetype != MOVETYPE_NONE) && (targ->movetype != MOVETYPE_BOUNCE) && (targ->movetype != MOVETYPE_PUSH) && (targ->movetype != MOVETYPE_STOP))
+			{
+				float	mass;
+				float push;
+
+				if (targ->mass < 50)
+					mass = 50;
+				else
+					mass = targ->mass;
+	
+				if (targ->client  && attacker == targ)
+					push = 1600.0f * ((float)knockback / mass);
+				else
+					push = 500.0f * ((float)knockback / mass);
+
+				VectorMA( targ->velocity, push, dir, targ->velocity );
+			}
 		}
 	}
 
-	take = damage;
-	save = 0;
+//	if (midair->value && level.status != MATCH_STATE_PLAYTIME) //во время вармапа в мидейре нельзя нанести дамадж
+//	{
+//		take = 0;
+//		save = damage;
+//	}
+//	else
+//	{
+		take = damage;
+		save = 0;
+//	}
 
 	// check for godmode
 	if ( (targ->flags & FL_GODMODE) && !(dflags & DAMAGE_NO_PROTECTION) )
@@ -350,7 +445,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 // do the damage
 	if (take)
 	{
-		if ((targ->svflags & SVF_MONSTER) || (client))
+		if (client)
 			if(targ == attacker)
 				SpawnDamage (TE_BLOOD, targ->s.origin, normal, take);
 			else
@@ -365,7 +460,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 			
 		if (targ->health <= 0)
 		{
-			if ((targ->svflags & SVF_MONSTER) || (client))
+			if (client)
 				targ->flags |= FL_NO_KNOCKBACK;
 			Killed (targ, inflictor, attacker, take, point);
 			return;
@@ -408,6 +503,8 @@ void T_RadiusDamage (edict_t *inflictor, edict_t *attacker, float damage, edict_
 	edict_t	*ent = NULL;
 	vec3_t	v;
 	vec3_t	dir;
+	if (midair->value)
+		radius = damage + 40;
 
 	while ((ent = findradius(ent, inflictor->s.origin, radius)) != NULL)
 	{
@@ -431,4 +528,18 @@ void T_RadiusDamage (edict_t *inflictor, edict_t *attacker, float damage, edict_
 			}
 		}
 	}
+}
+
+//-------------------------------------------------------------------------------
+float MidAir_Height (edict_t *targ)
+{
+	trace_t trace;
+	
+	trace = gi.trace(targ->s.origin, targ->mins, targ->maxs, tv(targ->s.origin[0], targ->s.origin[1], targ->s.origin[2] - 16000), targ, MASK_SOLID);
+
+	if( trace.fraction == 1 || trace.allsolid )
+	{
+		return 0.0f;
+	} else
+		return targ->s.origin[2] - trace.endpos[2];
 }

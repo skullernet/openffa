@@ -543,8 +543,10 @@ extern	edict_t			*g_edicts;
 #define DF( x )     ( ( ( int )dmflags->value & DF_ ## x ) != 0 )
 
 extern	cvar_t	*maxentities;
-extern	cvar_t	*deathmatch;
-extern	cvar_t	*coop;
+//extern	cvar_t	*deathmatch; //atu
+//extern	cvar_t	*coop;
+extern	cvar_t	*midair;	//
+extern	cvar_t	*ctf;		// на всяк случай =)
 extern	cvar_t	*dmflags;
 extern	cvar_t	*skill;
 extern	cvar_t	*fraglimit;
@@ -684,6 +686,7 @@ qboolean OnSameTeam (edict_t *ent1, edict_t *ent2);
 qboolean CanDamage (edict_t *targ, edict_t *inflictor);
 void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod);
 void T_RadiusDamage (edict_t *inflictor, edict_t *attacker, float damage, edict_t *ignore, float radius, int mod);
+float MidAir_Height (edict_t *targ); //atu midair
 
 // damage flags
 #define DAMAGE_RADIUS			0x00000001	// damage was indirect

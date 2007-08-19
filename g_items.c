@@ -150,11 +150,11 @@ qboolean Pickup_Powerup (edict_t *ent, edict_t *other)
 	int		quantity;
 
 	quantity = other->client->inventory[ITEM_INDEX(ent->item)];
-	if ((skill->value == 1 && quantity >= 2) || (skill->value >= 2 && quantity >= 1))
-		return qfalse;
+//	if ((skill->value == 1 && quantity >= 2) || (skill->value >= 2 && quantity >= 1))
+//		return qfalse;
 
-	if ((coop->value) && (ent->item->flags & IT_STAY_COOP) && (quantity > 0))
-		return qfalse;
+//	if ((coop->value) && (ent->item->flags & IT_STAY_COOP) && (quantity > 0))
+//		return qfalse;
 
 	other->client->inventory[ITEM_INDEX(ent->item)]++;
 

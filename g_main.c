@@ -31,8 +31,10 @@ int meansOfDeath;
 
 edict_t		*g_edicts;
 
-cvar_t	*deathmatch;
-cvar_t	*coop;
+//cvar_t	*deathmatch;
+//cvar_t	*coop;
+cvar_t	*midair;
+cvar_t	*ctf;
 cvar_t	*dmflags;
 cvar_t	*skill;
 cvar_t	*fraglimit;
@@ -498,9 +500,11 @@ void InitGame (void)
 	gi.cvar ("gamedate", __DATE__ , CVAR_SERVERINFO | CVAR_LATCH);
 
 	maxclients = gi.cvar ("maxclients", "4", CVAR_SERVERINFO | CVAR_LATCH);
-	deathmatch = gi.cvar ("deathmatch", "1", CVAR_LATCH);
-	coop = gi.cvar ("coop", "0", CVAR_LATCH);
-	skill = gi.cvar ("skill", "1", CVAR_LATCH);
+	//deathmatch = gi.cvar ("deathmatch", "1", CVAR_LATCH); //atu
+	//coop = gi.cvar ("coop", "0", CVAR_LATCH);
+	midair = gi.cvar ("midair", "0", CVAR_LATCH); //atu
+	ctf = gi.cvar ("ctf", "0", CVAR_LATCH); //atu
+	//skill = gi.cvar ("skill", "1", CVAR_LATCH); //atu
 	maxentities = gi.cvar ("maxentities", "1024", CVAR_LATCH);
 
 	// change anytime vars
@@ -530,8 +534,8 @@ void InitGame (void)
 	sv_maplist = gi.cvar ("sv_maplist", "", 0);
 
     // force deathmatch
-    gi.cvar_set( "coop", "0" );
-    gi.cvar_set( "deathmatch", "1" );
+    //gi.cvar_set( "coop", "0" ); //atu
+    //gi.cvar_set( "deathmatch", "1" );
 
 	// initialize all entities for this game
 	game.maxentities = maxentities->value;
