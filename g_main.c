@@ -72,7 +72,6 @@ cvar_t	*flood_waitdelay;
 
 cvar_t	*sv_maplist;
 
-void SpawnEntities (char *mapname, char *entities, char *spawnpoint);
 void ClientThink (edict_t *ent, usercmd_t *cmd);
 qboolean ClientConnect (edict_t *ent, char *userinfo);
 void ClientUserinfoChanged (edict_t *ent, char *userinfo);
@@ -80,121 +79,9 @@ void ClientDisconnect (edict_t *ent);
 void ClientBegin (edict_t *ent);
 void ClientCommand (edict_t *ent);
 void RunEntity (edict_t *ent);
-void WriteGame (char *filename, qboolean autosave);
-void ReadGame (char *filename);
-void WriteLevel (char *filename);
-void ReadLevel (char *filename);
-void InitGame (void);
-void G_RunFrame (void);
 
 
 //===================================================================
-
-void ShutdownGame (void)
-{
-	gi.dprintf ("==== ShutdownGame ====\n");
-
-	gi.FreeTags (TAG_LEVEL);
-	gi.FreeTags (TAG_GAME);
-}
-
-/*
-=================
-GetGameAPI
-
-Returns a pointer to the structure with all entry points
-and global variables
-=================
-*/
-EXPORTED game_export_t *GetGameAPI (game_import_t *import)
-{
-	gi = *import;
-
-	globals.apiversion = GAME_API_VERSION;
-	globals.Init = InitGame;
-	globals.Shutdown = ShutdownGame;
-	globals.SpawnEntities = SpawnEntities;
-
-	globals.WriteGame = WriteGame;
-	globals.ReadGame = ReadGame;
-	globals.WriteLevel = WriteLevel;
-	globals.ReadLevel = ReadLevel;
-
-	globals.ClientThink = ClientThink;
-	globals.ClientConnect = ClientConnect;
-	globals.ClientUserinfoChanged = ClientUserinfoChanged;
-	globals.ClientDisconnect = ClientDisconnect;
-	globals.ClientBegin = ClientBegin;
-	globals.ClientCommand = ClientCommand;
-
-	globals.RunFrame = G_RunFrame;
-
-	globals.ServerCommand = ServerCommand;
-
-	globals.edict_size = sizeof(edict_t);
-
-	return &globals;
-}
-
-EXPORTED int GetGameFeatures( int features ) {
-    serverFeatures = features;
-    return GAME_FEATURE_CLIENTNUM;
-}
-
-#ifndef GAME_HARD_LINKED
-
-// this is only here so the functions in q_shared.c can link
-void Com_Printf( const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAX_STRING_CHARS];
-
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
-
-	gi.dprintf( "%s", text );
-}
-
-void Com_DPrintf( const char *fmt, ... ) {
-}
-
-void Com_WPrintf( const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAX_STRING_CHARS];
-
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
-
-	gi.dprintf( "WARNING: %s", text );
-}
-
-void Com_EPrintf( const char *fmt, ... ) {
-	va_list		argptr;
-	char		text[MAX_STRING_CHARS];
-
-	va_start( argptr, fmt );
-	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-	va_end( argptr );
-
-	gi.dprintf( "ERROR: %s", text );
-}
-
-void Com_Error( comErrorType_t err_level, const char *error, ... ) {
-	va_list		argptr;
-	char		text[MAX_STRING_CHARS];
-
-	va_start( argptr, error );
-	Q_vsnprintf( text, sizeof( text ), error, argptr );
-	va_end( argptr );
-
-	gi.error( "%s", text );
-}
-
-#endif
-
-//======================================================================
-
 
 /*
 =================
@@ -465,6 +352,13 @@ void G_RunFrame (void)
 }
 
 
+static void G_Shutdown (void) {
+	gi.dprintf ("==== ShutdownGame ====\n");
+
+	gi.FreeTags (TAG_LEVEL);
+	gi.FreeTags (TAG_GAME);
+}
+
 
 /*
 ============
@@ -475,8 +369,7 @@ only happens when a new game is started or a save game
 is loaded.
 ============
 */
-void InitGame (void)
-{
+static void G_Init (void) {
 	gi.dprintf ("==== InitGame ====\n");
 
 	gun_x = gi.cvar ("gun_x", "0", 0);
@@ -544,15 +437,111 @@ void InitGame (void)
 	globals.num_edicts = game.maxclients+1;
 }
 
-void WriteGame (char *filename, qboolean autosave) {
+static void G_WriteGame (const char *filename, qboolean autosave) {
 }
 
-void ReadGame (char *filename) {
+static void G_ReadGame (const char *filename) {
 }
 
-void WriteLevel (char *filename) {
+static void G_WriteLevel (const char *filename) {
 }
 
-void ReadLevel (char *filename) {
+static void G_ReadLevel (const char *filename) {
 }
 
+//======================================================================
+
+#ifndef GAME_HARD_LINKED
+
+// this is only here so the functions in q_shared.c can link
+void Com_Printf( const char *fmt, ... ) {
+	va_list		argptr;
+	char		text[MAX_STRING_CHARS];
+
+	va_start( argptr, fmt );
+	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
+	va_end( argptr );
+
+	gi.dprintf( "%s", text );
+}
+
+void Com_DPrintf( const char *fmt, ... ) {
+}
+
+void Com_WPrintf( const char *fmt, ... ) {
+	va_list		argptr;
+	char		text[MAX_STRING_CHARS];
+
+	va_start( argptr, fmt );
+	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
+	va_end( argptr );
+
+	gi.dprintf( "WARNING: %s", text );
+}
+
+void Com_EPrintf( const char *fmt, ... ) {
+	va_list		argptr;
+	char		text[MAX_STRING_CHARS];
+
+	va_start( argptr, fmt );
+	Q_vsnprintf( text, sizeof( text ), fmt, argptr );
+	va_end( argptr );
+
+	gi.dprintf( "ERROR: %s", text );
+}
+
+void Com_Error( comErrorType_t err_level, const char *error, ... ) {
+	va_list		argptr;
+	char		text[MAX_STRING_CHARS];
+
+	va_start( argptr, error );
+	Q_vsnprintf( text, sizeof( text ), error, argptr );
+	va_end( argptr );
+
+	gi.error( "%s", text );
+}
+
+#endif
+
+/*
+=================
+GetGameAPI
+
+Returns a pointer to the structure with all entry points
+and global variables
+=================
+*/
+EXPORTED game_export_t *GetGameAPI (game_import_t *import)
+{
+	gi = *import;
+
+	globals.apiversion = GAME_API_VERSION;
+	globals.Init = G_Init;
+	globals.Shutdown = G_Shutdown;
+	globals.SpawnEntities = G_SpawnEntities;
+
+	globals.WriteGame = G_WriteGame;
+	globals.ReadGame = G_ReadGame;
+	globals.WriteLevel = G_WriteLevel;
+	globals.ReadLevel = G_ReadLevel;
+
+	globals.ClientThink = ClientThink;
+	globals.ClientConnect = ClientConnect;
+	globals.ClientUserinfoChanged = ClientUserinfoChanged;
+	globals.ClientDisconnect = ClientDisconnect;
+	globals.ClientBegin = ClientBegin;
+	globals.ClientCommand = ClientCommand;
+
+	globals.RunFrame = G_RunFrame;
+
+	globals.ServerCommand = G_ServerCommand;
+
+	globals.edict_size = sizeof(edict_t);
+
+	return &globals;
+}
+
+EXPORTED int GetGameFeatures( int features ) {
+    serverFeatures = features;
+    return GAME_FEATURE_CLIENTNUM;
+}

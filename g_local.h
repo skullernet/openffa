@@ -368,9 +368,11 @@ typedef struct
 	char		mapname[MAX_QPATH];		// the server name (base1, etc)
 	char		nextmap[MAX_QPATH];		// go here when fraglimit is hit
 
-	// intermission state
 	int			status;
-	char		*nextmap;
+    int         warmup_framenum;        // time warmup finishes
+    int         frames_remaining;       // timelimit
+
+	// intermission state
 	int 		intermission_framenum;		// time the intermission was started
 	vec3_t		intermission_origin;
 	vec3_t		intermission_angle;
@@ -758,8 +760,7 @@ void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 //
 // g_svcmds.c
 //
-void	ServerCommand (void);
-qboolean SV_FilterPacket (char *from);
+void G_ServerCommand (void);
 
 //
 // p_view.c
@@ -801,6 +802,11 @@ void ChaseNext(edict_t *ent);
 void ChasePrev(edict_t *ent);
 void GetChaseTarget(edict_t *ent);
 void SetChaseTarget( edict_t *ent, edict_t *targ );
+
+//
+// g_spawn.c
+//
+void G_SpawnEntities (const char *mapname, const char *entities, const char *spawnpoint);
 
 //============================================================================
 

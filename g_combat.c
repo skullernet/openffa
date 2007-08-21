@@ -290,7 +290,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 	if (g_midair->value)
 	{	
 		float		playerheight, minheight = 45, midheight = 0;
-		qboolean	lowheight = qfalse, midairshot = qtrue;
+		qboolean	lowheight = qfalse;//, midairshot = qtrue;
 
 		playerheight = MidAir_Height(targ);
 		midheight = targ->s.origin[2] - inflictor->s.old_origin[2];

@@ -262,8 +262,7 @@ ED_CallSpawn
 Finds the spawn function for the entity and calls it
 ===============
 */
-void ED_CallSpawn (edict_t *ent)
-{
+void ED_CallSpawn (edict_t *ent) {
 	const spawn_t	*s;
 	const gitem_t	*item;
 	int		i;
@@ -300,8 +299,7 @@ void ED_CallSpawn (edict_t *ent)
 ED_NewString
 =============
 */
-char *ED_NewString (char *string)
-{
+static char *ED_NewString (char *string) {
 	char	*newb, *new_p;
 	int		i,l;
 	
@@ -329,8 +327,6 @@ char *ED_NewString (char *string)
 }
 
 
-
-
 /*
 ===============
 ED_ParseField
@@ -339,8 +335,7 @@ Takes a key/value pair and sets the binary values
 in an edict
 ===============
 */
-void ED_ParseField (char *key, char *value, edict_t *ent)
-{
+static void ED_ParseField (char *key, char *value, edict_t *ent) {
 	const field_t	*f;
 	byte	*b;
 	float	v;
@@ -397,8 +392,7 @@ Parses an edict out of the given string, returning the new position
 ed should be a properly initialized empty edict.
 ====================
 */
-char *ED_ParseEdict (char *data, edict_t *ent)
-{
+static void ED_ParseEdict (const char **data, edict_t *ent) {
 	qboolean	init;
 	char		keyname[256];
 	char		*com_token;
@@ -410,17 +404,17 @@ char *ED_ParseEdict (char *data, edict_t *ent)
 	while (1)
 	{	
 	// parse key
-		com_token = COM_Parse (( const char ** )&data);
+		com_token = COM_Parse (data);
 		if (com_token[0] == '}')
 			break;
-		if (!data)
+		if (!*data)
 			gi.error ("ED_ParseEntity: EOF without closing brace");
 
 		Q_strncpyz (keyname, com_token, sizeof(keyname));
 		
 	// parse value	
-		com_token = COM_Parse (( const char ** )&data);
-		if (!data)
+		com_token = COM_Parse (data);
+		if (!*data)
 			gi.error ("ED_ParseEntity: EOF without closing brace");
 
 		if (com_token[0] == '}')
@@ -438,8 +432,6 @@ char *ED_ParseEdict (char *data, edict_t *ent)
 
 	if (!init)
 		memset (ent, 0, sizeof(*ent));
-
-	return data;
 }
 
 
@@ -503,7 +495,7 @@ Creates a server's entity / program execution context by
 parsing textual entity definitions out of an ent file.
 ==============
 */
-void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
+void G_SpawnEntities (const char *mapname, const char *entities, const char *spawnpoint)
 {
 	edict_t		*ent;
     gclient_t   *client;
@@ -547,7 +539,7 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 	while (1)
 	{
 		// parse the opening brace	
-		com_token = COM_Parse (( const char ** )&entities);
+		com_token = COM_Parse (&entities);
 		if (!entities)
 			break;
 		if (com_token[0] != '{')
@@ -557,7 +549,7 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 			ent = g_edicts;
 		else
 			ent = G_Spawn ();
-		entities = ED_ParseEdict (entities, ent);
+		ED_ParseEdict (&entities, ent);
 
 		// remove things (except the world) from different skill levels or deathmatch
 		if (ent != g_edicts)

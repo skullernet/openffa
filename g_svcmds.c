@@ -21,8 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "g_local.h"
 
 
-void	Svcmd_Test_f (void)
-{
+static void Svcmd_Test_f (void) {
 	gi.cprintf (NULL, PRINT_HIGH, "Svcmd_Test_f()\n");
 }
 
@@ -35,8 +34,7 @@ The game can issue gi.argc() / gi.argv() commands to get the rest
 of the parameters
 =================
 */
-void	ServerCommand (void)
-{
+void G_ServerCommand (void) {
 	char	*cmd;
 
 	cmd = gi.argv(1);

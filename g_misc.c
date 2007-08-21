@@ -634,7 +634,7 @@ void SP_misc_eastertank (edict_t *ent)
 	ent->s.modelindex = gi.modelindex ("models/monsters/tank/tris.md2");
 	ent->s.frame = 254;
 	ent->think = misc_eastertank_think;
-	ent->nextthink = level.time + 2 * FRAMETIME;
+	ent->nextthink = level.framenum + 2;
 	gi.linkentity (ent);
 }
 
