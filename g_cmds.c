@@ -1013,6 +1013,10 @@ int G_CalcVote( int *acc, int *rej ) {
 qboolean G_CheckVote( void ) {
     int treshold = g_vote_treshold->value;
     int acc, rej;
+
+	if( !level.vote.proposal ) {
+		return qfalse;
+	}
     
     // is our victim gone?
     if( level.vote.victim && !level.vote.victim->pers.connected ) {

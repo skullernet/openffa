@@ -1228,11 +1228,16 @@ Will not be called between levels.
 void ClientDisconnect (edict_t *ent)
 {
 	int		playernum, total;
+	conn_t	connected;
 
 	if (!ent->client)
 		return;
 
-    if( ent->client->pers.connected == CONN_SPAWNED ) {
+	connected = ent->client->pers.connected;
+	ent->client->pers.connected = CONN_DISCONNECTED;
+	ent->client->ps.stats[STAT_FRAGS] = 0;
+
+    if( connected == CONN_SPAWNED ) {
         // send effect
         gi.WriteByte (svc_muzzleflash);
         gi.WriteShort (ent-g_edicts);
@@ -1241,9 +1246,9 @@ void ClientDisconnect (edict_t *ent)
 
         // update ranks
         total = G_UpdateRanks();
-        gi.bprintf( PRINT_HIGH, "%s disconnected (%d players)\n",
-            ent->client->pers.netname, total );
-    } else if( ent->client->pers.connected > CONN_CONNECTED ) {
+        gi.bprintf( PRINT_HIGH, "%s disconnected (%d player%s)\n",
+            ent->client->pers.netname, total, total == 1 ? "" : "s" );
+    } else if( connected > CONN_CONNECTED ) {
         gi.bprintf( PRINT_HIGH, "%s disconnected\n",
             ent->client->pers.netname );
     }
@@ -1259,8 +1264,6 @@ void ClientDisconnect (edict_t *ent)
 	ent->inuse = qfalse;
 	ent->classname = "disconnected";
     ent->svflags = SVF_NOCLIENT;
-	ent->client->pers.connected = CONN_DISCONNECTED;
-	ent->client->ps.stats[STAT_FRAGS] = 0;
 
 	playernum = ent-g_edicts-1;
 	gi.configstring (CS_PLAYERSKINS+playernum, "");
