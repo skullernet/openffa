@@ -193,7 +193,7 @@ void DeathmatchScoreboardMessage( edict_t *ent, edict_t *killer ) {
             sec = 1;
         }
 
-        if( c->resp.score ) {
+        if( c->resp.score > 0 ) {
             j = c->resp.score + c->resp.deaths;
             eff = j ? c->resp.score * 100 / j : 100;
         } else {
