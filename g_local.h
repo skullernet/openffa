@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "config.h"
 #include "q_shared.h"
+#include "q_list.h"
 
 typedef unsigned int memtag_t;
 
@@ -492,6 +493,19 @@ typedef struct
 	void		(*endfunc)(edict_t *);
 } moveinfo_t;
 
+
+#define MAP_NOAUTO  1
+#define MAP_NOVOTE  2
+
+typedef struct {
+    list_t  entry;
+    int min, max;
+    int flags;
+    char name[1];
+} map_entry_t;
+
+extern list_t           g_maplist;
+
 extern	const gitem_t	g_itemlist[ITEM_TOTAL];
 
 extern	game_locals_t	game;
@@ -761,6 +775,8 @@ void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 // g_svcmds.c
 //
 void G_ServerCommand (void);
+map_entry_t *G_FindMap( const char *name );
+map_entry_t *G_RandomMap( void );
 
 //
 // p_view.c

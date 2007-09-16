@@ -45,6 +45,7 @@ cvar_t	*g_vote_mask;
 cvar_t	*g_vote_time;
 cvar_t	*g_vote_treshold;
 cvar_t	*g_vote_limit;
+cvar_t	*g_randomize;
 cvar_t	*dedicated;
 
 cvar_t	*filterban;
@@ -150,52 +151,39 @@ EndDMLevel
 The timelimit or fraglimit has been exceeded
 =================
 */
-void EndDMLevel (void)
-{
-	edict_t		*ent;
-	char *s, *t, *f;
-	static const char *seps = " ,\n\r";
+void EndDMLevel ( void ) {
+    int r = g_randomize->value;
+    map_entry_t *map;
 
     strcpy( level.nextmap, level.mapname );
 
+	BeginIntermission();
+
 	// stay on same level flag
-	if( DF(SAME_LEVEL) ) {
-		BeginIntermission ();
+	if( DF( SAME_LEVEL ) ) {
 		return;
 	}
 
-	// see if it's in the map list
-	if (*sv_maplist->string) {
-		s = CopyString(sv_maplist->string);
-		f = NULL;
-		t = strtok(s, seps);
-		while (t != NULL) {
-			if (Q_stricmp(t, level.mapname) == 0) {
-				// it's in the list, go to the next one
-				t = strtok(NULL, seps);
-				if (t == NULL) { // end of list, go to first one
-					if (f != NULL) // there isn't a first one, same level
-						strcpy( level.nextmap, f );
-				} else
-					strcpy( level.nextmap, t );
-                BeginIntermission ();
-				gi.TagFree(s);
-				return;
-			}
-			if (!f)
-				f = t;
-			t = strtok(NULL, seps);
-		}
-		gi.TagFree(s);
-	}
-
-	// search for a changelevel
-    ent = G_Find (NULL, FOFS(classname), "target_changelevel");
-    if (ent) {
-//        strcpy(level.nextmap, ent->);
+    // empty map list?
+    if( LIST_EMPTY( &g_maplist ) ) {
+        return;
     }
-	
-    BeginIntermission ();
+
+    if( r < 1 ) {
+        map = G_FindMap( level.mapname );
+        if( map ) {
+            //map = LIST_NEXT_CYCLE( map_entry_t, map, entry );
+        } else {
+            map = LIST_FIRST( map_entry_t, &g_maplist, entry );
+        }
+    } else {
+        map = G_RandomMap();
+        if( r > 1 && !Q_stricmp( map->name, level.mapname ) ) {
+            //map = LIST_NEXT_CYCLE( map_entry_t, map, entry );
+        }
+    }
+
+    strcpy( level.nextmap, map->name );
 }
 
 void G_StartSound( int index ) {
@@ -406,6 +394,7 @@ static void G_Init (void) {
 	g_vote_time = gi.cvar ("g_vote_time", "120", 0);
 	g_vote_treshold = gi.cvar ("g_vote_treshold", "50", 0);
 	g_vote_limit = gi.cvar ("g_vote_limit", "0", 0);
+	g_randomize = gi.cvar ("g_randomize", "1", 0);
 
 	run_pitch = gi.cvar ("run_pitch", "0.002", 0);
 	run_roll = gi.cvar ("run_roll", "0.005", 0);
