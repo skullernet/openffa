@@ -1318,10 +1318,8 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 	{
 		client->ps.pmove.pm_type = PM_FREEZE;
 		// can exit intermission after five seconds
-		// auto exit after 20 minutes
-		j = level.framenum - level.intermission_framenum;
-        if( j > 5 * HZ ) {
-            if( ( ucmd->buttons & BUTTON_ANY ) || j > 1200 * HZ )
+        if( level.framenum - level.intermission_framenum > 5 * HZ ) {
+            if( ucmd->buttons & BUTTON_ANY )
 	    		G_ExitLevel();
         }
 		return;

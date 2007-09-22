@@ -25,7 +25,7 @@ static void Svcmd_Test_f( void ) {
 	gi.cprintf (NULL, PRINT_HIGH, "Svcmd_Test_f()\n");
 }
 
-list_t  g_maplist;
+LIST_DECL( g_maplist );
 
 map_entry_t *G_FindMap( const char *name ) {
     map_entry_t *map;
@@ -71,24 +71,24 @@ static void Svcmd_Maplist_f( void ) {
     map_entry_t *map, *next;
     int length;
 
-    if( argc < 2 ) {
+    if( argc < 3 ) {
         if( LIST_EMPTY( &g_maplist ) ) {
             Com_Printf( "Map list is empty.\n" );
             return;
         }
         LIST_FOR_EACH( map_entry_t, map, &g_maplist, entry ) {
-            Com_Printf( "%8s %2d %2d %2d\n", map->name, map->min, map->max, map->flags );
+            Com_Printf( "%-8s %2d %2d %2d\n", map->name, map->min, map->max, map->flags );
         }
         return;
     }
 
-    cmd = gi.argv( 1 );
+    cmd = gi.argv( 2 );
     if( !strcmp( cmd, "add" ) ) {
-        if( argc < 3 ) {
+        if( argc < 4 ) {
             Com_Printf( "Usage: add <mapname> [min] [max] [flags]\n" );
             return;
         }
-        name = gi.argv( 2 );
+        name = gi.argv( 3 );
         map = G_FindMap( name );
         if( map ) {
             Com_Printf( "%s already exists in map list.\n", name );
@@ -100,17 +100,17 @@ static void Svcmd_Maplist_f( void ) {
             return;
         }
         map = gi.TagMalloc( sizeof( *map ) + length, TAG_GAME );
-        map->min = atoi( gi.argv( 3 ) );
-        map->max = atoi( gi.argv( 4 ) );
-        map->flags = atoi( gi.argv( 5 ) );
+        map->min = atoi( gi.argv( 4 ) );
+        map->max = atoi( gi.argv( 5 ) );
+        map->flags = atoi( gi.argv( 6 ) );
         strcpy( map->name, name );
         List_Append( &g_maplist, &map->entry );
     } else if( !strcmp( cmd, "del" ) ) {
-        if( argc < 3 ) {
+        if( argc < 4 ) {
             Com_Printf( "Usage: del <mapname>\n" );
             return;
         }
-        name = gi.argv( 2 );
+        name = gi.argv( 3 );
         map = G_FindMap( name );
         if( !map ) {
             Com_Printf( "%s not found in map list.\n", name );
@@ -124,7 +124,20 @@ static void Svcmd_Maplist_f( void ) {
         }
         List_Init( &g_maplist );
     } else {
+        Com_Printf( "Unknown maplist command \"%s\".\n", cmd );
     }
+}
+
+static void Svcmd_Reset_f( void ) {
+    G_ResetLevel();
+}
+
+static void Svcmd_NextMap_f( void ) {
+    if( gi.argc() != 3 ) {
+        Com_Printf( "Usage: nextmap <name>\n" );
+        return;
+    }
+    Q_strncpyz( level.nextmap, gi.argv( 2 ), sizeof( level.nextmap ) );
 }
 
 /*
@@ -139,12 +152,21 @@ of the parameters
 void G_ServerCommand (void) {
 	char	*cmd;
 
+    if( gi.argc() < 2 ) {
+        Com_Printf( "Usage: sv <command> [arguments ...]\n" );
+        return;
+    }
+
 	cmd = gi.argv(1);
 	if (!strcmp (cmd, "test"))
 		Svcmd_Test_f ();
     else if (!strcmp (cmd, "maplist"))
 		Svcmd_Maplist_f ();
+    else if (!strcmp (cmd, "reset"))
+		Svcmd_Reset_f ();
+    else if (!strcmp (cmd, "nextmap"))
+		Svcmd_NextMap_f ();
 	else
-		gi.cprintf (NULL, PRINT_HIGH, "Unknown server command \"%s\"\n", cmd);
+		Com_Printf( "Unknown server command \"%s\"\n", cmd);
 }
 

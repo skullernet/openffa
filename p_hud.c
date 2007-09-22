@@ -87,6 +87,7 @@ void BeginIntermission (void)
 	}
 
 	level.intermission_framenum = level.framenum;
+    level.vote.proposal = 0;
 
 	// find an intermission spot
 	ent = G_Find (NULL, FOFS(classname), "info_player_intermission");

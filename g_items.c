@@ -96,7 +96,7 @@ gitem_t	*FindItem (char *pickup_name)
 
 //======================================================================
 
-void DoRespawn (edict_t *ent)
+static void DoRespawn (edict_t *ent)
 {
 	if (ent->team)
 	{
@@ -139,6 +139,9 @@ void HideItem (edict_t *ent)
 	ent->flags |= FL_RESPAWN;
 	ent->svflags |= SVF_NOCLIENT;
 	ent->solid = SOLID_NOT;
+    if( ent->think == DoRespawn ) {
+        ent->nextthink = 0;
+    }
 	gi.linkentity (ent);
 }
 
@@ -1034,6 +1037,45 @@ void SpawnItem (edict_t *ent, gitem_t *item)
 	if (ent->model)
 		gi.modelindex (ent->model);
 }
+
+
+void G_UpdateItemBans( void ) {
+    int itb = g_item_ban->value;
+    int i;
+    edict_t *ent;
+
+    for( i = game.maxclients + BODY_QUEUE_SIZE + 1; i < globals.num_edicts; i++ ) {
+        ent = &g_edicts[i];
+        if( !ent->inuse || !ent->item ) {
+            continue;
+        }
+	    if( ( ent->spawnflags & (DROPPED_ITEM|DROPPED_PLAYER_ITEM) ) ) {
+            continue;
+        }
+        if( ent->item->use == Use_Quad ) {
+            if( itb & ITB_QUAD ) {
+                HideItem( ent );
+            } else if( ent->svflags & SVF_NOCLIENT ) {
+                SetRespawn( ent, 2 );
+            }
+        } else if( ent->item->use == Use_Invulnerability ) {
+            if( itb & ITB_INVUL ) {
+                HideItem( ent );
+            } else if( ent->svflags & SVF_NOCLIENT ) {
+                SetRespawn( ent, 2 );
+            }
+        } else if( ent->item->weapmodel == WEAP_BFG ) {
+            if( itb & ITB_BFG ) {
+                HideItem( ent );
+            } else if( ent->svflags & SVF_NOCLIENT ) {
+                SetRespawn( ent, 2 );
+            }
+        }
+    }
+    
+    g_item_ban->modified = qfalse;
+}
+
 
 //======================================================================
 

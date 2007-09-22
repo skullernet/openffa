@@ -737,6 +737,11 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 	if (gi.argc () < 2 && !arg0)
 		return;
 
+    if( cl->level.muted ) {
+		gi.cprintf(ent, PRINT_HIGH, "You have been muted by vote.\n" );
+        return;
+    }
+
 	if (!((int)(dmflags->value) & (DF_MODELTEAMS | DF_SKINTEAMS)))
 		team = qfalse;
 
@@ -926,7 +931,7 @@ static void Cmd_Stats_f( edict_t *ent ) {
 
 static void Cmd_CastVote_f( edict_t *ent, qboolean accepted ) {
     if( !level.vote.framenum ) {
-        gi.cprintf( ent, PRINT_HIGH, "There is no vote in progress.\n" );
+        gi.cprintf( ent, PRINT_HIGH, "No vote in progress.\n" );
         return;
     }
     if( ent->client->level.vote.index == level.vote.index ) {
@@ -942,42 +947,6 @@ static void Cmd_CastVote_f( edict_t *ent, qboolean accepted ) {
     }
     
     gi.cprintf( ent, PRINT_HIGH, "Vote cast.\n" );
-}
-
-typedef struct {
-    char name[16];
-    int bit;
-    qboolean (*func)( edict_t * );
-} vote_proposal_t;
-
-static qboolean Vote_Timelimit( edict_t *ent ) {
-    int num = atoi( gi.argv( 2 ) );
-
-    if( num < 0 ) {
-        gi.cprintf( ent, PRINT_HIGH, "Timelimit %d is invalid.\n", num );
-        return qfalse;
-    }
-    if( num == timelimit->value ) {
-        gi.cprintf( ent, PRINT_HIGH, "Timelimit is already set to %d.\n", num );
-        return qfalse;
-    }
-    level.vote.value = num;
-    return qtrue;
-}
-
-static qboolean Vote_Fraglimit( edict_t *ent ) {
-    int num = atoi( gi.argv( 2 ) );
-
-    if( num < 0 ) {
-        gi.cprintf( ent, PRINT_HIGH, "Fraglimit %d is invalid.\n", num );
-        return qfalse;
-    }
-    if( num == fraglimit->value ) {
-        gi.cprintf( ent, PRINT_HIGH, "Fraglimit is already set to %d.\n", num );
-        return qfalse;
-    }
-    level.vote.value = num;
-    return qtrue;
 }
 
 int G_CalcVote( int *acc, int *rej ) {
@@ -1038,16 +1007,20 @@ qboolean G_CheckVote( void ) {
             gi.bprintf( PRINT_HIGH, "Vote passed. Fraglimit set to %d.\n", level.vote.value );
             gi.AddCommandString( va( "set fraglimit %d\n", level.vote.value ) );
             break;
+        case VOTE_ITEMS:
+            gi.bprintf( PRINT_HIGH, "Vote passed. New item config set.\n" );
+            gi.AddCommandString( va( "set g_item_ban %d\n", level.vote.value ) );
+            break;
         case VOTE_KICK:
             gi.bprintf( PRINT_HIGH, "Vote passed. Kicking %s...\n", level.vote.victim->pers.netname );
             gi.AddCommandString( va( "kick %d\n", level.vote.victim - game.clients ) );
             break;
         case VOTE_MUTE:
             gi.bprintf( PRINT_HIGH, "Vote passed. Muting %s...\n", level.vote.victim->pers.netname );
-//            level.vote.victim->pers.muted = qtrue;
+            level.vote.victim->level.muted = qtrue;
             break;
         case VOTE_MAP:
-            gi.bprintf( PRINT_HIGH, "Vote passed. Next map set to %s.\n", level.nextmap );
+            gi.bprintf( PRINT_HIGH, "Vote passed. Next map is %s.\n", level.nextmap );
             BeginIntermission();
             break;
         default:
@@ -1073,19 +1046,47 @@ finish:
 void G_BuildProposal( char *buffer ) {
     switch( level.vote.proposal ) {
     case VOTE_TIMELIMIT:
-        sprintf( buffer, "set timelimit to %d", level.vote.value );
+        sprintf( buffer, "set time limit to %d", level.vote.value );
         break;
     case VOTE_FRAGLIMIT:
-        sprintf( buffer, "set fraglimit to %d", level.vote.value );
+        sprintf( buffer, "set frag limit to %d", level.vote.value );
+        break;
+    case VOTE_ITEMS: {
+            int mask = ( int )g_item_ban->value ^ level.vote.value;
+
+            //strcpy( buffer, "change item config: " );
+            buffer[0] = 0;
+            if( mask & ITB_QUAD ) {
+                if( level.vote.value & ITB_QUAD ) {
+                    strcat( buffer, "-quad " );
+                } else {
+                    strcat( buffer, "+quad " );
+                }
+            }
+            if( mask & ITB_INVUL ) {
+                if( level.vote.value & ITB_INVUL ) {
+                    strcat( buffer, "-inv " );
+                } else {
+                    strcat( buffer, "+inv " );
+                }
+            }
+            if( mask & ITB_BFG ) {
+                if( level.vote.value & ITB_BFG ) {
+                    strcat( buffer, "-bfg " );
+                } else {
+                    strcat( buffer, "+bfg " );
+                }
+            }
+        }
         break;
     case VOTE_KICK:
-        sprintf( buffer, "kick player \"%s\"", level.vote.victim->pers.netname );
+        sprintf( buffer, "kick %s", level.vote.victim->pers.netname );
         break;
     case VOTE_MUTE:
-        sprintf( buffer, "mute player \"%s\"", level.vote.victim->pers.netname );
+        sprintf( buffer, "mute %s", level.vote.victim->pers.netname );
         break;
     case VOTE_MAP:
-        sprintf( buffer, "change map to \"%s\"", level.nextmap );
+        sprintf( buffer, "change map to %s", level.nextmap );
         break;
     default:
         strcpy( buffer, "unknown" );
@@ -1093,25 +1094,87 @@ void G_BuildProposal( char *buffer ) {
     }
 }
 
-#if 0
-static void Vote_Items( edict_t *ent ) {
-    if( *s == '+' || *s == '-' ) {
-        for( v = vote_subjects; v->bit; v++ ) {
-            if( !( v->bit & VOTE_TOGGLE ) ) {
-                continue;
-            }
-            if( !strcmp( s + 1, v->name ) ) {
-                break;
-            }
+
+typedef struct {
+    char name[16];
+    int bit;
+    qboolean (*func)( edict_t * );
+} vote_proposal_t;
+
+static qboolean Vote_Timelimit( edict_t *ent ) {
+    int num = atoi( gi.argv( 2 ) );
+
+    if( num < 0 || num > 3600 ) {
+        gi.cprintf( ent, PRINT_HIGH, "Timelimit %d is invalid.\n", num );
+        return qfalse;
+    }
+    if( num == timelimit->value ) {
+        gi.cprintf( ent, PRINT_HIGH, "Timelimit is already set to %d.\n", num );
+        return qfalse;
+    }
+    level.vote.value = num;
+    return qtrue;
+}
+
+static qboolean Vote_Fraglimit( edict_t *ent ) {
+    int num = atoi( gi.argv( 2 ) );
+
+    if( num < 0 || num > 999 ) {
+        gi.cprintf( ent, PRINT_HIGH, "Fraglimit %d is invalid.\n", num );
+        return qfalse;
+    }
+    if( num == fraglimit->value ) {
+        gi.cprintf( ent, PRINT_HIGH, "Fraglimit is already set to %d.\n", num );
+        return qfalse;
+    }
+    level.vote.value = num;
+    return qtrue;
+}
+
+
+static qboolean Vote_Items( edict_t *ent ) {
+    int i;
+    char *s;
+    int mask = g_item_ban->value;
+    int bit, c;
+
+    for( i = 2; i < gi.argc(); i++ ) {
+        s = gi.argv( i );
+
+        if( *s == '+' || *s == '-' ) {
+            c = *s++;
+        } else {
+            c = '+';
         }
-        if( !v->bit ) {
-            gi.cprintf( ent, PRINT_HIGH,
-                "Unknown item '%s'. Type 'vote help' for usage.\n", s + 1 );
-            return;
+
+        if( !strcmp( s, "all" ) ) {
+            bit = ITB_QUAD|ITB_INVUL|ITB_BFG;
+        } else if( !strcmp( s, "quad" ) ) {
+            bit = ITB_QUAD;
+        } else if( !strcmp( s, "inv" ) || !strcmp( s, "invul" ) ) {
+            bit = ITB_INVUL;
+        } else if( !strcmp( s, "bfg" ) ) {
+            bit = ITB_BFG;
+        } else {
+            gi.cprintf( ent, PRINT_HIGH, "Item %s is not known.\n", s );
+            return qfalse;
+        }
+
+        if( c == '-' ) {
+            mask |= bit;
+        } else {
+            mask &= ~bit;
         }
     }
+
+    if( mask == g_item_ban->value ) {
+        gi.cprintf( ent, PRINT_HIGH, "This item config is already set.\n" );
+        return qfalse;
+    }
+
+    level.vote.value = mask;
+    return qtrue;
 }
-#endif
 
 static qboolean Vote_Victim( edict_t *ent ) {
     edict_t *other = G_SetPlayer( ent, 2 );
@@ -1120,7 +1183,7 @@ static qboolean Vote_Victim( edict_t *ent ) {
     }
 
     if( other == ent ) {
-        gi.cprintf( ent, PRINT_HIGH, "You can't kick yourself.\n" );
+        gi.cprintf( ent, PRINT_HIGH, "You can't %s yourself.\n", gi.argv( 1 ) );
         return qfalse;
     }
 
@@ -1129,7 +1192,22 @@ static qboolean Vote_Victim( edict_t *ent ) {
 }
 
 static qboolean Vote_Map( edict_t *ent ) {
-    return qfalse;
+    char *name = gi.argv( 2 );
+    map_entry_t *map;
+
+    map = G_FindMap( name );
+    if( !map ) {
+        gi.cprintf( ent, PRINT_HIGH, "Map %s is not on the list.\n", name );
+        return qfalse;
+    }
+
+    if( map->flags & MAP_NOVOTE ) {
+        gi.cprintf( ent, PRINT_HIGH, "Map %s is not subject to voting.\n", map->name );
+        return qfalse;
+    }
+
+    strcpy( level.nextmap, map->name );
+    return qtrue;
 }
 
 static const vote_proposal_t vote_proposals[] = {
@@ -1137,7 +1215,7 @@ static const vote_proposal_t vote_proposals[] = {
     { "tl", VOTE_TIMELIMIT, Vote_Timelimit },
     { "fraglimit", VOTE_FRAGLIMIT, Vote_Fraglimit },
     { "fl", VOTE_FRAGLIMIT, Vote_Fraglimit },
-//    { "items", VOTE_ITEMS, Vote_Items },
+    { "items", VOTE_ITEMS, Vote_Items },
     { "kick", VOTE_KICK, Vote_Victim },
     { "mute", VOTE_MUTE, Vote_Victim },
     { "map", VOTE_MAP, Vote_Map },
@@ -1161,7 +1239,7 @@ static void Cmd_Vote_f( edict_t *ent ) {
 
     if( argc < 2 ) {
         if( !level.vote.proposal ) {
-            gi.cprintf( ent, PRINT_HIGH, "No vote in progress.\n" );
+            gi.cprintf( ent, PRINT_HIGH, "No vote in progress. Type 'vote help' for usage.\n" );
             return;
         }
         G_BuildProposal( buffer );
@@ -1181,7 +1259,33 @@ static void Cmd_Vote_f( edict_t *ent ) {
 //
 // generic commands
 //
-    if( !strcmp( s, "help" ) ) {
+    if( !strcmp( s, "help" ) || !strcmp( s, "h" ) ) {
+        gi.cprintf( ent, PRINT_HIGH,
+            "Usage: vote [yes|no|help|proposal] [argument]\n"
+            "Available proposal(s):\n" );
+        if( mask & VOTE_FRAGLIMIT ) {
+            gi.cprintf( ent, PRINT_HIGH, "   fraglimit|fl <count>\n" );
+        }
+        if( mask & VOTE_TIMELIMIT ) {
+            gi.cprintf( ent, PRINT_HIGH, "   timelimit|tl <seconds>\n" );
+        }
+        if( mask & VOTE_ITEMS ) {
+            gi.cprintf( ent, PRINT_HIGH, "   items [+|-]<quad|inv|bfg> [...]\n" );
+        }
+        if( mask & VOTE_KICK ) {
+            gi.cprintf( ent, PRINT_HIGH, "   kick <name|id>\n" );
+        }
+        if( mask & VOTE_MUTE ) {
+            gi.cprintf( ent, PRINT_HIGH, "   mute <name|id>\n" );
+        }
+        if( mask & VOTE_MAP ) {
+            gi.cprintf( ent, PRINT_HIGH, "   map <name>\n" );
+        }
+        if( mask & (VOTE_KICK|VOTE_MUTE) ) {
+            gi.cprintf( ent, PRINT_HIGH,
+                "You may use 'skins' command to obtain player ID.\n"
+                "In case name/ID are ambiguous, ID is matched first.\n");
+        }
         return;
     }
     if( !strcmp( s, "yes" ) || !strcmp( s, "y" ) ) {
@@ -1201,6 +1305,11 @@ static void Cmd_Vote_f( edict_t *ent ) {
         return;
     }
 
+    if( level.intermission_framenum ) {
+        gi.cprintf( ent, PRINT_HIGH, "You may not initiate votes during intermission.\n" );
+        return;
+    }
+
     if( level.framenum - level.vote.framenum < 5*HZ ) {
         gi.cprintf( ent, PRINT_HIGH, "You may not initiate votes too soon.\n" );
         return;
@@ -1217,7 +1326,7 @@ static void Cmd_Vote_f( edict_t *ent ) {
         }
     }
     if( !v->bit ) {
-        gi.cprintf( ent, PRINT_HIGH, "Unknown proposal. Try 'vote help'.\n" );
+        gi.cprintf( ent, PRINT_HIGH, "Unknown proposal. Type 'vote help' for usage.\n" );
         return;
     }
 
@@ -1227,7 +1336,7 @@ static void Cmd_Vote_f( edict_t *ent ) {
     }
 
     if( argc < 3 ) {
-        gi.cprintf( ent, PRINT_HIGH, "Insufficient arguments. Try 'vote help'.\n" );
+        gi.cprintf( ent, PRINT_HIGH, "Insufficient arguments. Type 'vote help' for usage.\n" );
         return;
     }
 
@@ -1239,16 +1348,17 @@ static void Cmd_Vote_f( edict_t *ent ) {
     level.vote.framenum = level.framenum + g_vote_time->value * HZ;
     level.vote.index++;
 
-    G_BuildProposal( buffer );
-
     gi.bprintf( PRINT_CHAT, "%s has initiated a vote!\n",
         ent->client->pers.netname );
-    gi.bprintf( PRINT_HIGH, "Proposal: %s\n", buffer );
     ent->client->level.vote.index = level.vote.index;
     ent->client->level.vote.accepted = qtrue;
     ent->client->level.vote.count++;
 
-    G_CheckVote();
+    // decide vote immediately
+    if( !G_CheckVote() ) {
+        G_BuildProposal( buffer );
+        gi.bprintf( PRINT_HIGH, "Proposal: %s\n", buffer );
+    }
 }
 
 

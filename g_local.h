@@ -80,6 +80,8 @@ typedef trace_t *(*gi_trace_t)( trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, edict
 #define	SPAWNFLAG_NOT_DEATHMATCH	0x00000800
 #define	SPAWNFLAG_NOT_COOP			0x00001000
 
+#define INHIBIT_MASK                (SPAWNFLAG_NOT_EASY|SPAWNFLAG_NOT_MEDIUM|SPAWNFLAG_NOT_HARD|SPAWNFLAG_NOT_COOP|SPAWNFLAG_NOT_DEATHMATCH)
+
 // edict->flags
 #define	FL_FLY					0x00000001
 #define	FL_SWIM					0x00000002	// implied immunity to drowining
@@ -356,6 +358,11 @@ typedef struct
 #define VOTE_MAP        32
 
 
+#define ITB_QUAD    1
+#define ITB_INVUL   2
+#define ITB_BFG     4
+
+
 //
 // this structure is cleared as each map is entered
 // it is read/written to the level.sav file for savegames
@@ -368,6 +375,7 @@ typedef struct
 	char		level_name[MAX_QPATH];	// the descriptive name (Outer Base, etc)
 	char		mapname[MAX_QPATH];		// the server name (base1, etc)
 	char		nextmap[MAX_QPATH];		// go here when fraglimit is hit
+    const char  *entstring;
 
 	int			status;
     int         warmup_framenum;        // time warmup finishes
@@ -375,6 +383,7 @@ typedef struct
 
 	// intermission state
 	int 		intermission_framenum;		// time the intermission was started
+    int         intermission_exit;          // time the intermission was exited
 	vec3_t		intermission_origin;
 	vec3_t		intermission_angle;
 
@@ -429,7 +438,7 @@ typedef struct
         int     framenum;
 
         int     value;
-        struct gclient_s *victim;
+        struct gclient_s    *victim;
     } vote;
 
 	edict_t		*current_entity;	// entity running from G_RunFrame
@@ -497,7 +506,7 @@ typedef struct
 #define MAP_NOAUTO  1
 #define MAP_NOVOTE  2
 
-typedef struct {
+typedef struct map_entry_s {
     list_t  entry;
     int min, max;
     int flags;
@@ -580,6 +589,7 @@ extern  cvar_t	*g_vote_mask;
 extern  cvar_t	*g_vote_time;
 extern  cvar_t	*g_vote_treshold;
 extern  cvar_t	*g_vote_limit;
+extern  cvar_t	*g_item_ban;
 extern	cvar_t	*dedicated;
 
 extern	cvar_t	*filterban;
@@ -675,6 +685,7 @@ int ArmorIndex (edict_t *ent);
 int PowerArmorType (edict_t *ent);
 qboolean Add_Ammo (edict_t *ent, gitem_t *item, int count);
 void Touch_Item (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf);
+void G_UpdateItemBans( void );
 
 //
 // g_utils.c
@@ -809,6 +820,7 @@ void FetchClientEntData (edict_t *ent);
 qboolean G_CheckVote( void ); 
 void G_ExitLevel( void );
 void G_StartSound( int index ); 
+void G_RunFrame( void );
 
 //
 // g_chase.c
@@ -823,6 +835,7 @@ void SetChaseTarget( edict_t *ent, edict_t *targ );
 // g_spawn.c
 //
 void G_SpawnEntities (const char *mapname, const char *entities, const char *spawnpoint);
+void G_ResetLevel( void );
 
 //============================================================================
 
@@ -906,6 +919,7 @@ typedef struct {
         qboolean    accepted;
         int         count;
     } vote;
+    qboolean    muted;
 } client_level_t;
 
 // this structure is cleared on each PutClientInServer(),

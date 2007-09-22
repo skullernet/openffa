@@ -487,6 +487,40 @@ void G_FindTeams (void)
 	gi.dprintf ("%i teams with %i entities\n", c, c2);
 }
 
+void G_ParseString( void ) {
+    const char  *entities = level.entstring;
+	edict_t		*ent;
+	int			inhibit = 0;
+	char		*token;
+
+// parse ents
+	while( 1 ) {
+		// parse the opening brace	
+		token = COM_Parse (&entities);
+		if (!entities)
+			break;
+		if (token[0] != '{')
+			gi.error ("%s: found %s when expecting {", __func__, token);
+
+		ent = G_Spawn ();
+		ED_ParseEdict (&entities, ent);
+
+		// remove things from different skill levels or deathmatch
+        if( ent->spawnflags & SPAWNFLAG_NOT_DEATHMATCH ) {
+            G_FreeEdict (ent);	
+            inhibit++;
+            continue;
+        }
+
+        ent->spawnflags &= ~INHIBIT_MASK;
+
+		ED_CallSpawn (ent);
+	}	
+
+	gi.dprintf ("%i entities inhibited\n", inhibit);
+
+}
+
 /*
 ==============
 SpawnEntities
@@ -499,10 +533,9 @@ void G_SpawnEntities (const char *mapname, const char *entities, const char *spa
 {
 	edict_t		*ent;
     gclient_t   *client;
-	int			inhibit;
-	char		*com_token;
 	int			i;
     client_persistant_t pers;
+    char        *token;
 
 	gi.FreeTags (TAG_LEVEL);
 
@@ -532,45 +565,91 @@ void G_SpawnEntities (const char *mapname, const char *entities, const char *spa
 	    gi.configstring( CS_PLAYERSKINS + i, client->pers.skin );
     }
 
-	ent = NULL;
-	inhibit = 0;
+    // parse worldspawn
+    token = COM_Parse (&entities);
+    if (!entities)
+        gi.error( "%s: empty entity string", __func__ );
+    if (token[0] != '{')
+        gi.error ("%s: found %s when expecting {", __func__, token);
 
-// parse ents
-	while (1)
-	{
-		// parse the opening brace	
-		com_token = COM_Parse (&entities);
-		if (!entities)
-			break;
-		if (com_token[0] != '{')
-			gi.error ("ED_LoadFromFile: found %s when expecting {",com_token);
+    ent = g_edicts;
+    ED_ParseEdict (&entities, ent);
 
-		if (!ent)
-			ent = g_edicts;
-		else
-			ent = G_Spawn ();
-		ED_ParseEdict (&entities, ent);
+    ED_CallSpawn (ent);
 
-		// remove things (except the world) from different skill levels or deathmatch
-		if (ent != g_edicts)
-		{
-            if ( ent->spawnflags & SPAWNFLAG_NOT_DEATHMATCH )
-            {
-                G_FreeEdict (ent);	
-                inhibit++;
-                continue;
-            }
+    level.entstring = entities;
 
-			ent->spawnflags &= ~(SPAWNFLAG_NOT_EASY|SPAWNFLAG_NOT_MEDIUM|SPAWNFLAG_NOT_HARD|SPAWNFLAG_NOT_COOP|SPAWNFLAG_NOT_DEATHMATCH);
-		}
+    G_ParseString();
+	G_FindTeams();
+    G_UpdateItemBans();
+}
 
-		ED_CallSpawn (ent);
-	}	
+void G_ResetLevel( void ) {
+    gclient_t *client;
+    edict_t *ent;
+    int i;
 
-	gi.dprintf ("%i entities inhibited\n", inhibit);
+	gi.FreeTags( TAG_LEVEL );
 
-	G_FindTeams ();
+    // clear level
+    level.framenum = 0;
+    level.time = 0;
+    level.intermission_framenum = 0;
+    level.intermission_exit = 0;
+    level.vote.proposal = 0;
+    level.nextmap[0] = 0;
 
+    // free all edicts
+    for( i = game.maxclients + 1; i < globals.num_edicts; i++ ) {
+        ent = &g_edicts[i];
+        if( ent->inuse ) {
+            G_FreeEdict( ent );
+        }
+    }
+	globals.num_edicts = game.maxclients + 1;
+
+    InitBodyQue();
+
+    // respawn all edicts
+    G_ParseString();
+	G_FindTeams();
+    G_UpdateItemBans();
+
+    // respawn all clients
+    for( i = 0; i < game.maxclients; i++ ) {
+        client = &game.clients[i];
+        if( !client->pers.connected ) {
+            continue;
+        }
+        client->level.enter_framenum = 0;
+        memset( &client->resp, 0, sizeof( client->resp ) );
+        memset( &client->level.vote, 0, sizeof( client->level.vote ) );
+        if( client->pers.connected == CONN_SPAWNED ) {
+            ent = client->edict;
+            G_ScoreChanged( ent );
+            ent->movetype = MOVETYPE_NOCLIP; // do not leave body
+            respawn( ent );
+        }
+    }
+
+    G_UpdateRanks();
+
+    if( timelimit->value > 0 ) {
+        G_WriteTime();
+        gi.multicast( NULL, MULTICAST_ALL );
+    }
+
+    // allow everything to settle
+    G_RunFrame();
+    G_RunFrame();
+
+    // make sure movers are not interpolated
+    for( i = game.maxclients + 1; i < globals.num_edicts; i++ ) {
+        ent = &g_edicts[i];
+        if( ent->inuse && ent->movetype ) {
+            ent->s.event = EV_OTHER_TELEPORT;
+        }
+    }
 }
 
 
@@ -699,8 +778,8 @@ void SP_worldspawn (edict_t *ent)
 	// set configstrings for items
 	SetItemNames ();
 
-	if (st.nextmap)
-		strcpy (level.nextmap, st.nextmap);
+	//if (st.nextmap)
+	//	strcpy (level.nextmap, st.nextmap);
 
 	// make some data visible to the server
 
@@ -711,6 +790,7 @@ void SP_worldspawn (edict_t *ent)
 	}
 	else
 		strncpy (level.level_name, level.mapname, sizeof(level.level_name));
+    ent->message = NULL;
 
 	if (st.sky && st.sky[0])
 		gi.configstring (CS_SKY, st.sky);

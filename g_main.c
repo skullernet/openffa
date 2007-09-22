@@ -46,6 +46,7 @@ cvar_t	*g_vote_time;
 cvar_t	*g_vote_treshold;
 cvar_t	*g_vote_limit;
 cvar_t	*g_randomize;
+cvar_t	*g_item_ban;
 cvar_t	*dedicated;
 
 cvar_t	*filterban;
@@ -155,9 +156,13 @@ void EndDMLevel ( void ) {
     int r = g_randomize->value;
     map_entry_t *map;
 
-    strcpy( level.nextmap, level.mapname );
-
 	BeginIntermission();
+
+    if( level.nextmap[0] ) {
+        return; // already set by operator or vote
+    }
+    
+    strcpy( level.nextmap, level.mapname );
 
 	// stay on same level flag
 	if( DF( SAME_LEVEL ) ) {
@@ -170,19 +175,21 @@ void EndDMLevel ( void ) {
     }
 
     if( r < 1 ) {
+        // sequental maplist traversal
         map = G_FindMap( level.mapname );
         if( map ) {
-            //map = LIST_NEXT_CYCLE( map_entry_t, map, entry );
+            map = LIST_NEXT_CYCLE( map_entry_t, map, &g_maplist, entry );
         } else {
             map = LIST_FIRST( map_entry_t, &g_maplist, entry );
         }
     } else {
         map = G_RandomMap();
         if( r > 1 && !Q_stricmp( map->name, level.mapname ) ) {
-            //map = LIST_NEXT_CYCLE( map_entry_t, map, entry );
+            map = LIST_NEXT_CYCLE( map_entry_t, map, &g_maplist, entry );
         }
     }
 
+    Com_Printf( "Next map is %s.\n", map->name );
     strcpy( level.nextmap, map->name );
 }
 
@@ -198,6 +205,10 @@ CheckDMRules
 static void CheckDMRules( void ) {
 	int			i, remaining;
 	gclient_t	*c;
+
+    if( g_item_ban->modified ) {
+        G_UpdateItemBans();
+    }
 
 	if( timelimit->value > 0 ) {
 		if( level.time >= timelimit->value*60 ) {
@@ -271,8 +282,19 @@ ExitLevel
 void G_ExitLevel (void) {
 	char	command [256];
 
+    if( level.intermission_exit ) {
+        return; // already exited
+    }
+
+    if( !strcmp( level.nextmap, level.mapname ) ) {
+        G_ResetLevel();
+        return;
+    }
+
 	Com_sprintf (command, sizeof(command), "gamemap \"%s\"\n", level.nextmap);
 	gi.AddCommandString (command);
+
+    level.intermission_exit = level.framenum;
 }
 
 /*
@@ -316,13 +338,20 @@ void G_RunFrame (void)
 		G_RunEntity (ent);
 	}
 
-	if( level.intermission_framenum ) {
+    if( level.intermission_exit ) {
+        if( level.framenum > level.intermission_exit + 5 ) {
+            G_ResetLevel(); // in case gamemap failed, reset the level
+        }
+    } else if( level.intermission_framenum ) {
         if( level.framenum == level.intermission_framenum + 1*HZ ) {
             if( rand() & 1 ) {
                 G_StartSound( level.sounds.xian );
             } else {
                 G_StartSound( level.sounds.makron );
             }
+        } else if( level.framenum == level.intermission_framenum + 1200*HZ ) {
+		    // auto exit intermission after 20 minutes
+	    	G_ExitLevel();
         }
     } else {
 	    // see if it is time to end a deathmatch
@@ -345,6 +374,8 @@ static void G_Shutdown (void) {
 
 	gi.FreeTags (TAG_LEVEL);
 	gi.FreeTags (TAG_GAME);
+
+    List_Init( &g_maplist );
 }
 
 
@@ -395,6 +426,7 @@ static void G_Init (void) {
 	g_vote_treshold = gi.cvar ("g_vote_treshold", "50", 0);
 	g_vote_limit = gi.cvar ("g_vote_limit", "0", 0);
 	g_randomize = gi.cvar ("g_randomize", "1", 0);
+	g_item_ban = gi.cvar ("g_item_ban", "0", 0);
 
 	run_pitch = gi.cvar ("run_pitch", "0.002", 0);
 	run_roll = gi.cvar ("run_roll", "0.005", 0);
