@@ -145,6 +145,69 @@ char *CopyString( const char *in ) {
 	return out;
 }
 
+static int QDECL ScoreCmp( const void *p1, const void *p2 ) {
+    score_t *a = *( score_t * const * )p1;
+    score_t *b = *( score_t * const * )p2;
+
+    if( a->score > b->score ) {
+        return 1;
+    }
+    if( a->score < b->score ) {
+        return -1;
+    }
+    if( a->time > b->time ) {
+        return 1;
+    }
+    if( a->time < b->time ) {
+        return -1;
+    }
+    return 0;
+}
+
+static void RegisterScore( void ) {
+	gclient_t	*ranks[MAX_CLIENTS];
+	gclient_t	*c;
+    score_t *s;
+    int total;
+    int sec, score;
+
+    total = G_CalcRanks( ranks );
+    if( !total ) {
+        return;
+    }
+
+    // grab our champion
+    c = ranks[0];
+
+    // calculate FPH
+    sec = ( level.framenum - c->level.enter_framenum ) / HZ;
+    if( !sec ) {
+        sec = 1;
+    }
+    score = c->resp.score * 3600 / sec;
+
+    if( score < 1 ) {
+        return; // do not record bogus results
+    }
+
+    if( level.numscores < MAX_SCORES ) {
+        s = &level.scores[level.numscores++];
+    } else {
+        s = &level.scores[ level.numscores - 1 ];
+        if( score < s->score ) {
+            return; // result not impressive enough
+        }
+    }
+
+    strcpy( s->name, c->pers.netname );
+    s->score = score;
+    time( &s->time );
+
+    qsort( level.scores, level.numscores, sizeof( score_t ), ScoreCmp );
+
+    level.record = s;
+}
+
 /*
 =================
 EndDMLevel
@@ -155,6 +218,8 @@ The timelimit or fraglimit has been exceeded
 void EndDMLevel ( void ) {
     int r = g_randomize->value;
     map_entry_t *map;
+
+    RegisterScore();
 
 	BeginIntermission();
 
@@ -306,7 +371,7 @@ Advances the world by 0.1 seconds
 */
 void G_RunFrame (void)
 {
-	int		i;
+	int		i, delta;
 	edict_t	*ent;
 
 	level.framenum++;
@@ -343,15 +408,30 @@ void G_RunFrame (void)
             G_ResetLevel(); // in case gamemap failed, reset the level
         }
     } else if( level.intermission_framenum ) {
-        if( level.framenum == level.intermission_framenum + 1*HZ ) {
+        delta = level.framenum - level.intermission_framenum;
+        if( delta == 1*HZ ) {
             if( rand() & 1 ) {
                 G_StartSound( level.sounds.xian );
             } else {
                 G_StartSound( level.sounds.makron );
             }
-        } else if( level.framenum == level.intermission_framenum + 1200*HZ ) {
+        } else if( delta == 1200*HZ ) {
 		    // auto exit intermission after 20 minutes
 	    	G_ExitLevel();
+        } else if( delta % ( 5 * HZ ) == 0 ) {
+            delta /= 5 * HZ;
+            if( level.numscores && ( delta & 1 ) ) {
+                HighScoresMessage();
+                gi.multicast( NULL, MULTICAST_ALL_R );
+            } else {
+                ent = &g_edicts[1];
+                for( i = 1; i <= game.maxclients; i++, ent++ ) {
+                    if( ent->client->pers.connected > CONN_CONNECTED ) {
+                        DeathmatchScoreboardMessage( ent, NULL );
+                        gi.unicast( ent, qtrue );
+                    }
+                }
+            }
         }
     } else {
 	    // see if it is time to end a deathmatch

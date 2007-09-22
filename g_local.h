@@ -117,6 +117,8 @@ typedef trace_t *(*gi_trace_t)( trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, edict
 
 #define BODY_QUEUE_SIZE		8
 
+#define MAX_NETNAME     16
+
 typedef enum
 {
 	DAMAGE_NO,
@@ -362,6 +364,14 @@ typedef struct
 #define ITB_INVUL   2
 #define ITB_BFG     4
 
+#define MAX_SCORES  10
+
+typedef struct {
+    char name[MAX_NETNAME];
+    int score;
+    time_t time;
+} score_t;
+
 
 //
 // this structure is cleared as each map is entered
@@ -372,7 +382,6 @@ typedef struct
 	int			framenum;
 	float 		time;
 
-	char		level_name[MAX_QPATH];	// the descriptive name (Outer Base, etc)
 	char		mapname[MAX_QPATH];		// the server name (base1, etc)
 	char		nextmap[MAX_QPATH];		// go here when fraglimit is hit
     const char  *entstring;
@@ -386,6 +395,10 @@ typedef struct
     int         intermission_exit;          // time the intermission was exited
 	vec3_t		intermission_origin;
 	vec3_t		intermission_angle;
+
+    score_t     scores[MAX_SCORES];
+    int         numscores;
+    score_t     *record;        // not NULL if scores updated
 
     struct {
         int     health;
@@ -806,6 +819,7 @@ void G_SetSpectatorStats (edict_t *ent);
 void G_CheckChaseStats (edict_t *ent);
 void ValidateSelectedItem (edict_t *ent);
 void DeathmatchScoreboardMessage (edict_t *client, edict_t *killer);
+void HighScoresMessage( void );
 
 //
 // g_phys.c
@@ -863,8 +877,6 @@ void G_ResetLevel( void );
 #define	ANIM_ATTACK		4
 #define	ANIM_DEATH		5
 #define	ANIM_REVERSE	6
-
-#define MAX_NETNAME     16
 
 typedef enum {
     CONN_DISCONNECTED,

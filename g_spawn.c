@@ -598,6 +598,7 @@ void G_ResetLevel( void ) {
     level.intermission_exit = 0;
     level.vote.proposal = 0;
     level.nextmap[0] = 0;
+    level.record = NULL;
 
     // free all edicts
     for( i = game.maxclients + 1; i < globals.num_edicts; i++ ) {
@@ -786,10 +787,7 @@ void SP_worldspawn (edict_t *ent)
 	if (ent->message && ent->message[0])
 	{
 		gi.configstring (CS_NAME, ent->message);
-		strncpy (level.level_name, ent->message, sizeof(level.level_name));
 	}
-	else
-		strncpy (level.level_name, level.mapname, sizeof(level.level_name));
     ent->message = NULL;
 
 	if (st.sky && st.sky[0])

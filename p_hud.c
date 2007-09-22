@@ -159,6 +159,50 @@ int G_CalcRanks( gclient_t **ranks ) {
 }
 
 
+void HighScoresMessage( void ) {
+	char	entry[MAX_STRING_CHARS];
+	char	string[MAX_STRING_CHARS];
+    char    date[MAX_QPATH];
+    struct tm   *tm;
+    score_t *s;
+	int		stringlength;
+	int		i, j;
+    int     y;
+
+	stringlength = Com_sprintf( string, sizeof( string ),
+        "xv 0 "
+        "yv 0 "
+        "cstring \"High Scores for %s\""
+        "yv 16 "
+        "cstring2 \"  # Name             FPH Date     \"",
+        level.mapname );
+
+    y = 24;
+	for( i = 0; i < level.numscores; i++ ) {
+        s = &level.scores[i];
+
+        tm = localtime( &s->time );
+        j = strftime( date, sizeof( date ), "%d %b %y", tm );
+        if( j <= 0 ) {
+            strcpy( date, "???" );
+        }
+		j = Com_sprintf( entry, sizeof( entry ),
+		    "yv %d cstring \"%c%2d %-15.15s %4d %-8s\"",
+            y, s == level.record ? '*' : ' ',
+            i + 1, s->name, s->score, date );
+
+        if( stringlength + j >= MAX_STRING_CHARS )
+            break;
+        strcpy( string + stringlength, entry );
+        stringlength += j;
+        y += 8;
+    }
+
+	gi.WriteByte( svc_layout );
+	gi.WriteString( string );
+}
+
+
 /*
 ==================
 DeathmatchScoreboardMessage
