@@ -737,7 +737,7 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 	if (gi.argc () < 2 && !arg0)
 		return;
 
-    if( cl->level.muted ) {
+    if( cl->level.flags & CF_MUTED ) {
 		gi.cprintf(ent, PRINT_HIGH, "You have been muted by vote.\n" );
         return;
     }
@@ -793,13 +793,13 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 	}
 }
 
-void Cmd_Observe_f(edict_t *ent) {
-    if( level.framenum - ent->client->respawn_framenum < 5*HZ ) {
-        return;
-    }
+static void Cmd_Observe_f(edict_t *ent) {
     if( ent->client->pers.connected == CONN_PREGAME ) {
         ent->client->pers.connected = CONN_SPECTATOR;
 		gi.cprintf( ent, PRINT_HIGH, "Changed to spectator mode.\n" );
+        return;
+    }
+    if( level.framenum - ent->client->respawn_framenum < 5*HZ ) {
         return;
     }
     if( ent->client->pers.connected == CONN_SPECTATOR ) {
@@ -808,6 +808,27 @@ void Cmd_Observe_f(edict_t *ent) {
         ent->client->pers.connected = CONN_SPECTATOR;
     }
     spectator_respawn( ent );
+}
+
+static void Cmd_Chase_f(edict_t *ent) {
+    if( ent->client->pers.connected == CONN_PREGAME ) {
+        ent->client->pers.connected = CONN_SPECTATOR;
+		gi.cprintf( ent, PRINT_HIGH, "Changed to spectator mode.\n" );
+		GetChaseTarget( ent );
+        return;
+    }
+    if( ent->client->pers.connected != CONN_SPECTATOR ) {
+        if( level.framenum - ent->client->respawn_framenum < 5*HZ ) {
+            return;
+        }
+        ent->client->pers.connected = CONN_SPECTATOR;
+        spectator_respawn( ent );
+    }
+    if( !ent->client->chase_target ) {
+		GetChaseTarget( ent );
+    } else {
+        SetChaseTarget( ent, NULL );
+    }
 }
 
 edict_t *G_SetPlayer( edict_t *ent, int arg ) {
@@ -1017,7 +1038,7 @@ qboolean G_CheckVote( void ) {
             break;
         case VOTE_MUTE:
             gi.bprintf( PRINT_HIGH, "Vote passed. Muting %s...\n", level.vote.victim->pers.netname );
-            level.vote.victim->level.muted = qtrue;
+            level.vote.victim->level.flags |= CF_MUTED;
             break;
         case VOTE_MAP:
             gi.bprintf( PRINT_HIGH, "Vote passed. Next map is %s.\n", level.nextmap );
@@ -1449,6 +1470,8 @@ void ClientCommand (edict_t *ent)
 		Cmd_Wave_f (ent);
 	else if (Q_stricmp(cmd, "observe") == 0)
 		Cmd_Observe_f(ent);
+	else if (Q_stricmp(cmd, "chase") == 0)
+		Cmd_Chase_f(ent);
 	else if (Q_stricmp(cmd, "stats") == 0)
 		Cmd_Stats_f(ent);
 	else if (Q_stricmp(cmd, "vote") == 0)

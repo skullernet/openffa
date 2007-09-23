@@ -279,7 +279,7 @@ void DeathmatchScoreboardMessage( edict_t *ent, edict_t *killer ) {
 
 		j = Com_sprintf( entry, sizeof( entry ),
 		    "yv %d string%s \"%2d %-15s %-16s %4d %4d\"",
-            y, c == ent->client ? "" : "2", i + 1,
+            y, c == ent->client ? "" : "2", total + i + 1,
             c->pers.netname, status, sec / 60, c->ping );
 
         if( stringlength + j >= MAX_STRING_CHARS )

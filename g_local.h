@@ -886,7 +886,8 @@ typedef enum {
     CONN_CONNECTED,
     CONN_PREGAME,
     CONN_SPAWNED,
-    CONN_SPECTATOR
+    CONN_SPECTATOR,
+    CONN_MVDSPEC
 } conn_t;
 
 typedef enum {
@@ -922,11 +923,15 @@ typedef struct {
     int         damage_given, damage_recvd;
 } client_respawn_t;
 
+#define CF_FIRST_TIME   1   // true when just connected
+#define CF_JUMP_HELD    2
+#define CF_MUTED        4
+
 // client data that stays across respawns, 
 // but cleared on level changes
 typedef struct {
 	int			enter_framenum;		// level.framenum the client entered the game
-    qboolean    first_time;         // qtrue when just connected
+    int         flags;
 	vec3_t		cmd_angles;			// angles sent over in the last command
     char        strings[MAX_PRIVATE][MAX_NETNAME]; // private configstrings
     struct {
@@ -934,7 +939,6 @@ typedef struct {
         qboolean    accepted;
         int         count;
     } vote;
-    qboolean    muted;
 } client_level_t;
 
 // this structure is cleared on each PutClientInServer(),

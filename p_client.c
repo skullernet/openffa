@@ -1103,8 +1103,9 @@ void ClientBegin (edict_t *ent)
 
     memset( &ent->client->resp, 0, sizeof( ent->client->resp ) );
 
-    if( ent->client->level.first_time ) {
+    if( ent->client->level.flags & CF_FIRST_TIME ) {
     	gi.bprintf (PRINT_HIGH, "%s connected\n", ent->client->pers.netname);
+        ent->client->level.flags &= ~CF_FIRST_TIME;
     }
 
 	ent->client->level.enter_framenum = level.framenum;
@@ -1212,7 +1213,7 @@ qboolean ClientConnect (edict_t *ent, char *userinfo) {
 	memset( ent->client, 0, sizeof( gclient_t ) );
     ent->client->edict = ent;
 	ent->client->pers.connected = CONN_CONNECTED;
-    ent->client->level.first_time = qtrue;
+    ent->client->level.flags |= CF_FIRST_TIME;
 
 	return qtrue;
 }
@@ -1448,13 +1449,13 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 
 	if (client->pers.connected == CONN_SPECTATOR) {
 		if (ucmd->upmove >= 10) {
-			if (!(client->ps.pmove.pm_flags & PMF_JUMP_HELD)) {
-				client->ps.pmove.pm_flags |= PMF_JUMP_HELD;
+			if (!(client->level.flags & CF_JUMP_HELD)) {
+				client->level.flags |= CF_JUMP_HELD;
 				if (client->chase_target)
 					ChaseNext(ent);
 			}
 		} else {
-			client->ps.pmove.pm_flags &= ~PMF_JUMP_HELD;
+			client->level.flags &= ~CF_JUMP_HELD;
         }
 	}
 
