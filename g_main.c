@@ -19,6 +19,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "g_local.h"
+#ifdef _WIN32
+#else
+#include <sys/types.h>
+#include <sys/stat.h>
+#endif
 
 game_locals_t	game;
 level_locals_t	level;
@@ -146,25 +151,48 @@ char *CopyString( const char *in ) {
 }
 
 static int QDECL ScoreCmp( const void *p1, const void *p2 ) {
-    score_t *a = *( score_t * const * )p1;
-    score_t *b = *( score_t * const * )p2;
+    score_t *a = ( score_t * )p1;
+    score_t *b = ( score_t * )p2;
 
     if( a->score > b->score ) {
-        return 1;
+        return -1;
     }
     if( a->score < b->score ) {
-        return -1;
-    }
-    if( a->time > b->time ) {
         return 1;
     }
-    if( a->time < b->time ) {
+    if( a->time > b->time ) {
         return -1;
+    }
+    if( a->time < b->time ) {
+        return 1;
     }
     return 0;
 }
 
-static void RegisterScore( void ) {
+static void G_SaveScores( void ) {
+    char path[MAX_OSPATH];
+    score_t *s;
+    FILE *fp;
+    int i;
+
+    Com_sprintf( path, sizeof( path ), "%s/highscores/%s.txt",
+        game.dir, level.mapname );
+
+    fp = fopen( path, "w" );
+    if( !fp ) {
+        return;
+    }
+
+    for( i = 0; i < level.numscores; i++ ) {
+        s = &level.scores[i];
+        fprintf( fp, "\"%s\" %d %lu\n", s->name, s->score, s->time );
+    }
+
+    fclose( fp );
+}
+
+
+static void G_RegisterScore( void ) {
 	gclient_t	*ranks[MAX_CLIENTS];
 	gclient_t	*c;
     score_t *s;
@@ -203,9 +231,52 @@ static void RegisterScore( void ) {
     s->score = score;
     time( &s->time );
 
+    level.record = s->time;
+
     qsort( level.scores, level.numscores, sizeof( score_t ), ScoreCmp );
 
-    level.record = s;
+    G_SaveScores();
+}
+
+void G_LoadScores( void ) {
+    char path[MAX_OSPATH];
+    char buffer[MAX_STRING_CHARS];
+    char *token;
+    const char *data;
+    score_t *s;
+    FILE *fp;
+
+    Com_sprintf( path, sizeof( path ), "%s/highscores/%s.txt",
+        game.dir, level.mapname );
+
+    fp = fopen( path, "r" );
+    if( !fp ) {
+        return;
+    }
+
+    do {
+        data = fgets( buffer, sizeof( buffer ), fp );
+        if( !data ) {
+            break;
+        }
+        token = COM_Parse( &data );
+        if( !token[0] ) {
+            continue;
+        }
+
+        s = &level.scores[level.numscores++];
+        Q_strncpyz( s->name, token, sizeof( s->name ) );
+
+        token = COM_Parse( &data );
+        s->score = strtoul( token, NULL, 10 );
+
+        token = COM_Parse( &data );
+        s->time = strtoul( token, NULL, 10 );
+    } while( level.numscores < MAX_SCORES );
+
+    fclose( fp );
+
+    qsort( level.scores, level.numscores, sizeof( score_t ), ScoreCmp );
 }
 
 /*
@@ -219,7 +290,7 @@ void EndDMLevel ( void ) {
     int r = g_randomize->value;
     map_entry_t *map;
 
-    RegisterScore();
+    G_RegisterScore();
 
 	BeginIntermission();
 
@@ -469,6 +540,9 @@ is loaded.
 ============
 */
 static void G_Init (void) {
+    char path[MAX_OSPATH];
+    char *s;
+
 	gi.dprintf ("==== InitGame ====\n");
 
 	gun_x = gi.cvar ("gun_x", "0", 0);
@@ -536,6 +610,24 @@ static void G_Init (void) {
 	game.maxclients = maxclients->value;
 	game.clients = gi.TagMalloc (game.maxclients * sizeof(game.clients[0]), TAG_GAME);
 	globals.num_edicts = game.maxclients+1;
+
+    // obtain home path
+    s = getenv( "QUAKE2_HOME" );
+    if( s && *s ) {
+        Q_strncpyz( game.dir, s, sizeof( game.dir ) );
+    } else {
+        cvar_t *basedir = gi.cvar( "basedir", "", 0 );
+        cvar_t *gamedir = gi.cvar( "game", "", 0 );
+        Com_sprintf( game.dir, sizeof( game.dir ), "%s/%s",
+            basedir->string, gamedir->string );
+    }
+
+    Com_sprintf( path, sizeof( path ), "%s/highscores", game.dir );
+#ifdef _WIN32
+#else
+    mkdir( path, 0755 );
+#endif
+
 }
 
 static void G_WriteGame (const char *filename, qboolean autosave) {

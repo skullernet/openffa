@@ -350,6 +350,8 @@ typedef struct
 
 	// cross level triggers
 	int			serverflags;
+
+    char        dir[MAX_OSPATH]; // where variable data is stored
 } game_locals_t;
 
 #define VOTE_TIMELIMIT  1 
@@ -398,7 +400,7 @@ typedef struct
 
     score_t     scores[MAX_SCORES];
     int         numscores;
-    score_t     *record;        // not NULL if scores updated
+    time_t      record;        // not zero if scores updated
 
     struct {
         int     health;
@@ -835,6 +837,7 @@ qboolean G_CheckVote( void );
 void G_ExitLevel( void );
 void G_StartSound( int index ); 
 void G_RunFrame( void );
+void G_LoadScores( void );
 
 //
 // g_chase.c

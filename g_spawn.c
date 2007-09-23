@@ -545,6 +545,8 @@ void G_SpawnEntities (const char *mapname, const char *entities, const char *spa
 	Q_strncpyz(level.mapname, mapname, sizeof(level.mapname));
 	Q_strncpyz(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint));
 
+    G_LoadScores();
+
 	// set client fields on player ents
 	for( i = 0; i < game.maxclients; i++ ) {
         ent = &g_edicts[i+1];
@@ -598,7 +600,7 @@ void G_ResetLevel( void ) {
     level.intermission_exit = 0;
     level.vote.proposal = 0;
     level.nextmap[0] = 0;
-    level.record = NULL;
+    level.record = 0;
 
     // free all edicts
     for( i = game.maxclients + 1; i < globals.num_edicts; i++ ) {

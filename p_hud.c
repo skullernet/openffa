@@ -188,7 +188,7 @@ void HighScoresMessage( void ) {
         }
 		j = Com_sprintf( entry, sizeof( entry ),
 		    "yv %d cstring \"%c%2d %-15.15s %4d %-8s\"",
-            y, s == level.record ? '*' : ' ',
+            y, s->time == level.record ? '*' : ' ',
             i + 1, s->name, s->score, date );
 
         if( stringlength + j >= MAX_STRING_CHARS )
