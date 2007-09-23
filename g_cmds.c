@@ -1248,9 +1248,10 @@ static void Cmd_Vote_f( edict_t *ent ) {
             "Proposal: %s\n"
             "Accepted: %d%%\n"
             "Rejected: %d%%\n"
-            "Treshold: %d%%\n",
-            ( level.vote.framenum - level.framenum ) / HZ,
-            buffer, acc, rej, treshold );
+            "Treshold: %d%%\n"
+            "Timeout : %d sec\n",
+            buffer, acc, rej, treshold,
+            ( level.vote.framenum - level.framenum ) / HZ );
         return;
     }
 
