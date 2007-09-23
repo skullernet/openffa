@@ -126,16 +126,16 @@ static int QDECL G_PlayerCmp( const void *p1, const void *p2 ) {
     gclient_t *b = *( gclient_t * const * )p2;
 
     if( a->resp.score > b->resp.score ) {
-        return 1;
+        return -1;
     }
     if( a->resp.score < b->resp.score ) {
-        return -1;
-    }
-    if( a->resp.deaths < b->resp.deaths ) {
         return 1;
     }
-    if( a->resp.deaths > b->resp.deaths ) {
+    if( a->resp.deaths < b->resp.deaths ) {
         return -1;
+    }
+    if( a->resp.deaths > b->resp.deaths ) {
+        return 1;
     }
     return 0;
 }
