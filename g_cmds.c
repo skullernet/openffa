@@ -1107,7 +1107,7 @@ void G_BuildProposal( char *buffer ) {
         sprintf( buffer, "mute %s", level.vote.victim->pers.netname );
         break;
     case VOTE_MAP:
-        sprintf( buffer, "change map to %s", level.nextmap );
+        Com_sprintf( buffer, MAX_QPATH, "change map to %s", level.nextmap );
         break;
     default:
         strcpy( buffer, "unknown" );
