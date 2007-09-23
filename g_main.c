@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "g_local.h"
 #ifdef _WIN32
+#include <direct.h>
 #else
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -624,6 +625,7 @@ static void G_Init (void) {
 
     Com_sprintf( path, sizeof( path ), "%s/highscores", game.dir );
 #ifdef _WIN32
+	_mkdir( path );
 #else
     mkdir( path, 0755 );
 #endif

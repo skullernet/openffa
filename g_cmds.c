@@ -741,7 +741,6 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 		gi.cprintf(ent, PRINT_HIGH, "You have been muted by vote.\n" );
         return;
     }
-    cl->resp.score++;
 
 	if (!((int)(dmflags->value) & (DF_MODELTEAMS | DF_SKINTEAMS)))
 		team = qfalse;
