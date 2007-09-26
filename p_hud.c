@@ -63,8 +63,10 @@ void MoveClientToIntermission (edict_t *ent)
     ent->svflags = SVF_NOCLIENT;
     gi.unlinkentity( ent );
 
+    PMenu_Close( ent );
+
 	// add the layout
-	DeathmatchScoreboardMessage (ent, NULL);
+	DeathmatchScoreboardMessage (ent);
 	gi.unicast (ent, qtrue);
 }
 
@@ -209,7 +211,7 @@ DeathmatchScoreboardMessage
 
 ==================
 */
-void DeathmatchScoreboardMessage( edict_t *ent, edict_t *killer ) {
+void DeathmatchScoreboardMessage( edict_t *ent ) {
 	char	entry[MAX_STRING_CHARS];
 	char	string[MAX_STRING_CHARS];
     char    status[MAX_QPATH];
@@ -264,6 +266,9 @@ void DeathmatchScoreboardMessage( edict_t *ent, edict_t *killer ) {
         if( c->pers.connected != CONN_PREGAME && c->pers.connected != CONN_SPECTATOR ) {
             continue;
         }
+        if( c->pers.flags & CPF_MVDSPEC ) {
+            continue;
+        }
 
         sec = ( level.framenum - c->level.enter_framenum ) / HZ;
         if( !sec ) {
@@ -303,7 +308,7 @@ Note that it isn't that hard to overflow the 1400 byte message limit!
 ==================
 */
 void DeathmatchScoreboard (edict_t *ent) {
-	DeathmatchScoreboardMessage (ent, ent->enemy);
+	DeathmatchScoreboardMessage (ent);
 	gi.unicast (ent, qtrue);
 }
 
@@ -316,8 +321,7 @@ Display the scoreboard
 ==================
 */
 void Cmd_Score_f (edict_t *ent) {
-	ent->client->showinventory = qfalse;
-	ent->client->showhelp = qfalse;
+    PMenu_Close( ent );
 
 	if (ent->client->showscores) {
 		ent->client->showscores = qfalse;
@@ -327,6 +331,7 @@ void Cmd_Score_f (edict_t *ent) {
 	ent->client->showscores = qtrue;
 	DeathmatchScoreboard (ent);
 }
+
 /*
 ==================
 Cmd_Help_f
@@ -497,10 +502,8 @@ void G_SetStats (edict_t *ent)
 	//
 	ent->client->ps.stats[STAT_LAYOUTS] = 0;
 
-    if (ent->client->health <= 0 || level.intermission_framenum || ent->client->showscores)
+    if (ent->client->health <= 0 || level.intermission_framenum || ent->client->showscores || ent->client->menu )
         ent->client->ps.stats[STAT_LAYOUTS] |= 1;
-    if (ent->client->showinventory && ent->client->health > 0)
-        ent->client->ps.stats[STAT_LAYOUTS] |= 2;
 
 	//
 	// frags

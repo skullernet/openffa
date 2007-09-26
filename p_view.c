@@ -1045,11 +1045,5 @@ void ClientEndServerFrame (edict_t *ent)
 	// clear weapon kicks
 	VectorClear (ent->client->kick_origin);
 	VectorClear (ent->client->kick_angles);
-
-	// if the scoreboard is up, update it
-	if (ent->client->showscores && !(level.framenum & 31) ) {
-		DeathmatchScoreboardMessage (ent, ent->enemy);
-		gi.unicast (ent, qfalse);
-	}
 }
 

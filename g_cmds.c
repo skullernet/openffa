@@ -71,6 +71,10 @@ void SelectNextItem (edict_t *ent, int itflags)
 
 	cl = ent->client;
 
+    if( cl->menu ) {
+        PMenu_Next( ent );
+        return;
+    }
 	if (cl->chase_target) {
 		ChaseNext(ent);
 		return;
@@ -103,6 +107,10 @@ void SelectPrevItem (edict_t *ent, int itflags)
 
 	cl = ent->client;
 
+    if( cl->menu ) {
+        PMenu_Prev( ent );
+        return;
+    }
 	if (cl->chase_target) {
 		ChasePrev(ent);
 		return;
@@ -466,30 +474,11 @@ void Cmd_Drop_f (edict_t *ent)
 Cmd_Inven_f
 =================
 */
-void Cmd_Inven_f (edict_t *ent)
-{
-	int			i;
-	gclient_t	*cl;
+void Cmd_Inven_f (edict_t *ent) {
+    extern void Cmd_Menu_f( edict_t *ent );
 
-	cl = ent->client;
-
-	cl->showscores = qfalse;
-	cl->showhelp = qfalse;
-
-	if (cl->showinventory)
-	{
-		cl->showinventory = qfalse;
-		return;
-	}
-
-	cl->showinventory = qtrue;
-
-	gi.WriteByte (svc_inventory);
-	for (i=0 ; i<MAX_ITEMS ; i++)
-	{
-		gi.WriteShort (cl->inventory[i]);
-	}
-	gi.unicast (ent, qtrue);
+    // this one is left for backwards compatibility
+    Cmd_Menu_f( ent );
 }
 
 /*
@@ -500,6 +489,11 @@ Cmd_InvUse_f
 void Cmd_InvUse_f (edict_t *ent)
 {
 	gitem_t		*it;
+
+    if( ent->client->menu ) {
+        PMenu_Select( ent );
+        return;
+    }
 
 	ValidateSelectedItem (ent);
 
@@ -626,6 +620,11 @@ void Cmd_InvDrop_f (edict_t *ent)
 {
 	gitem_t		*it;
 
+    if( ent->client->menu ) {
+        PMenu_Select( ent );
+        return;
+    }
+
 	ValidateSelectedItem (ent);
 
 	if (ent->client->selected_item == -1)
@@ -663,11 +662,9 @@ void Cmd_Kill_f (edict_t *ent)
 Cmd_PutAway_f
 =================
 */
-void Cmd_PutAway_f (edict_t *ent)
-{
+void Cmd_PutAway_f (edict_t *ent) {
 	ent->client->showscores = qfalse;
-	ent->client->showhelp = qfalse;
-	ent->client->showinventory = qfalse;
+    PMenu_Close( ent );
 }
 
 
@@ -737,7 +734,7 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 	if (gi.argc () < 2 && !arg0)
 		return;
 
-    if( cl->level.flags & CF_MUTED ) {
+    if( cl->level.flags & CLF_MUTED ) {
 		gi.cprintf(ent, PRINT_HIGH, "You have been muted by vote.\n" );
         return;
     }
@@ -800,6 +797,7 @@ static void Cmd_Observe_f(edict_t *ent) {
         return;
     }
     if( level.framenum - ent->client->respawn_framenum < 5*HZ ) {
+		gi.cprintf( ent, PRINT_HIGH, "You may not change modes too soon.\n" );
         return;
     }
     if( ent->client->pers.connected == CONN_SPECTATOR ) {
@@ -819,6 +817,7 @@ static void Cmd_Chase_f(edict_t *ent) {
     }
     if( ent->client->pers.connected != CONN_SPECTATOR ) {
         if( level.framenum - ent->client->respawn_framenum < 5*HZ ) {
+		    gi.cprintf( ent, PRINT_HIGH, "You may not change modes too soon.\n" );
             return;
         }
         ent->client->pers.connected = CONN_SPECTATOR;
@@ -979,6 +978,9 @@ int G_CalcVote( int *acc, int *rej ) {
         if( client->pers.connected <= CONN_CONNECTED ) {
             continue;
         }
+        if( client->pers.flags & CPF_MVDSPEC ) {
+            continue;
+        }
         total++;
         if( client->level.vote.index == level.vote.index ) {
             if( client->level.vote.accepted ) {
@@ -1038,7 +1040,7 @@ qboolean G_CheckVote( void ) {
             break;
         case VOTE_MUTE:
             gi.bprintf( PRINT_HIGH, "Vote passed. Muting %s...\n", level.vote.victim->pers.netname );
-            level.vote.victim->level.flags |= CF_MUTED;
+            level.vote.victim->level.flags |= CLF_MUTED;
             break;
         case VOTE_MAP:
             gi.bprintf( PRINT_HIGH, "Vote passed. Next map is %s.\n", level.nextmap );
@@ -1205,6 +1207,11 @@ static qboolean Vote_Victim( edict_t *ent ) {
 
     if( other == ent ) {
         gi.cprintf( ent, PRINT_HIGH, "You can't %s yourself.\n", gi.argv( 1 ) );
+        return qfalse;
+    }
+
+    if( other->client->pers.flags & CPF_LOOPBACK ) {
+        gi.cprintf( ent, PRINT_HIGH, "You can't %s local client.\n", gi.argv( 1 ) );
         return qfalse;
     }
 
@@ -1384,6 +1391,67 @@ static void Cmd_Vote_f( edict_t *ent ) {
 }
 
 
+static void select_test( edict_t *ent, pmenu_t *menu ) {
+    switch( menu->cur ) {
+    case 3:
+        if( ent->client->pers.connected == CONN_SPAWNED ) {
+            break;
+        }
+        if( ent->client->pers.connected != CONN_PREGAME ) {
+            if( level.framenum - ent->client->respawn_framenum < 5*HZ ) {
+                gi.cprintf( ent, PRINT_HIGH, "You may not change modes too soon.\n" );
+                break;
+            }
+        }
+        ent->client->pers.connected = CONN_SPAWNED;
+        spectator_respawn( ent );
+        break;
+    case 4:
+        break;
+    case 6:
+        Cmd_Observe_f( ent );
+        break;
+    case 7:
+        Cmd_Chase_f( ent );
+        break;
+    case 12:
+        PMenu_Close( ent );
+        break;
+    }
+}
+
+static pmenu_entry_t entries[] = {
+    { "OpenFFA - Main", PMENU_ALIGN_CENTER },
+    {},
+    {},
+    { "*Enter the game", PMENU_ALIGN_LEFT, select_test },
+    { "*Voting menu", PMENU_ALIGN_LEFT, select_test },
+    {},
+    { "*Enter OBSERVER mode", PMENU_ALIGN_LEFT, select_test },
+    { "*Enter CHASECAM mode", PMENU_ALIGN_LEFT, select_test },
+    {},
+    //{ "*Help", PMENU_ALIGN_LEFT, select_test },
+    {},
+    {},
+    {},
+    { "*Exit menu", PMENU_ALIGN_LEFT, select_test },
+    {},
+    {},
+    { "Use [ and ] to move cursor", PMENU_ALIGN_CENTER },
+    { "Press Enter to select", PMENU_ALIGN_CENTER },
+    { "*"VERSION, PMENU_ALIGN_RIGHT }
+};
+
+void Cmd_Menu_f( edict_t *ent ) {
+    if( ent->client->menu ) {
+        PMenu_Close( ent );
+        return;
+    }
+    ent->client->showscores = qfalse;
+    PMenu_Open( ent, entries, 0, sizeof(entries)/sizeof(entries[0]), NULL );
+}
+
+
 /*
 =================
 ClientCommand
@@ -1480,6 +1548,8 @@ void ClientCommand (edict_t *ent)
 		Cmd_CastVote_f(ent, qtrue);
 	else if (Q_stricmp(cmd, "no") == 0)
 		Cmd_CastVote_f(ent, qfalse);
+	else if (Q_stricmp(cmd, "menu") == 0)
+		Cmd_Menu_f(ent);
 	else	// anything that doesn't match a command will be a chat
 		Cmd_Say_f (ent, qfalse, qtrue);
 }

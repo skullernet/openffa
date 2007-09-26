@@ -118,20 +118,28 @@ void ClientEndServerFrames (void) {
         if( c->pers.connected <= CONN_CONNECTED ) {
             continue;
         }
-        if( c->pers.connected == CONN_SPECTATOR && c->chase_target ) {
-            continue;
+        if( !c->chase_target ) {
+		    ClientEndServerFrame( c->edict );
         }
-		ClientEndServerFrame( c->edict );
+
+        // if the scoreboard is up, update it
+        if( c->showscores && !( level.framenum & 31 ) ) {
+            DeathmatchScoreboardMessage( c->edict );
+            gi.unicast( c->edict, qfalse );
+        }
+
+        PMenu_Update( c->edict );
 	}
 
     // update chase cam after all stats and positions are calculated
     for( i = 0, c = game.clients; i < game.maxclients; i++, c++ ) {
-        if( c->pers.connected != CONN_SPECTATOR || !c->chase_target ) {
+        if( c->pers.connected <= CONN_CONNECTED ) {
             continue;
         }
-		ChaseEndServerFrame( c->edict );
+        if( c->chase_target ) {
+		    ChaseEndServerFrame( c->edict );
+        }
     }
-
 }
 
 
@@ -499,7 +507,7 @@ void G_RunFrame (void)
                 ent = &g_edicts[1];
                 for( i = 1; i <= game.maxclients; i++, ent++ ) {
                     if( ent->client->pers.connected > CONN_CONNECTED ) {
-                        DeathmatchScoreboardMessage( ent, NULL );
+                        DeathmatchScoreboardMessage( ent );
                         gi.unicast( ent, qtrue );
                     }
                 }
@@ -738,5 +746,5 @@ EXPORTED game_export_t *GetGameAPI (game_import_t *import)
 
 EXPORTED int GetGameFeatures( int features ) {
     serverFeatures = features;
-    return GAME_FEATURE_CLIENTNUM;
+    return GAME_FEATURE_CLIENTNUM|GAME_FEATURE_MVDSPEC;
 }

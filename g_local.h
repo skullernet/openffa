@@ -718,7 +718,7 @@ void	G_FreeEdict (edict_t *e);
 void	G_TouchTriggers (edict_t *ent);
 void	G_TouchSolids (edict_t *ent);
 
-char	*G_CopyString (char *in);
+char	*G_CopyString (const char *in);
 
 float	*tv (float x, float y, float z);
 char	*vtos (vec3_t v);
@@ -818,7 +818,7 @@ int G_CalcRanks( gclient_t **ranks );
 void G_SetSpectatorStats (edict_t *ent);
 void G_CheckChaseStats (edict_t *ent);
 void ValidateSelectedItem (edict_t *ent);
-void DeathmatchScoreboardMessage (edict_t *client, edict_t *killer);
+void DeathmatchScoreboardMessage (edict_t *client);
 void HighScoresMessage( void );
 
 //
@@ -879,13 +879,33 @@ void G_ResetLevel( void );
 #define	ANIM_DEATH		5
 #define	ANIM_REVERSE	6
 
+
+typedef enum {
+	PMENU_ALIGN_LEFT,
+	PMENU_ALIGN_CENTER,
+	PMENU_ALIGN_RIGHT
+} pmenu_align_t;
+
+typedef struct pmenu_s {
+	struct pmenu_entry_s *entries;
+	int cur, num;
+	void *arg;
+} pmenu_t;
+
+typedef void (*pmenu_select_t)( edict_t *ent, pmenu_t *menu );
+
+typedef struct pmenu_entry_s {
+	char *text;
+	pmenu_align_t align;
+	pmenu_select_t select;
+} pmenu_entry_t;
+
 typedef enum {
     CONN_DISCONNECTED,
     CONN_CONNECTED,
     CONN_PREGAME,
     CONN_SPAWNED,
-    CONN_SPECTATOR,
-    CONN_MVDSPEC
+    CONN_SPECTATOR
 } conn_t;
 
 typedef enum {
@@ -901,6 +921,9 @@ typedef struct {
     int deaths;
 } weapstat_t;
 
+#define CPF_LOOPBACK     1
+#define CPF_MVDSPEC      2
+
 // client data that stays across multiple level loads
 typedef struct {
 	char		userinfo[MAX_INFO_STRING];
@@ -910,6 +933,7 @@ typedef struct {
     float       fov;
     gender_t    gender;
 	conn_t	    connected;
+    int         flags;
 } client_persistant_t;
 
 // client data that stays across deathmatch respawns,
@@ -921,9 +945,9 @@ typedef struct {
     int         damage_given, damage_recvd;
 } client_respawn_t;
 
-#define CF_FIRST_TIME   1   // true when just connected
-#define CF_JUMP_HELD    2
-#define CF_MUTED        4
+#define CLF_FIRST_TIME   1   // true when just connected
+#define CLF_JUMP_HELD    2
+#define CLF_MUTED        4
 
 // client data that stays across respawns, 
 // but cleared on level changes
@@ -959,10 +983,11 @@ struct gclient_s
     edict_t         *edict;
 
 	qboolean	showscores;			// set layout stat
-	qboolean	showinventory;		// set layout stat
-	qboolean	showhelp;
-	qboolean	showhelpicon;
 
+    pmenu_t     *menu;
+    int         menu_framenum;
+    qboolean    menu_dirty;
+    
 	int			ammo_index;
 
 	int			buttons;
@@ -1197,4 +1222,15 @@ struct edict_s
 	// common data blocks
 	moveinfo_t		moveinfo;
 };
+
+//
+// p_menu.c
+//
+
+pmenu_t *PMenu_Open( edict_t *ent, pmenu_entry_t *entries, int cur, int num, void *arg );
+void PMenu_Close( edict_t *ent ); 
+void PMenu_Update( edict_t *ent );
+void PMenu_Next( edict_t *ent ); 
+void PMenu_Prev( edict_t *ent );
+void PMenu_Select( edict_t *ent ); 
 

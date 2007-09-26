@@ -29,8 +29,6 @@ static void SetChaseStats( gclient_t *client ) {
 	client->ps.stats[STAT_LAYOUTS] = 0;
 	if (client->showscores)
 		client->ps.stats[STAT_LAYOUTS] |= 1;
-	if (client->showinventory)
-		client->ps.stats[STAT_LAYOUTS] |= 2;
 
 	client->ps.stats[STAT_CHASE] = CS_PLAYERSKINS + playernum;
 
@@ -237,10 +235,5 @@ void ChaseEndServerFrame( edict_t *ent ) {
     // stats
     SetChaseStats( c );
 
-    // if the scoreboard is up, update it
-    if( c->showscores && !( level.framenum & 31 ) ) {
-        DeathmatchScoreboardMessage( ent, ent->enemy );
-        gi.unicast( c->edict, qfalse );
-    }
 }
 

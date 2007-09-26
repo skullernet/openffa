@@ -956,6 +956,8 @@ void PutClientInServer (edict_t *ent)
     	SelectSpawnPoint (ent, spawn_origin, spawn_angles);
     }
 
+    PMenu_Close( ent );
+
 	// deathmatch wipes most client data every spawn
     resp = client->resp;
 	pers = client->pers;
@@ -968,7 +970,6 @@ void PutClientInServer (edict_t *ent)
     client->level = lvl;
     client->edict = ent;
     client->clientNum = index;
-    client->activity_framenum = level.framenum;
 
 	client->selected_item = ITEM_BLASTER;
 	client->inventory[ITEM_BLASTER] = 1;
@@ -1053,6 +1054,8 @@ void PutClientInServer (edict_t *ent)
 		return;
 	} 
 
+    client->activity_framenum = level.framenum;
+
 	if (!KillBox (ent))
 	{	// could't spawn in?
 	}
@@ -1103,14 +1106,18 @@ void ClientBegin (edict_t *ent)
 
     memset( &ent->client->resp, 0, sizeof( ent->client->resp ) );
 
-    if( ent->client->level.flags & CF_FIRST_TIME ) {
+    if( ent->client->level.flags & CLF_FIRST_TIME ) {
     	gi.bprintf (PRINT_HIGH, "%s connected\n", ent->client->pers.netname);
-        ent->client->level.flags &= ~CF_FIRST_TIME;
+        ent->client->level.flags &= ~CLF_FIRST_TIME;
     }
 
 	ent->client->level.enter_framenum = level.framenum;
 
-	ent->client->pers.connected = CONN_PREGAME;
+    if( ent->client->pers.flags & CPF_MVDSPEC ) {
+    	ent->client->pers.connected = CONN_SPECTATOR;
+    } else {
+    	ent->client->pers.connected = CONN_PREGAME;
+    }
 
 	// locate ent at a spawn point
 	PutClientInServer (ent);
@@ -1157,10 +1164,12 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
 	// combine name and skin into a configstring
 	s = Info_ValueForKey (client->pers.userinfo, "skin");
 	Com_sprintf( client->pers.skin, MAX_QPATH, "%s\\%s",
-        ent->client->pers.netname, s );
+        client->pers.netname, s );
 
-	playernum = ( ent - g_edicts ) - 1;
-	gi.configstring( CS_PLAYERSKINS + playernum, client->pers.skin );
+    if( !( client->pers.flags & CPF_MVDSPEC ) ) {
+    	playernum = ( ent - g_edicts ) - 1;
+	    gi.configstring( CS_PLAYERSKINS + playernum, client->pers.skin );
+    }
 
 	// set fov
 	if( DF( FIXED_FOV ) ) {
@@ -1207,13 +1216,32 @@ loadgames will.
 ============
 */
 qboolean ClientConnect (edict_t *ent, char *userinfo) {
+    char *s;
+
+    if( !Info_Validate( userinfo ) ) {
+        return qfalse;
+    }
+
 	// they can connect
 	ent->client = game.clients + (ent - g_edicts - 1);
 
 	memset( ent->client, 0, sizeof( gclient_t ) );
     ent->client->edict = ent;
 	ent->client->pers.connected = CONN_CONNECTED;
-    ent->client->level.flags |= CF_FIRST_TIME;
+    ent->client->level.flags |= CLF_FIRST_TIME;
+
+    s = Info_ValueForKey (userinfo, "ip");
+    if( !strcmp( s, "loopback" ) ) {
+        ent->client->pers.flags |= CPF_LOOPBACK;
+    }
+
+    if( serverFeatures & GAME_FEATURE_MVDSPEC ) {
+        s = Info_ValueForKey (userinfo, "mvdspec");
+        if( *s ) {
+            ent->client->pers.flags |= CPF_MVDSPEC;
+            ent->client->level.flags &= ~CLF_FIRST_TIME;
+        }
+    }
 
 	return qtrue;
 }
@@ -1253,6 +1281,8 @@ void ClientDisconnect (edict_t *ent)
         gi.bprintf( PRINT_HIGH, "%s disconnected\n",
             ent->client->pers.netname );
     }
+
+    PMenu_Close( ent );
 
     G_CheckVote();
 
@@ -1449,13 +1479,13 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 
 	if (client->pers.connected == CONN_SPECTATOR) {
 		if (ucmd->upmove >= 10) {
-			if (!(client->level.flags & CF_JUMP_HELD)) {
-				client->level.flags |= CF_JUMP_HELD;
+			if (!(client->level.flags & CLF_JUMP_HELD)) {
+				client->level.flags |= CLF_JUMP_HELD;
 				if (client->chase_target)
 					ChaseNext(ent);
 			}
 		} else {
-			client->level.flags &= ~CF_JUMP_HELD;
+			client->level.flags &= ~CLF_JUMP_HELD;
         }
 	}
 
