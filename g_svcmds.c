@@ -99,7 +99,7 @@ static void Svcmd_Maplist_f( void ) {
             Com_Printf( "Oversize mapname.\n" );
             return;
         }
-        map = gi.TagMalloc( sizeof( *map ) + length, TAG_GAME );
+        map = G_Malloc( sizeof( *map ) + length );
         map->min = atoi( gi.argv( 4 ) );
         map->max = atoi( gi.argv( 5 ) );
         map->flags = atoi( gi.argv( 6 ) );

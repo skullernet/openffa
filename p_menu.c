@@ -63,9 +63,11 @@ static void PMenu_Write(edict_t *ent) {
 
         if( length + j >= MAX_STRING_CHARS )
             break;
-        strcpy( string + length, entry );
+        memcpy( string + length, entry, j );
         length += j;
 	}
+
+    string[length] = 0;
 
 	gi.WriteByte (svc_layout);
 	gi.WriteString (string);
@@ -89,9 +91,9 @@ pmenu_t *PMenu_Open( edict_t *ent, pmenu_entry_t *entries, int cur, int num, voi
 		PMenu_Close(ent);
 	}
 
-	menu = gi.TagMalloc(sizeof(pmenu_t), TAG_GAME);
+	menu = G_Malloc(sizeof(pmenu_t));
 	menu->arg = arg;
-	menu->entries = gi.TagMalloc(sizeof(pmenu_entry_t) * num, TAG_GAME);
+	menu->entries = G_Malloc(sizeof(pmenu_entry_t) * num);
 	for (i = 0; i < num; i++) {
         menu->entries[i].select = entries[i].select;
         menu->entries[i].align = entries[i].align;

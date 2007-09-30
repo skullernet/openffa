@@ -20,49 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "g_local.h"
 #include "m_player.h"
 
-
-char *ClientTeam (edict_t *ent)
-{
-	char		*p;
-	static char	value[512];
-
-	value[0] = 0;
-
-	if (!ent->client)
-		return value;
-
-	strcpy(value, Info_ValueForKey (ent->client->pers.userinfo, "skin"));
-	p = strchr(value, '/');
-	if (!p)
-		return value;
-
-	if ((int)(dmflags->value) & DF_MODELTEAMS)
-	{
-		*p = 0;
-		return value;
-	}
-
-	// if ((int)(dmflags->value) & DF_SKINTEAMS)
-	return ++p;
-}
-
-qboolean OnSameTeam (edict_t *ent1, edict_t *ent2)
-{
-	char	ent1Team [512];
-	char	ent2Team [512];
-
-	if (!((int)(dmflags->value) & (DF_MODELTEAMS | DF_SKINTEAMS)))
-		return qfalse;
-
-	strcpy (ent1Team, ClientTeam (ent1));
-	strcpy (ent2Team, ClientTeam (ent2));
-
-	if (strcmp(ent1Team, ent2Team) == 0)
-		return qtrue;
-	return qfalse;
-}
-
-
 void SelectNextItem (edict_t *ent, int itflags)
 {
 	gclient_t	*cl;
@@ -739,9 +696,6 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
         return;
     }
 
-	if (!((int)(dmflags->value) & (DF_MODELTEAMS | DF_SKINTEAMS)))
-		team = qfalse;
-
 	if (team)
 		Com_sprintf (text, sizeof(text), "(%s): ", cl->pers.netname);
 	else
@@ -764,8 +718,8 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 		if (i >= 0 && level.framenum - cl->flood_when[i % FLOOD_MSGS] < flood_persecond->value*HZ) {
             j = flood_waitdelay->value;
 			cl->flood_locktill = level.framenum + j*HZ;
-			gi.cprintf(ent, PRINT_CHAT, "Flood protection: "
-                "You can't talk for %d seconds.\n", j);
+			gi.cprintf(ent, PRINT_CHAT,
+                "Flood protection: You can't talk for %d seconds.\n", j);
             return;
         }
 		cl->flood_when[++cl->flood_whenhead % FLOOD_MSGS] = level.framenum;
@@ -781,53 +735,13 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 			continue;
 		if (!other->client)
 			continue;
-		if (team)
-		{
-			if (!OnSameTeam(ent, other))
-				continue;
+		if (team) {
+            if( PLAYER_SPAWNED( ent ) != PLAYER_SPAWNED( other ) ) {
+                continue;
+            }
 		}
 		gi.cprintf(other, PRINT_CHAT, "%s\n", text);
 	}
-}
-
-static void Cmd_Observe_f(edict_t *ent) {
-    if( ent->client->pers.connected == CONN_PREGAME ) {
-        ent->client->pers.connected = CONN_SPECTATOR;
-		gi.cprintf( ent, PRINT_HIGH, "Changed to spectator mode.\n" );
-        return;
-    }
-    if( level.framenum - ent->client->respawn_framenum < 5*HZ ) {
-		gi.cprintf( ent, PRINT_HIGH, "You may not change modes too soon.\n" );
-        return;
-    }
-    if( ent->client->pers.connected == CONN_SPECTATOR ) {
-        ent->client->pers.connected = CONN_SPAWNED;
-    } else {
-        ent->client->pers.connected = CONN_SPECTATOR;
-    }
-    spectator_respawn( ent );
-}
-
-static void Cmd_Chase_f(edict_t *ent) {
-    if( ent->client->pers.connected == CONN_PREGAME ) {
-        ent->client->pers.connected = CONN_SPECTATOR;
-		gi.cprintf( ent, PRINT_HIGH, "Changed to spectator mode.\n" );
-		GetChaseTarget( ent );
-        return;
-    }
-    if( ent->client->pers.connected != CONN_SPECTATOR ) {
-        if( level.framenum - ent->client->respawn_framenum < 5*HZ ) {
-		    gi.cprintf( ent, PRINT_HIGH, "You may not change modes too soon.\n" );
-            return;
-        }
-        ent->client->pers.connected = CONN_SPECTATOR;
-        spectator_respawn( ent );
-    }
-    if( !ent->client->chase_target ) {
-		GetChaseTarget( ent );
-    } else {
-        SetChaseTarget( ent, NULL );
-    }
 }
 
 edict_t *G_SetPlayer( edict_t *ent, int arg ) {
@@ -859,8 +773,8 @@ edict_t *G_SetPlayer( edict_t *ent, int arg ) {
 	}
 
 	// check for a name match
-    for( i = 0; i < game.maxclients; i++ ) {
-        other = &g_edicts[ i + 1 ];
+    for( i = 1; i <= game.maxclients; i++ ) {
+        other = &g_edicts[i];
 		if (!other->client ) {
             continue;
         }
@@ -872,14 +786,82 @@ edict_t *G_SetPlayer( edict_t *ent, int arg ) {
 		}
 	}
 
-	Com_Printf ("Client \"%s\" is not on the server.\n", s);
+	gi.cprintf( ent, PRINT_HIGH, "Client \"%s\" is not on the server.\n", s);
 	return NULL;
 }
 
+static void Cmd_Observe_f(edict_t *ent) {
+    if( ent->client->pers.connected == CONN_PREGAME ) {
+        ent->client->pers.connected = CONN_SPECTATOR;
+		gi.cprintf( ent, PRINT_HIGH, "Changed to spectator mode.\n" );
+        return;
+    }
+    if( level.framenum - ent->client->respawn_framenum < 5*HZ ) {
+		gi.cprintf( ent, PRINT_HIGH, "You may not change modes too soon.\n" );
+        return;
+    }
+    if( ent->client->pers.connected == CONN_SPECTATOR ) {
+        ent->client->pers.connected = CONN_SPAWNED;
+    } else {
+        ent->client->pers.connected = CONN_SPECTATOR;
+    }
+    spectator_respawn( ent );
+}
+
+static void Cmd_Chase_f( edict_t *ent ) {
+    edict_t *target = NULL;
+
+    if( gi.argc() == 2 ) {
+        target = G_SetPlayer( ent, 1 );
+        if( !target ) {
+            return;
+        }
+        if( !PLAYER_SPAWNED( target ) ) {
+	        gi.cprintf( ent, PRINT_HIGH, "Client \"%s\" is not in the game.\n",
+                target->client->pers.netname);
+            return;
+        }
+    }
+
+    if( ent->client->pers.connected == CONN_PREGAME ) {
+        ent->client->pers.connected = CONN_SPECTATOR;
+		gi.cprintf( ent, PRINT_HIGH, "Changed to spectator mode.\n" );
+        if( target ) {
+            SetChaseTarget( ent, target );
+        } else {
+    		GetChaseTarget( ent );
+        }
+        return;
+    }
+    if( ent->client->pers.connected != CONN_SPECTATOR ) {
+        if( level.framenum - ent->client->respawn_framenum < 5*HZ ) {
+		    gi.cprintf( ent, PRINT_HIGH, "You may not change modes too soon.\n" );
+            return;
+        }
+        ent->client->pers.connected = CONN_SPECTATOR;
+        spectator_respawn( ent );
+    }
+    if( target ) {
+        if( target == ent->client->chase_target ) {
+	        gi.cprintf( ent, PRINT_HIGH, "Client \"%s\" is already being chased.\n",
+                target->client->pers.netname);
+            return;
+        }
+        SetChaseTarget( ent, target );
+    } else {
+        if( !ent->client->chase_target ) {
+            GetChaseTarget( ent );
+        } else {
+            SetChaseTarget( ent, NULL );
+        }
+    }
+}
+
+
 static const char weapnames[WEAP_TOTAL][16] = {
-    "None", "Blaster", "Shotgun", "S.Shotgun", "Machinegun",
-    "Chaingun", "Grenades", "G.Launcher", "R.Launcher",
-    "H.Blaster", "Railgun", "BFG10K"
+    "None",         "Blaster",  "Shotgun",      "S.Shotgun",    "Machinegun",
+    "Chaingun",     "Grenades", "G.Launcher",   "R.Launcher",
+    "H.Blaster",    "Railgun",  "BFG10K"
 };
 
 static void Cmd_Stats_f( edict_t *ent ) {
@@ -1109,7 +1091,7 @@ void G_BuildProposal( char *buffer ) {
         sprintf( buffer, "mute %s", level.vote.victim->pers.netname );
         break;
     case VOTE_MAP:
-        Com_sprintf( buffer, MAX_QPATH, "change map to %s", level.nextmap );
+        sprintf( buffer, "change map to %s", level.nextmap );
         break;
     default:
         strcpy( buffer, "unknown" );
@@ -1251,7 +1233,7 @@ static const vote_proposal_t vote_proposals[] = {
 };
 
 static void Cmd_Vote_f( edict_t *ent ) {
-    char buffer[MAX_QPATH];
+    char buffer[MAX_STRING_CHARS];
     const vote_proposal_t *v;
     int mask = g_vote_mask->value;
     int limit = g_vote_limit->value;
@@ -1470,31 +1452,23 @@ void ClientCommand (edict_t *ent)
 
 	cmd = gi.argv(0);
 
-	if (Q_stricmp (cmd, "say") == 0)
-	{
+	if (Q_stricmp (cmd, "say") == 0) {
 		Cmd_Say_f (ent, qfalse, qfalse);
 		return;
 	}
-	if (Q_stricmp (cmd, "say_team") == 0)
-	{
+	if (Q_stricmp (cmd, "say_team") == 0) {
 		Cmd_Say_f (ent, qtrue, qfalse);
-		return;
-	}
-	if (Q_stricmp (cmd, "score") == 0)
-	{
-		Cmd_Score_f (ent);
-		return;
-	}
-	if (Q_stricmp (cmd, "help") == 0)
-	{
-		Cmd_Help_f (ent);
 		return;
 	}
 
 	if (level.intermission_framenum)
 		return;
 
-	if (Q_stricmp (cmd, "use") == 0)
+	if (Q_stricmp (cmd, "score") == 0)
+		Cmd_Score_f (ent);
+	else if (Q_stricmp (cmd, "help") == 0)
+		Cmd_Help_f (ent);
+	else if (Q_stricmp (cmd, "use") == 0)
 		Cmd_Use_f (ent);
 	else if (Q_stricmp (cmd, "drop") == 0)
 		Cmd_Drop_f (ent);

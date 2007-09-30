@@ -718,6 +718,7 @@ void	G_FreeEdict (edict_t *e);
 void	G_TouchTriggers (edict_t *ent);
 void	G_TouchSolids (edict_t *ent);
 
+#define G_Malloc( x )   gi.TagMalloc( x, TAG_GAME )
 char	*G_CopyString (const char *in);
 
 float	*tv (float x, float y, float z);
@@ -879,6 +880,7 @@ void G_ResetLevel( void );
 #define	ANIM_DEATH		5
 #define	ANIM_REVERSE	6
 
+#define PLAYER_SPAWNED( e ) ( (e)->client->pers.connected == CONN_SPAWNED )
 
 typedef enum {
 	PMENU_ALIGN_LEFT,

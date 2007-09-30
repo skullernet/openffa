@@ -388,16 +388,17 @@ void vectoangles (vec3_t value1, vec3_t angles)
 	angles[ROLL] = 0;
 }
 
-char *G_CopyString (const char *in)
-{
+char *G_CopyString( const char *in ) {
 	char	*out;
+    int     length;
 
     if( !in ) {
         return NULL;
     }
 	
-	out = gi.TagMalloc (strlen(in)+1, TAG_GAME);
-	strcpy (out, in);
+    length = strlen( in ) + 1;
+	out = G_Malloc( length );
+	memcpy( out, in, length );
 	return out;
 }
 

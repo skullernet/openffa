@@ -148,11 +148,9 @@ int G_CalcRanks( gclient_t **ranks ) {
 	// sort the clients by score, then by eff
 	total = 0;
 	for( i = 0; i < game.maxclients; i++ ) {
-        if( game.clients[i].pers.connected != CONN_SPAWNED ) {
-            continue;
+        if( game.clients[i].pers.connected == CONN_SPAWNED ) {
+            ranks[total++] = &game.clients[i];
         }
-
-        ranks[total++] = &game.clients[i];
 	}
 
     qsort( ranks, total, sizeof( gclient_t * ), G_PlayerCmp );
@@ -215,7 +213,7 @@ void DeathmatchScoreboardMessage( edict_t *ent ) {
 	char	entry[MAX_STRING_CHARS];
 	char	string[MAX_STRING_CHARS];
     char    status[MAX_QPATH];
-	int		stringlength;
+	int		length;
 	int		i, j, total;
     int     y, sec, eff;
 	gclient_t	*ranks[MAX_CLIENTS];
@@ -226,7 +224,7 @@ void DeathmatchScoreboardMessage( edict_t *ent ) {
         "yv 26 "
         "string \"Player          Frg Dth Eff% FPH Time Ping\""
         "xv -40 " );
-	stringlength = strlen( string );
+	length = strlen( string );
 
     total = G_CalcRanks( ranks );
 
@@ -253,10 +251,10 @@ void DeathmatchScoreboardMessage( edict_t *ent ) {
             c->pers.netname, c->resp.score, c->resp.deaths, eff,
             c->resp.score * 3600 / sec, sec / 60, c->ping );
 
-        if( stringlength + j >= MAX_STRING_CHARS )
+        if( length + j >= MAX_STRING_CHARS )
             break;
-        strcpy( string + stringlength, entry );
-        stringlength += j;
+        memcpy( string + length, entry, j );
+        length += j;
         y += 8;
     }
 
@@ -287,12 +285,14 @@ void DeathmatchScoreboardMessage( edict_t *ent ) {
             y, c == ent->client ? "" : "2", total + i + 1,
             c->pers.netname, status, sec / 60, c->ping );
 
-        if( stringlength + j >= MAX_STRING_CHARS )
+        if( length + j >= MAX_STRING_CHARS )
             break;
-        strcpy( string + stringlength, entry );
-        stringlength += j;
+        memcpy( string + length, entry, j );
+        length += j;
         y += 8;
     }
+
+    string[length] = 0;
 
 	gi.WriteByte( svc_layout );
 	gi.WriteString( string );

@@ -826,7 +826,7 @@ void CopyToBodyQue (edict_t *ent)
 	gi.unlinkentity (ent);
 
 	// grab a body que and cycle to the next one
-	body = &g_edicts[(int)maxclients->value + level.body_que + 1];
+	body = &g_edicts[game.maxclients + level.body_que + 1];
 	level.body_que = (level.body_que + 1) % BODY_QUEUE_SIZE;
 
 	gi.unlinkentity (body);

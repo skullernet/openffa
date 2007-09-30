@@ -142,23 +142,6 @@ void ClientEndServerFrames (void) {
     }
 }
 
-
-char *CopyString( const char *in ) {
-	char	*out;
-	int length;
-
-	if( !in ) {
-		return NULL;
-	}
-
-	length = strlen( in ) + 1;
-	
-	out = gi.TagMalloc( TAG_GAME, length );
-	strcpy( out, in );
-
-	return out;
-}
-
 static int QDECL ScoreCmp( const void *p1, const void *p2 ) {
     score_t *a = ( score_t * )p1;
     score_t *b = ( score_t * )p2;
@@ -611,13 +594,13 @@ static void G_Init (void) {
 
 	// initialize all entities for this game
 	game.maxentities = maxentities->value;
-	g_edicts =  gi.TagMalloc (game.maxentities * sizeof(g_edicts[0]), TAG_GAME);
+	g_edicts = G_Malloc (game.maxentities * sizeof(g_edicts[0]));
 	globals.edicts = g_edicts;
 	globals.max_edicts = game.maxentities;
 
 	// initialize all clients for this game
 	game.maxclients = maxclients->value;
-	game.clients = gi.TagMalloc (game.maxclients * sizeof(game.clients[0]), TAG_GAME);
+	game.clients = G_Malloc (game.maxclients * sizeof(game.clients[0]));
 	globals.num_edicts = game.maxclients+1;
 
     // obtain home path

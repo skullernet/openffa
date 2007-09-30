@@ -74,7 +74,7 @@ qboolean CanDamage (edict_t *targ, edict_t *inflictor)
 Killed
 ============
 */
-void Killed (edict_t *targ, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+static void Killed (edict_t *targ, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
 	if (targ->health < -999)
 		targ->health = -999;
@@ -89,13 +89,9 @@ void Killed (edict_t *targ, edict_t *inflictor, edict_t *attacker, int damage, v
 SpawnDamage
 ================
 */
-void SpawnDamage (int type, vec3_t origin, vec3_t normal, int damage)
-{
-	if (damage > 255)
-		damage = 255;
+static void SpawnDamage (int type, vec3_t origin, vec3_t normal) {
 	gi.WriteByte (svc_temp_entity);
 	gi.WriteByte (type);
-//	gi.WriteByte (damage);
 	gi.WritePosition (origin);
 	gi.WriteDir (normal);
 	gi.multicast (origin, MULTICAST_PVS);
@@ -189,7 +185,7 @@ static int CheckPowerArmor (edict_t *ent, vec3_t point, vec3_t normal, int damag
 	if (save > damage)
 		save = damage;
 
-	SpawnDamage (pa_te_type, point, normal, save);
+	SpawnDamage (pa_te_type, point, normal);
 	client->powerarmor_framenum = level.framenum + 2;
 
 	power_used = save / damagePerCell;
@@ -233,12 +229,12 @@ static int CheckArmor (edict_t *ent, vec3_t point, vec3_t normal, int damage, in
 		return 0;
 
 	client->inventory[index] -= save;
-	SpawnDamage (te_sparks, point, normal, save);
+	SpawnDamage (te_sparks, point, normal);
 
 	return save;
 }
 
-qboolean CheckTeamDamage (edict_t *targ, edict_t *attacker)
+static qboolean CheckTeamDamage (edict_t *targ, edict_t *attacker)
 {
 		//FIXME make the next line real and uncomment this block
 		// if ((ability to damage a teammate == OFF) && (targ's team == attacker's team))
@@ -262,6 +258,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 	// friendly fire avoidance
 	// if enabled you can't hurt teammates (but you can hurt yourself)
 	// knockback still occurs
+#if 0
 	if( (targ != attacker) && ((int)(dmflags->value) & (DF_MODELTEAMS|DF_SKINTEAMS)))
 	{
 		if (OnSameTeam (targ, attacker))
@@ -272,6 +269,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 				mod |= MOD_FRIENDLY_FIRE;
 		}
 	}
+#endif
 	meansOfDeath = mod;
 
 	client = targ->client;
@@ -406,7 +404,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 	{
 		take = 0;
 		save = damage;
-		SpawnDamage (te_sparks, point, normal, save);
+		SpawnDamage (te_sparks, point, normal);
 	}
 
 	// check for invincibility
@@ -444,14 +442,14 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 	{
 		if (client)
 			if(targ == attacker)
-				SpawnDamage (TE_BLOOD, targ->s.origin, normal, take);
+				SpawnDamage (TE_BLOOD, targ->s.origin, normal);
 			else
-				SpawnDamage (TE_BLOOD, point, normal, take);
+				SpawnDamage (TE_BLOOD, point, normal);
 		else
 			if(targ == attacker)
-				SpawnDamage (TE_SPARKS, targ->s.origin, normal, take);
+				SpawnDamage (TE_SPARKS, targ->s.origin, normal);
 			else
-				SpawnDamage (TE_SPARKS, point, normal, take);
+				SpawnDamage (TE_SPARKS, point, normal);
 
 		targ->health -= take;
 			
