@@ -20,8 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "g_local.h"
 #include "m_player.h"
 
-void SelectNextItem (edict_t *ent, int itflags)
-{
+static void SelectNextItem (edict_t *ent, int itflags) {
 	gclient_t	*cl;
 	int			i, index;
 	const gitem_t		*it;
@@ -56,8 +55,7 @@ void SelectNextItem (edict_t *ent, int itflags)
 	cl->selected_item = -1;
 }
 
-void SelectPrevItem (edict_t *ent, int itflags)
-{
+static void SelectPrevItem (edict_t *ent, int itflags) {
 	gclient_t	*cl;
 	int			i, index;
 	const gitem_t		*it;

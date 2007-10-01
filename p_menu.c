@@ -91,9 +91,8 @@ pmenu_t *PMenu_Open( edict_t *ent, pmenu_entry_t *entries, int cur, int num, voi
 		PMenu_Close(ent);
 	}
 
-	menu = G_Malloc(sizeof(pmenu_t));
+	menu = G_Malloc( sizeof( pmenu_t ) + sizeof( pmenu_entry_t ) * ( num - 1 ) );
 	menu->arg = arg;
-	menu->entries = G_Malloc(sizeof(pmenu_entry_t) * num);
 	for (i = 0; i < num; i++) {
         menu->entries[i].select = entries[i].select;
         menu->entries[i].align = entries[i].align;
@@ -135,9 +134,6 @@ void PMenu_Close( edict_t *ent ) {
 	for (i = 0; i < menu->num; i++)
 		if (menu->entries[i].text)
 			gi.TagFree(menu->entries[i].text);
-	gi.TagFree(menu->entries);
-//	if (menu->arg)
-//		free(menu->arg);
 	gi.TagFree(menu);
 	ent->client->menu = NULL;
 }

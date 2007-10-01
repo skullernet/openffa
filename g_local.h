@@ -888,19 +888,20 @@ typedef enum {
 	PMENU_ALIGN_RIGHT
 } pmenu_align_t;
 
-typedef struct pmenu_s {
-	struct pmenu_entry_s *entries;
-	int cur, num;
-	void *arg;
-} pmenu_t;
-
-typedef void (*pmenu_select_t)( edict_t *ent, pmenu_t *menu );
+struct pmenu_s;
+typedef void (*pmenu_select_t)( struct edict_s *, struct pmenu_s * );
 
 typedef struct pmenu_entry_s {
 	char *text;
 	pmenu_align_t align;
 	pmenu_select_t select;
 } pmenu_entry_t;
+
+typedef struct pmenu_s {
+	int cur, num;
+	void *arg;
+	pmenu_entry_t entries[1];
+} pmenu_t;
 
 typedef enum {
     CONN_DISCONNECTED,
