@@ -68,6 +68,12 @@ void MoveClientToIntermission (edict_t *ent)
 	// add the layout
 	DeathmatchScoreboardMessage (ent);
 	gi.unicast (ent, qtrue);
+
+    if( ent->client->pers.uf & UF_AUTOSCREENSHOT ) {
+        gi.WriteByte( svc_stufftext );
+        gi.WriteString( "wait; screenshot\n" );
+	    gi.unicast (ent, qtrue);
+    }
 }
 
 void BeginIntermission (void)

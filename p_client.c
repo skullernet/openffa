@@ -1200,6 +1200,9 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
         client->pers.gender = GENDER_NEUTRAL;
     }
 
+    // flags
+	s = Info_ValueForKey (client->pers.userinfo, "uf");
+    client->pers.uf = atoi(s);
 }
 
 

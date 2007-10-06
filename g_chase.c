@@ -114,7 +114,9 @@ static void UpdateChaseCam( gclient_t *client ) {
 	edict_t *targ = client->chase_target;
 
 	client->ps = targ->client->ps;
-	client->ps.fov = client->pers.fov;
+    if( client->pers.uf & UF_LOCALFOV ) {
+    	client->ps.fov = client->pers.fov;
+    }
 	client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
 	if( targ->deadflag ) {
 		client->ps.pmove.pm_type = PM_DEAD;

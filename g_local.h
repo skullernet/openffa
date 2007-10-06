@@ -935,6 +935,7 @@ typedef struct {
 	int			hand;
     float       fov;
     gender_t    gender;
+    int         uf;
 	conn_t	    connected;
     int         flags;
 } client_persistant_t;
