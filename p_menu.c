@@ -96,7 +96,7 @@ pmenu_t *PMenu_Open( edict_t *ent, pmenu_entry_t *entries, int cur, int num, voi
 	for (i = 0; i < num; i++) {
         menu->entries[i].select = entries[i].select;
         menu->entries[i].align = entries[i].align;
-		menu->entries[i].text = G_CopyString(entries[i].text);
+		menu->entries[i].text = entries[i].text;
     }
 
 	menu->num = num;
@@ -126,14 +126,14 @@ pmenu_t *PMenu_Open( edict_t *ent, pmenu_entry_t *entries, int cur, int num, voi
 
 void PMenu_Close( edict_t *ent ) {
 	pmenu_t *menu = ent->client->menu;
-	int i;
+	//int i;
 
 	if (!menu)
 		return;
 
-	for (i = 0; i < menu->num; i++)
+	/*for (i = 0; i < menu->num; i++)
 		if (menu->entries[i].text)
-			gi.TagFree(menu->entries[i].text);
+			gi.TagFree(menu->entries[i].text);*/
 	gi.TagFree(menu);
 	ent->client->menu = NULL;
 }

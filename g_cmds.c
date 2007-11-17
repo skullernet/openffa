@@ -1375,6 +1375,7 @@ static void select_test( edict_t *ent, pmenu_t *menu ) {
     switch( menu->cur ) {
     case 3:
         if( ent->client->pers.connected == CONN_SPAWNED ) {
+            PMenu_Close( ent );
             break;
         }
         if( ent->client->pers.connected != CONN_PREGAME ) {
@@ -1400,15 +1401,16 @@ static void select_test( edict_t *ent, pmenu_t *menu ) {
     }
 }
 
-static pmenu_entry_t entries[] = {
+static pmenu_entry_t main_menu[] = {
     { "OpenFFA - Main", PMENU_ALIGN_CENTER },
     { NULL },
     { NULL },
-    { "*Enter the game", PMENU_ALIGN_LEFT, select_test },
-    { "*Voting menu", PMENU_ALIGN_LEFT, select_test },
+    { NULL, PMENU_ALIGN_LEFT, select_test },
+//    { "*Voting menu", PMENU_ALIGN_LEFT, select_test },
     { NULL },
-    { "*Enter OBSERVER mode", PMENU_ALIGN_LEFT, select_test },
-    { "*Enter CHASECAM mode", PMENU_ALIGN_LEFT, select_test },
+    { NULL },
+    { NULL, PMENU_ALIGN_LEFT, select_test },
+    { NULL, PMENU_ALIGN_LEFT, select_test },
     { NULL },
     //{ "*Help", PMENU_ALIGN_LEFT, select_test },
     { NULL },
@@ -1427,8 +1429,32 @@ void Cmd_Menu_f( edict_t *ent ) {
         PMenu_Close( ent );
         return;
     }
+
+    switch( ent->client->pers.connected ) {
+    case CONN_PREGAME:
+        main_menu[3].text = "*Enter the game";
+        main_menu[6].text = "*Enter OBSERVER mode";
+        main_menu[7].text = "*Enter CHASECAM mode";
+        break;
+    case CONN_SPECTATOR:
+        main_menu[3].text = "*Enter the game";
+        if( ent->client->chase_target ) {
+            main_menu[6].text = "*Enter OBSERVER mode";
+            main_menu[7].text = "*Leave CHASECAM mode";
+        } else {
+            main_menu[6].text = "*Leave OBSERVER mode";
+            main_menu[7].text = "*Enter CHASECAM mode";
+        }
+        break;
+    default:
+        main_menu[3].text = "*Return to game";
+        main_menu[6].text = "*Enter OBSERVER mode";
+        main_menu[7].text = "*Enter CHASECAM mode";
+        break;
+    }
+
     ent->client->showscores = qfalse;
-    PMenu_Open( ent, entries, 0, sizeof(entries)/sizeof(entries[0]), NULL );
+    PMenu_Open( ent, main_menu, 0, 18, NULL );
 }
 
 
