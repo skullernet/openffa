@@ -27,20 +27,19 @@ static	edict_t		*current_player;
 static	gclient_t	*current_client;
 
 static	vec3_t	forward, right, up;
-float	xyspeed;
+static  float	xyspeed;
 
-float	bobmove;
-int		bobcycle;		// odd cycles are right foot going forward
-float	bobfracsin;		// sin(bobfrac*M_PI)
+static float	bobmove;
+static int		bobcycle;		// odd cycles are right foot going forward
+static float	bobfracsin;		// sin(bobfrac*M_PI)
 
 /*
 ===============
-SV_CalcRoll
+P_CalcRoll
 
 ===============
 */
-float SV_CalcRoll (vec3_t angles, vec3_t velocity)
-{
+static float P_CalcRoll (vec3_t angles, vec3_t velocity) {
 	float	sign;
 	float	side;
 	float	value;
@@ -57,7 +56,6 @@ float SV_CalcRoll (vec3_t angles, vec3_t velocity)
 		side = value;
 	
 	return side*sign;
-	
 }
 
 
@@ -68,8 +66,7 @@ P_DamageFeedback
 Handles color blends and view kicks
 ===============
 */
-void P_DamageFeedback (edict_t *player)
-{
+static void P_DamageFeedback (edict_t *player) {
 	gclient_t	*client;
 	float	side;
 	float	realcount, count, kick;
@@ -205,7 +202,7 @@ void P_DamageFeedback (edict_t *player)
 
 /*
 ===============
-SV_CalcViewOffset
+P_CalcViewOffset
 
 Auto pitching on slopes?
 
@@ -219,8 +216,7 @@ Auto pitching on slopes?
 
 ===============
 */
-void SV_CalcViewOffset (edict_t *ent)
-{
+static void P_CalcViewOffset (edict_t *ent) {
 	float		*angles;
 	float		bob;
 	float		ratio;
@@ -345,11 +341,10 @@ void SV_CalcViewOffset (edict_t *ent)
 
 /*
 ==============
-SV_CalcGunOffset
+P_CalcGunOffset
 ==============
 */
-void SV_CalcGunOffset (edict_t *ent)
-{
+static void P_CalcGunOffset (edict_t *ent) {
 	int		i;
 	float	delta;
 
@@ -397,11 +392,10 @@ void SV_CalcGunOffset (edict_t *ent)
 
 /*
 =============
-SV_AddBlend
+P_AddBlend
 =============
 */
-void SV_AddBlend (float r, float g, float b, float a, float *v_blend)
-{
+static void P_AddBlend (float r, float g, float b, float a, float *v_blend) {
 	float	a2, a3;
 
 	if (a <= 0)
@@ -418,11 +412,10 @@ void SV_AddBlend (float r, float g, float b, float a, float *v_blend)
 
 /*
 =============
-SV_CalcBlend
+P_CalcBlend
 =============
 */
-void SV_CalcBlend (edict_t *ent)
-{
+static void P_CalcBlend (edict_t *ent) {
 	int		contents;
 	vec3_t	vieworg;
 	int		remaining;
@@ -439,11 +432,11 @@ void SV_CalcBlend (edict_t *ent)
 		ent->client->ps.rdflags &= ~RDF_UNDERWATER;
 
 	if (contents & (CONTENTS_SOLID|CONTENTS_LAVA))
-		SV_AddBlend (1.0, 0.3, 0.0, 0.6, ent->client->ps.blend);
+		P_AddBlend (1.0, 0.3, 0.0, 0.6, ent->client->ps.blend);
 	else if (contents & CONTENTS_SLIME)
-		SV_AddBlend (0.0, 0.1, 0.05, 0.6, ent->client->ps.blend);
+		P_AddBlend (0.0, 0.1, 0.05, 0.6, ent->client->ps.blend);
 	else if (contents & CONTENTS_WATER)
-		SV_AddBlend (0.5, 0.3, 0.2, 0.4, ent->client->ps.blend);
+		P_AddBlend (0.5, 0.3, 0.2, 0.4, ent->client->ps.blend);
 
 	// add for powerups
 	if (ent->client->quad_framenum > level.framenum)
@@ -452,7 +445,7 @@ void SV_CalcBlend (edict_t *ent)
 		if (remaining == 30)	// beginning to fade
 			gi.sound(ent, CHAN_ITEM, gi.soundindex("items/damage2.wav"), 1, ATTN_NORM, 0);
 		if (remaining > 30 || (remaining & 4) )
-			SV_AddBlend (0, 0, 1, 0.08, ent->client->ps.blend);
+			P_AddBlend (0, 0, 1, 0.08, ent->client->ps.blend);
 	}
 	else if (ent->client->invincible_framenum > level.framenum)
 	{
@@ -460,7 +453,7 @@ void SV_CalcBlend (edict_t *ent)
 		if (remaining == 30)	// beginning to fade
 			gi.sound(ent, CHAN_ITEM, gi.soundindex("items/protect2.wav"), 1, ATTN_NORM, 0);
 		if (remaining > 30 || (remaining & 4) )
-			SV_AddBlend (1, 1, 0, 0.08, ent->client->ps.blend);
+			P_AddBlend (1, 1, 0, 0.08, ent->client->ps.blend);
 	}
 	else if (ent->client->enviro_framenum > level.framenum)
 	{
@@ -468,7 +461,7 @@ void SV_CalcBlend (edict_t *ent)
 		if (remaining == 30)	// beginning to fade
 			gi.sound(ent, CHAN_ITEM, gi.soundindex("items/airout.wav"), 1, ATTN_NORM, 0);
 		if (remaining > 30 || (remaining & 4) )
-			SV_AddBlend (0, 1, 0, 0.08, ent->client->ps.blend);
+			P_AddBlend (0, 1, 0, 0.08, ent->client->ps.blend);
 	}
 	else if (ent->client->breather_framenum > level.framenum)
 	{
@@ -476,16 +469,16 @@ void SV_CalcBlend (edict_t *ent)
 		if (remaining == 30)	// beginning to fade
 			gi.sound(ent, CHAN_ITEM, gi.soundindex("items/airout.wav"), 1, ATTN_NORM, 0);
 		if (remaining > 30 || (remaining & 4) )
-			SV_AddBlend (0.4, 1, 0.4, 0.04, ent->client->ps.blend);
+			P_AddBlend (0.4, 1, 0.4, 0.04, ent->client->ps.blend);
 	}
 
 	// add for damage
 	if (ent->client->damage_alpha > 0)
-		SV_AddBlend (ent->client->damage_blend[0],ent->client->damage_blend[1]
+		P_AddBlend (ent->client->damage_blend[0],ent->client->damage_blend[1]
 		,ent->client->damage_blend[2], ent->client->damage_alpha, ent->client->ps.blend);
 
 	if (ent->client->bonus_alpha > 0)
-		SV_AddBlend (0.85, 0.7, 0.3, ent->client->bonus_alpha, ent->client->ps.blend);
+		P_AddBlend (0.85, 0.7, 0.3, ent->client->bonus_alpha, ent->client->ps.blend);
 
 	// drop the damage value
 	ent->client->damage_alpha -= 0.06;
@@ -504,8 +497,7 @@ void SV_CalcBlend (edict_t *ent)
 P_FallingDamage
 =================
 */
-void P_FallingDamage (edict_t *ent)
-{
+static void P_FallingDamage (edict_t *ent) {
 	float	delta;
 	int		damage;
 	vec3_t	dir;
@@ -584,8 +576,7 @@ void P_FallingDamage (edict_t *ent)
 P_WorldEffects
 =============
 */
-void P_WorldEffects (void)
-{
+static void P_WorldEffects (void) {
 	qboolean	breather;
 	qboolean	envirosuit;
 	int			waterlevel, old_waterlevel;
@@ -737,11 +728,10 @@ void P_WorldEffects (void)
 
 /*
 ===============
-G_SetClientEffects
+P_SetEffects
 ===============
 */
-void G_SetClientEffects (edict_t *ent)
-{
+static void P_SetEffects (edict_t *ent) {
 	int		pa_type;
 	int		remaining;
 
@@ -790,16 +780,14 @@ void G_SetClientEffects (edict_t *ent)
 
 /*
 ===============
-G_SetClientEvent
+P_SetEvent
 ===============
 */
-void G_SetClientEvent (edict_t *ent)
-{
+static void P_SetEvent (edict_t *ent) {
 	if (ent->s.event)
 		return;
 
-	if ( ent->groundentity && xyspeed > 225)
-	{
+	if ( ent->groundentity && xyspeed > 225) {
 		if ( (int)(current_client->bobtime+bobmove) != bobcycle )
 			ent->s.event = EV_FOOTSTEP;
 	}
@@ -807,11 +795,10 @@ void G_SetClientEvent (edict_t *ent)
 
 /*
 ===============
-G_SetClientSound
+P_SetSound
 ===============
 */
-void G_SetClientSound (edict_t *ent)
-{
+static void P_SetSound (edict_t *ent) {
     int weap;
 
 	if (ent->client->weapon)
@@ -833,11 +820,10 @@ void G_SetClientSound (edict_t *ent)
 
 /*
 ===============
-G_SetClientFrame
+P_SetFrame
 ===============
 */
-void G_SetClientFrame (edict_t *ent)
-{
+static void P_SetFrame (edict_t *ent) {
 	gclient_t	*client;
 	qboolean	duck, run;
 
@@ -982,7 +968,7 @@ void ClientEndServerFrame (edict_t *ent)
 		ent->s.angles[PITCH] = ent->client->v_angle[PITCH]/3;
 	ent->s.angles[YAW] = ent->client->v_angle[YAW];
 	ent->s.angles[ROLL] = 0;
-	ent->s.angles[ROLL] = SV_CalcRoll (ent->s.angles, ent->velocity)*4;
+	ent->s.angles[ROLL] = P_CalcRoll (ent->s.angles, ent->velocity)*4;
 
 	//
 	// calculate speed and cycle to be used for
@@ -1000,7 +986,9 @@ void ClientEndServerFrame (edict_t *ent)
 			bobmove = 0.125;
 		else
 			bobmove = 0.0625;
-	}
+	} else {
+        bobmove = 0;
+    }
 	
 	bobtime = (current_client->bobtime += bobmove);
 
@@ -1017,25 +1005,25 @@ void ClientEndServerFrame (edict_t *ent)
 	P_DamageFeedback (ent);
 
 	// determine the view offsets
-	SV_CalcViewOffset (ent);
+	P_CalcViewOffset (ent);
 
 	// determine the gun offsets
-	SV_CalcGunOffset (ent);
+	P_CalcGunOffset (ent);
 
 	// determine the full screen color blend
 	// must be after viewoffset, so eye contents can be
 	// accurately determined
 	// FIXME: with client prediction, the contents
 	// should be determined by the client
-	SV_CalcBlend (ent);
+	P_CalcBlend (ent);
 
-	G_SetClientEvent (ent);
+	P_SetEvent (ent);
 
-	G_SetClientEffects (ent);
+	P_SetEffects (ent);
 
-	G_SetClientSound (ent);
+	P_SetSound (ent);
 
-	G_SetClientFrame (ent);
+	P_SetFrame (ent);
 
     G_SetStats(ent);
 
