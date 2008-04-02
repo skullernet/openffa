@@ -389,17 +389,14 @@ void vectoangles (vec3_t value1, vec3_t angles)
 }
 
 char *G_CopyString( const char *in ) {
-	char	*out;
-    int     length;
+    size_t  len;
 
     if( !in ) {
         return NULL;
     }
 	
-    length = strlen( in ) + 1;
-	out = G_Malloc( length );
-	memcpy( out, in, length );
-	return out;
+    len = strlen( in ) + 1;
+	return memcpy( G_Malloc( len ), in, len );
 }
 
 

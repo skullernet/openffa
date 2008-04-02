@@ -22,7 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 static void PMenu_Write(edict_t *ent) {
 	char string[MAX_STRING_CHARS];
 	char entry[MAX_STRING_CHARS];
-	int i, j, length;
+	int i;
+	size_t total, len;
 	pmenu_entry_t *p;
 	int x;
 	pmenu_t *menu = ent->client->menu;
@@ -34,7 +35,7 @@ static void PMenu_Write(edict_t *ent) {
 	}
 
 	strcpy( string, "xv 32 yv 8 picn inventory " );
-    length = strlen( string );
+    total = strlen( string );
 
 	for (i = 0, p = menu->entries; i < menu->num; i++, p++) {
 		if (!p->text || !p->text[0])
@@ -58,16 +59,16 @@ static void PMenu_Write(edict_t *ent) {
             alt ^= 1;
         }
 
-		j = Com_sprintf( entry, sizeof( entry ), "yv %d xv %d string%s \"%s%s\" ",
+		len = Com_sprintf( entry, sizeof( entry ), "yv %d xv %d string%s \"%s%s\" ",
             32 + i * 8, x, alt ? "2" : "", menu->cur == i ? "\x0d" : "", t );
 
-        if( length + j >= MAX_STRING_CHARS )
+        if( total + len >= MAX_STRING_CHARS )
             break;
-        memcpy( string + length, entry, j );
-        length += j;
+        memcpy( string + total, entry, len );
+        total += len;
 	}
 
-    string[length] = 0;
+    string[total] = 0;
 
 	gi.WriteByte (svc_layout);
 	gi.WriteString (string);

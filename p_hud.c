@@ -171,11 +171,11 @@ void HighScoresMessage( void ) {
     char    date[MAX_QPATH];
     struct tm   *tm;
     score_t *s;
-	int		stringlength;
-	int		i, j;
+	size_t	total, len;
+	int		i;
     int     y;
 
-	stringlength = Com_sprintf( string, sizeof( string ),
+	total = Com_sprintf( string, sizeof( string ),
         "xv 0 "
         "yv 0 "
         "cstring \"High Scores for %s\""
@@ -188,21 +188,22 @@ void HighScoresMessage( void ) {
         s = &level.scores[i];
 
         tm = localtime( &s->time );
-        j = strftime( date, sizeof( date ), "%d %b %y", tm );
-        if( j <= 0 ) {
+        len = strftime( date, sizeof( date ), "%d %b %y", tm );
+        if( len < 1 ) {
             strcpy( date, "???" );
         }
-		j = Com_sprintf( entry, sizeof( entry ),
+		len = Com_sprintf( entry, sizeof( entry ),
 		    "yv %d cstring \"%c%2d %-15.15s %4d %-8s\"",
             y, s->time == level.record ? '*' : ' ',
             i + 1, s->name, s->score, date );
 
-        if( stringlength + j >= MAX_STRING_CHARS )
+        if( total + len >= MAX_STRING_CHARS )
             break;
-        strcpy( string + stringlength, entry );
-        stringlength += j;
+        memcpy( string + total, entry, len );
+        total += len;
         y += 8;
     }
+	string[total] = 0;
 
 	gi.WriteByte( svc_layout );
 	gi.WriteString( string );
@@ -219,8 +220,8 @@ void DeathmatchScoreboardMessage( edict_t *ent ) {
 	char	entry[MAX_STRING_CHARS];
 	char	string[MAX_STRING_CHARS];
     char    status[MAX_QPATH];
-	int		length;
-	int		i, j, total;
+	size_t	total, len;
+	int		i, j, numranks;
     int     y, sec, eff;
 	gclient_t	*ranks[MAX_CLIENTS];
 	gclient_t	*c;
@@ -230,13 +231,13 @@ void DeathmatchScoreboardMessage( edict_t *ent ) {
         "yv 26 "
         "string \"Player          Frg Dth Eff% FPH Time Ping\""
         "xv -40 " );
-	length = strlen( string );
+	total = strlen( string );
 
-    total = G_CalcRanks( ranks );
+    numranks = G_CalcRanks( ranks );
 
 	// add the clients sorted by rank
     y = 34;
-	for( i = 0; i < total; i++ ) {
+	for( i = 0; i < numranks; i++ ) {
 		c = ranks[i];
 
         sec = ( level.framenum - c->level.enter_framenum ) / HZ;
@@ -251,16 +252,16 @@ void DeathmatchScoreboardMessage( edict_t *ent ) {
             eff = 0;
         }
 
-		j = Com_sprintf( entry, sizeof( entry ),
+		len = Com_sprintf( entry, sizeof( entry ),
 		    "yv %d string%s \"%2d %-15s %3d %3d %3d %4d %4d %4d\"",
             y, c == ent->client ? "" : "2", i + 1,
             c->pers.netname, c->resp.score, c->resp.deaths, eff,
             c->resp.score * 3600 / sec, sec / 60, c->ping );
 
-        if( length + j >= MAX_STRING_CHARS )
+        if( total + len >= MAX_STRING_CHARS )
             break;
-        memcpy( string + length, entry, j );
-        length += j;
+        memcpy( string + total, entry, len );
+        total += len;
         y += 8;
     }
 
@@ -286,19 +287,19 @@ void DeathmatchScoreboardMessage( edict_t *ent ) {
             strcpy( status, "(observing)" );
         }
 
-		j = Com_sprintf( entry, sizeof( entry ),
+		len = Com_sprintf( entry, sizeof( entry ),
 		    "yv %d string%s \"%2d %-15s %-16s %4d %4d\"",
-            y, c == ent->client ? "" : "2", total + i + 1,
+            y, c == ent->client ? "" : "2", numranks + i + 1,
             c->pers.netname, status, sec / 60, c->ping );
 
-        if( length + j >= MAX_STRING_CHARS )
+        if( total + len >= MAX_STRING_CHARS )
             break;
-        memcpy( string + length, entry, j );
-        length += j;
+        memcpy( string + total, entry, len );
+        total += len;
         y += 8;
     }
 
-    string[length] = 0;
+    string[total] = 0;
 
 	gi.WriteByte( svc_layout );
 	gi.WriteString( string );

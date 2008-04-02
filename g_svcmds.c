@@ -69,7 +69,7 @@ static void Svcmd_Maplist_f( void ) {
     int argc = gi.argc();
     char *cmd, *name;
     map_entry_t *map, *next;
-    int length;
+    size_t length;
 
     if( argc < 3 ) {
         if( LIST_EMPTY( &g_maplist ) ) {
