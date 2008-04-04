@@ -29,7 +29,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 game_locals_t	game;
 level_locals_t	level;
 game_import_t	gi;
-int             serverFeatures;
 game_export_t	globals;
 spawn_temp_t	st;
 
@@ -79,6 +78,8 @@ cvar_t	*flood_persecond;
 cvar_t	*flood_waitdelay;
 
 cvar_t	*sv_maplist;
+
+cvar_t  *sv_features;
 
 void ClientThink (edict_t *ent, usercmd_t *cmd);
 qboolean ClientConnect (edict_t *ent, char *userinfo);
@@ -549,6 +550,8 @@ static void G_Init (void) {
 
 	// noset vars
 	dedicated = gi.cvar ("dedicated", "0", CVAR_NOSET);
+    sv_features = gi.cvar( "sv_features", NULL, 0 );
+    gi.cvar( "g_features", va( "%d", GMF_CLIENTNUM|GMF_MVDSPEC ), CVAR_NOSET );
 
 	// latched vars
 	sv_cheats = gi.cvar ("cheats", "0", CVAR_SERVERINFO|CVAR_LATCH);
@@ -697,8 +700,7 @@ Returns a pointer to the structure with all entry points
 and global variables
 =================
 */
-EXPORTED game_export_t *GetGameAPI (game_import_t *import)
-{
+EXPORTED game_export_t *GetGameAPI( game_import_t *import ) {
 	gi = *import;
 
 	globals.apiversion = GAME_API_VERSION;
@@ -727,7 +729,3 @@ EXPORTED game_export_t *GetGameAPI (game_import_t *import)
 	return &globals;
 }
 
-EXPORTED int GetGameFeatures( int features ) {
-    serverFeatures = features;
-    return GAME_FEATURE_CLIENTNUM|GAME_FEATURE_MVDSPEC;
-}

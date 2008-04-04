@@ -536,7 +536,6 @@ extern	game_locals_t	game;
 extern	level_locals_t	level;
 extern	game_import_t	gi;
 extern	game_export_t	globals;
-extern  int             serverFeatures;
 extern	spawn_temp_t	st;
 
 // means of death
@@ -628,6 +627,8 @@ extern	cvar_t	*flood_persecond;
 extern	cvar_t	*flood_waitdelay;
 
 extern	cvar_t	*sv_maplist;
+
+extern  cvar_t  *sv_features;
 
 #define world	(&g_edicts[0])
 

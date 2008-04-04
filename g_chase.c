@@ -228,7 +228,7 @@ void ChaseEndServerFrame( edict_t *ent ) {
     }
    
     // camera
-    if( serverFeatures & GAME_FEATURE_CLIENTNUM ) {
+    if( ( int )sv_features->value & GMF_CLIENTNUM ) {
         UpdateChaseCam( c );
     } else {
         UpdateChaseCamHack( c );
