@@ -388,9 +388,13 @@ typedef struct
 	char		nextmap[MAX_QPATH];		// go here when fraglimit is hit
     const char  *entstring;
 
-	int			status;
-    int         warmup_framenum;        // time warmup finishes
-    int         frames_remaining;       // timelimit
+	//int			status;
+    int         warmup_framenum;        // time the warmup was started
+    int         countdown_framenum;     // time the countdown was started
+    int         match_framenum;         // time the match was started
+    int         pause_framenum;         // time the pause was started
+
+//    int         frames_remaining;       // timelimit
 
 	// intermission state
 	int 		intermission_framenum;		// time the intermission was started
@@ -785,7 +789,7 @@ void InitClientPersistant (gclient_t *client);
 void InitClientResp (gclient_t *client);
 void InitBodyQue (void);
 void ClientBeginServerFrame (edict_t *ent);
-int G_WriteTime( void ); 
+void G_WriteTime( int remaining ); 
 void G_AccountDamage( edict_t *targ, edict_t *inflictor, edict_t *attacker, int points ); 
 void G_SetDeltaAngles( edict_t *ent, vec3_t angles ); 
 void G_ScoreChanged( edict_t *ent );

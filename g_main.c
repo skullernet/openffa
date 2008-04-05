@@ -332,7 +332,7 @@ CheckDMRules
 =================
 */
 static void CheckDMRules( void ) {
-	int			i, remaining;
+	int			i;
 	gclient_t	*c;
 
     if( g_item_ban->modified ) {
@@ -346,7 +346,10 @@ static void CheckDMRules( void ) {
 			return;
 		}
         if( timelimit->modified || ( level.framenum % HZ ) == 0 ) {
-            remaining = G_WriteTime();
+            int delta = level.framenum - level.match_framenum;
+            int remaining = timelimit->value*60 - delta / HZ;
+
+            G_WriteTime( remaining );
             gi.multicast( NULL, MULTICAST_ALL );
 
             // notify
@@ -360,15 +363,10 @@ static void CheckDMRules( void ) {
                 G_StartSound( level.sounds.secret );
                 break;
             case 300:
-			    gi.bprintf( PRINT_HIGH, "5 minutes remaining in match.\n" );
-                G_StartSound( level.sounds.secret );
-                break;
             case 600:
-			    gi.bprintf( PRINT_HIGH, "10 minutes remaining in match.\n" );
-                G_StartSound( level.sounds.secret );
-                break;
             case 900:
-			    gi.bprintf( PRINT_HIGH, "15 minutes remaining in match.\n" ); 
+			    gi.bprintf( PRINT_HIGH, "%d minutes remaining in match.\n",
+                    remaining / 60 );
                 G_StartSound( level.sounds.secret );
                 break;
             }
@@ -445,9 +443,8 @@ void G_RunFrame (void)
 	// treat each object in turn
 	// even the world gets a chance to think
 	//
-	ent = &g_edicts[0];
-	for (i=0 ; i<globals.num_edicts ; i++, ent++) {
-		if (!ent->inuse)
+	for( i = 0, ent = g_edicts; i < globals.num_edicts; i++, ent++ ) {
+		if( !ent->inuse )
 			continue;
 
 		level.current_entity = ent;
@@ -459,7 +456,7 @@ void G_RunFrame (void)
 			ent->groundentity = NULL;
 		}
 
-		if (i > 0 && i <= game.maxclients) {
+		if( i > 0 && i <= game.maxclients ) {
 			ClientBeginServerFrame (ent);
 			continue;
 		}
@@ -498,8 +495,28 @@ void G_RunFrame (void)
             }
         }
     } else {
-	    // see if it is time to end a deathmatch
-	    CheckDMRules();
+        if( level.warmup_framenum ) {
+            delta = level.framenum - level.warmup_framenum;
+        } else if( level.countdown_framenum ) {
+            delta = level.framenum - level.countdown_framenum;
+            if( ( level.framenum % HZ ) == 0 ) {
+                int remaining = 15*HZ - delta;
+
+                if( remaining ) {
+                    G_WriteTime( remaining );
+                    if( remaining == 10*HZ ) {
+                        G_StartSound( level.sounds.count );
+                    }
+                } else {
+                    gi.bprintf( PRINT_HIGH, "Match has started!\n" );
+                    level.countdown_framenum = 0;
+                    level.match_framenum = level.framenum;
+                }
+            }
+        } else {
+    	    // see if it is time to end a deathmatch
+	        CheckDMRules();
+        }
 
         // check vote timeout
         if( level.vote.proposal && level.framenum > level.vote.framenum ) {

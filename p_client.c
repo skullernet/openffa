@@ -1067,9 +1067,8 @@ void PutClientInServer (edict_t *ent)
 	ChangeWeapon (ent);
 }
 
-int G_WriteTime( void ) {
+void G_WriteTime( int remaining ) {
     char buffer[16];
-    int remaining = timelimit->value*60 - level.time;
     int sec = remaining % 60;
     int min = remaining / 60;
     int i;
@@ -1084,8 +1083,6 @@ int G_WriteTime( void ) {
     gi.WriteByte( svc_configstring );
     gi.WriteShort( CS_TIME );
     gi.WriteString( buffer );
-
-    return remaining;
 }
 
 
@@ -1125,7 +1122,9 @@ void ClientBegin (edict_t *ent)
 	if (level.intermission_framenum) {
 		MoveClientToIntermission (ent);
 	} else if( timelimit->value > 0 ) {
-        G_WriteTime();
+        int remaining = timelimit->value*60 - level.time;
+
+        G_WriteTime( remaining );
         gi.unicast( ent, qtrue );
 	}
 

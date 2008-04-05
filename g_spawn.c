@@ -638,7 +638,9 @@ void G_ResetLevel( void ) {
     G_UpdateRanks();
 
     if( timelimit->value > 0 ) {
-        G_WriteTime();
+        int remaining = timelimit->value*60 - level.time;
+
+        G_WriteTime( remaining );
         gi.multicast( NULL, MULTICAST_ALL );
     }
 
