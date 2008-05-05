@@ -1016,7 +1016,7 @@ qboolean G_CheckVote( void ) {
             break;
         case VOTE_KICK:
             gi.bprintf( PRINT_HIGH, "Vote passed. Kicking %s...\n", level.vote.victim->pers.netname );
-            gi.AddCommandString( va( "kick %d\n", level.vote.victim - game.clients ) );
+            gi.AddCommandString( va( "kick %d\n", ( int )( level.vote.victim - game.clients ) ) );
             break;
         case VOTE_MUTE:
             gi.bprintf( PRINT_HIGH, "Vote passed. Muting %s...\n", level.vote.victim->pers.netname );
