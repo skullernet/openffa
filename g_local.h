@@ -350,6 +350,7 @@ typedef struct
 
 	// cross level triggers
 	int			serverflags;
+    int         serverFeatures;
 
     char        dir[MAX_OSPATH]; // where variable data is stored
 } game_locals_t;
@@ -632,7 +633,7 @@ extern	cvar_t	*flood_waitdelay;
 
 extern	cvar_t	*sv_maplist;
 
-extern  cvar_t  *sv_features;
+//extern  cvar_t  *sv_features;
 
 #define world	(&g_edicts[0])
 

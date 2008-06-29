@@ -1237,7 +1237,7 @@ qboolean ClientConnect (edict_t *ent, char *userinfo) {
         ent->client->pers.flags |= CPF_LOOPBACK;
     }
 
-    if( ( int )sv_features->value & GMF_MVDSPEC ) {
+    if( game.serverFeatures & GMF_MVDSPEC ) {
         s = Info_ValueForKey (userinfo, "mvdspec");
         if( *s ) {
             ent->client->pers.flags |= CPF_MVDSPEC;

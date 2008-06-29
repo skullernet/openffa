@@ -19,12 +19,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "g_local.h"
-#ifdef _WIN32
-#include <direct.h>
-#else
-#include <sys/types.h>
-#include <sys/stat.h>
-#endif
 
 game_locals_t	game;
 level_locals_t	level;
@@ -79,7 +73,7 @@ cvar_t	*flood_waitdelay;
 
 cvar_t	*sv_maplist;
 
-cvar_t  *sv_features;
+//cvar_t  *sv_features;
 
 void ClientThink (edict_t *ent, usercmd_t *cmd);
 qboolean ClientConnect (edict_t *ent, char *userinfo);
@@ -567,8 +561,6 @@ static void G_Init (void) {
 
 	// noset vars
 	dedicated = gi.cvar ("dedicated", "0", CVAR_NOSET);
-    sv_features = gi.cvar( "sv_features", NULL, 0 );
-    gi.cvar( "g_features", va( "%d", GMF_CLIENTNUM|GMF_MVDSPEC ), CVAR_NOSET );
 
 	// latched vars
 	sv_cheats = gi.cvar ("cheats", "0", CVAR_SERVERINFO|CVAR_LATCH);
@@ -623,8 +615,8 @@ static void G_Init (void) {
 	game.clients = G_Malloc (game.maxclients * sizeof(game.clients[0]));
 	globals.num_edicts = game.maxclients+1;
 
-    // obtain home path
-    s = getenv( "QUAKE2_HOME" );
+    // obtain game path
+    s = getenv( "QUAKE2_GAME_PATH" );
     if( s && *s ) {
         Q_strncpyz( game.dir, s, sizeof( game.dir ) );
     } else {
@@ -635,12 +627,15 @@ static void G_Init (void) {
     }
 
     Com_sprintf( path, sizeof( path ), "%s/highscores", game.dir );
-#ifdef _WIN32
-	_mkdir( path );
-#else
-    mkdir( path, 0755 );
-#endif
+	Q_mkdir( path );
 
+    // obtain server features
+    s = getenv( "QUAKE2_SERVER_FEATURES" );
+    if( s && *s ) {
+        game.serverFeatures = atoi( s );
+    }
+    Q_setenv( "QUAKE2_GAME_FEATURES",
+        va( "%d", GMF_CLIENTNUM|GMF_MVDSPEC ) );
 }
 
 static void G_WriteGame (const char *filename, qboolean autosave) {
