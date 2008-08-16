@@ -23,7 +23,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "q_shared.h"
 #include "q_list.h"
 
-typedef unsigned int memtag_t;
+#define TAG_GAME    765		// clear when unloading the dll
+#define TAG_LEVEL	766		// clear when loading a new level
 
 // define GAME_INCLUDE so that game.h does not define the
 // short, server-visible gclient_t and edict_t structures,
