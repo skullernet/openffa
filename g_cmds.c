@@ -695,15 +695,15 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
     }
 
 	if (team)
-		Com_sprintf (text, sizeof(text), "(%s): ", cl->pers.netname);
+		Q_snprintf (text, sizeof(text), "(%s): ", cl->pers.netname);
 	else
-		Com_sprintf (text, sizeof(text), "%s: ", cl->pers.netname);
+		Q_snprintf (text, sizeof(text), "%s: ", cl->pers.netname);
 
 	if (arg0) {
-		Q_strcat (text, sizeof(text), gi.argv(0));
-		Q_strcat (text, sizeof(text), " ");
+		Q_strlcat (text, gi.argv(0), sizeof(text));
+		Q_strlcat (text, " ", sizeof(text));
     }
-	Q_strcat (text, sizeof(text), gi.args());
+	Q_strlcat (text, gi.args(), sizeof(text));
 
     j = flood_msgs->value;
 	if (j > 0) {

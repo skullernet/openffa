@@ -88,7 +88,7 @@ void SP_target_speaker (edict_t *ent)
 		return;
 	}
 	if (!strstr (st.noise, ".wav"))
-		Com_sprintf (buffer, sizeof(buffer), "%s.wav", st.noise);
+		Q_snprintf (buffer, sizeof(buffer), "%s.wav", st.noise);
 	else
 		strncpy (buffer, st.noise, sizeof(buffer));
 	ent->noise_index = gi.soundindex (buffer);
@@ -184,7 +184,7 @@ void use_target_changelevel (edict_t *self, edict_t *other, edict_t *activator)
 	if (strstr(self->map, "*"))	
 		game.serverflags &= ~(SFL_CROSS_TRIGGER_MASK);
 
-    Q_strncpyz( level.nextmap, self->map, sizeof( level.nextmap ) );
+    Q_strlcpy( level.nextmap, self->map, sizeof( level.nextmap ) );
 	BeginIntermission ();
 }
 

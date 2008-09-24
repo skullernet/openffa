@@ -161,9 +161,13 @@ static void G_SaveScores( void ) {
     score_t *s;
     FILE *fp;
     int i;
+    size_t len;
 
-    Com_sprintf( path, sizeof( path ), "%s/highscores/%s.txt",
+    len = Q_snprintf( path, sizeof( path ), "%s/highscores/%s.txt",
         game.dir, level.mapname );
+    if( len >= sizeof( path ) ) {
+        return;
+    }
 
     fp = fopen( path, "w" );
     if( !fp ) {
@@ -233,7 +237,7 @@ void G_LoadScores( void ) {
     score_t *s;
     FILE *fp;
 
-    Com_sprintf( path, sizeof( path ), "%s/highscores/%s.txt",
+    Q_snprintf( path, sizeof( path ), "%s/highscores/%s.txt",
         game.dir, level.mapname );
 
     fp = fopen( path, "r" );
@@ -252,7 +256,7 @@ void G_LoadScores( void ) {
         }
 
         s = &level.scores[level.numscores++];
-        Q_strncpyz( s->name, token, sizeof( s->name ) );
+        Q_strlcpy( s->name, token, sizeof( s->name ) );
 
         token = COM_Parse( &data );
         s->score = strtoul( token, NULL, 10 );
@@ -412,7 +416,7 @@ void G_ExitLevel (void) {
         return;
     }
 
-	Com_sprintf (command, sizeof(command), "gamemap \"%s\"\n", level.nextmap);
+	Q_snprintf (command, sizeof(command), "gamemap \"%s\"\n", level.nextmap);
 	gi.AddCommandString (command);
 
     level.intermission_exit = level.framenum;
@@ -618,15 +622,17 @@ static void G_Init (void) {
     // obtain game path
     s = getenv( "QUAKE2_GAME_PATH" );
     if( s && *s ) {
-        Q_strncpyz( game.dir, s, sizeof( game.dir ) );
+        Q_strlcpy( game.dir, s, sizeof( game.dir ) );
     } else {
-        cvar_t *basedir = gi.cvar( "basedir", "", 0 );
-        cvar_t *gamedir = gi.cvar( "game", "", 0 );
-        Com_sprintf( game.dir, sizeof( game.dir ), "%s/%s",
-            basedir->string, gamedir->string );
+        cvar_t *basedir = gi.cvar( "basedir", NULL, 0 );
+        cvar_t *gamedir = gi.cvar( "game", NULL, 0 );
+        if( basedir && gamedir ) {
+            Q_concat( game.dir, sizeof( game.dir ),
+                basedir->string, "/", gamedir->string, NULL );
+        }
     }
 
-    Com_sprintf( path, sizeof( path ), "%s/highscores", game.dir );
+    Q_snprintf( path, sizeof( path ), "%s/highscores", game.dir );
 	Q_mkdir( path );
 
     // obtain server features

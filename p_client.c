@@ -82,21 +82,21 @@ int G_UpdateRanks( void ) {
     c = ranks[0];
     topscore = c->resp.score;
     j = total > 1 ? ranks[1]->resp.score : 0;
-    Com_sprintf( buffer, sizeof( buffer ), "  +%2d", topscore - j );
+    Q_snprintf( buffer, sizeof( buffer ), "  +%2d", topscore - j );
     G_PrivateString( c->edict, PCS_DELTA, buffer );
-    Com_sprintf( buffer, sizeof( buffer ), "1/%d", total );
+    Q_snprintf( buffer, sizeof( buffer ), "1/%d", total );
     G_PrivateString( c->edict, PCS_RANK, va( "%5s", buffer ) );
 
     // other players
     for( i = 1; i < total; i++ ) {
         c = ranks[i];
-        Com_sprintf( buffer, sizeof( buffer ), "  -%2d",
+        Q_snprintf( buffer, sizeof( buffer ), "  -%2d",
             topscore - c->resp.score );
         for( j = 0; buffer[j]; j++ ) {
             buffer[j] |= 128;
         }
         G_PrivateString( c->edict, PCS_DELTA, buffer );
-        Com_sprintf( buffer, sizeof( buffer ), "%d/%d", i + 1, total );
+        Q_snprintf( buffer, sizeof( buffer ), "%d/%d", i + 1, total );
         G_PrivateString( c->edict, PCS_RANK, va( "%5s", buffer ) );
     }
 
@@ -109,10 +109,10 @@ void G_ScoreChanged( edict_t *ent ) {
 
     total = ( int )fraglimit->value;
     if( total > 0 ) {
-        Com_sprintf( buffer, sizeof( buffer ), "%2d/%-2d",
+        Q_snprintf( buffer, sizeof( buffer ), "%2d/%-2d",
             ent->client->resp.score, total );
     } else {
-        Com_sprintf( buffer, sizeof( buffer ), "%5d",
+        Q_snprintf( buffer, sizeof( buffer ), "%5d",
             ent->client->resp.score );
     }
 
@@ -1149,7 +1149,7 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
     gclient_t *client = ent->client;
 
 	// save off the userinfo in case we want to check something later
-	Q_strncpyz( client->pers.userinfo, userinfo, MAX_INFO_STRING );
+	Q_strlcpy( client->pers.userinfo, userinfo, MAX_INFO_STRING );
 
 	// check for malformed or illegal info strings
 	if (!Info_Validate(client->pers.userinfo)) {
@@ -1158,11 +1158,11 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
 
 	// set name
 	s = Info_ValueForKey (client->pers.userinfo, "name");
-	Q_strncpyz( client->pers.netname, s, MAX_NETNAME );
+	Q_strlcpy( client->pers.netname, s, MAX_NETNAME );
 
 	// combine name and skin into a configstring
 	s = Info_ValueForKey (client->pers.userinfo, "skin");
-	Com_sprintf( client->pers.skin, MAX_QPATH, "%s\\%s",
+	Q_snprintf( client->pers.skin, MAX_QPATH, "%s\\%s",
         client->pers.netname, s );
 
     if( !( client->pers.flags & CPF_MVDSPEC ) ) {

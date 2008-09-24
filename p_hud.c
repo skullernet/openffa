@@ -175,7 +175,7 @@ void HighScoresMessage( void ) {
 	int		i;
     int     y;
 
-	total = Com_sprintf( string, sizeof( string ),
+	total = Q_snprintf( string, sizeof( string ),
         "xv 0 "
         "yv 0 "
         "cstring \"High Scores for %s\""
@@ -192,11 +192,13 @@ void HighScoresMessage( void ) {
         if( len < 1 ) {
             strcpy( date, "???" );
         }
-		len = Com_sprintf( entry, sizeof( entry ),
+		len = Q_snprintf( entry, sizeof( entry ),
 		    "yv %d cstring \"%c%2d %-15.15s %4d %-8s\"",
             y, s->time == level.record ? '*' : ' ',
             i + 1, s->name, s->score, date );
-
+        if( len >= sizeof( entry ) ) {
+            continue;
+        }
         if( total + len >= MAX_STRING_CHARS )
             break;
         memcpy( string + total, entry, len );
@@ -252,12 +254,14 @@ void DeathmatchScoreboardMessage( edict_t *ent ) {
             eff = 0;
         }
 
-		len = Com_sprintf( entry, sizeof( entry ),
+		len = Q_snprintf( entry, sizeof( entry ),
 		    "yv %d string%s \"%2d %-15s %3d %3d %3d %4d %4d %4d\"",
             y, c == ent->client ? "" : "2", i + 1,
             c->pers.netname, c->resp.score, c->resp.deaths, eff,
             c->resp.score * 3600 / sec, sec / 60, c->ping );
-
+        if( len >= sizeof( entry ) ) {
+            continue;
+        }
         if( total + len >= MAX_STRING_CHARS )
             break;
         memcpy( string + total, entry, len );
@@ -281,17 +285,19 @@ void DeathmatchScoreboardMessage( edict_t *ent ) {
         }
 
         if( c->chase_target ) {
-            Com_sprintf( status, sizeof( status ), "(chasing %s)",
+            Q_snprintf( status, sizeof( status ), "(chasing %s)",
                 c->chase_target->client->pers.netname );
         } else {
             strcpy( status, "(observing)" );
         }
 
-		len = Com_sprintf( entry, sizeof( entry ),
+		len = Q_snprintf( entry, sizeof( entry ),
 		    "yv %d string%s \"%2d %-15s %-16s %4d %4d\"",
             y, c == ent->client ? "" : "2", numranks + i + 1,
             c->pers.netname, status, sec / 60, c->ping );
-
+        if( len >= sizeof( entry ) ) {
+            continue;
+        }
         if( total + len >= MAX_STRING_CHARS )
             break;
         memcpy( string + total, entry, len );
@@ -367,7 +373,7 @@ void G_PrivateString( edict_t *ent, int index, const char *string ) {
     }
 
     // save new string
-    Q_strncpyz( ent->client->level.strings[index], string, MAX_NETNAME );
+    Q_strlcpy( ent->client->level.strings[index], string, MAX_NETNAME );
 
     gi.WriteByte( svc_configstring );
     gi.WriteShort( CS_PRIVATE + index );

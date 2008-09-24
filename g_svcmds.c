@@ -137,7 +137,7 @@ static void Svcmd_NextMap_f( void ) {
         Com_Printf( "Usage: nextmap <name>\n" );
         return;
     }
-    Q_strncpyz( level.nextmap, gi.argv( 2 ), sizeof( level.nextmap ) );
+    Q_strlcpy( level.nextmap, gi.argv( 2 ), sizeof( level.nextmap ) );
 }
 
 /*

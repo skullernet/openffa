@@ -410,7 +410,7 @@ static void ED_ParseEdict (const char **data, edict_t *ent) {
 		if (!*data)
 			gi.error ("ED_ParseEntity: EOF without closing brace");
 
-		Q_strncpyz (keyname, com_token, sizeof(keyname));
+		Q_strlcpy (keyname, com_token, sizeof(keyname));
 		
 	// parse value	
 		com_token = COM_Parse (data);
@@ -542,8 +542,8 @@ void G_SpawnEntities (const char *mapname, const char *entities, const char *spa
 	memset (&level, 0, sizeof(level));
 	memset (g_edicts, 0, game.maxentities * sizeof (g_edicts[0]));
 
-	Q_strncpyz(level.mapname, mapname, sizeof(level.mapname));
-	Q_strncpyz(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint));
+	Q_strlcpy(level.mapname, mapname, sizeof(level.mapname));
+	Q_strlcpy(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint));
 
     G_LoadScores();
 

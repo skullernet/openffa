@@ -59,9 +59,11 @@ static void PMenu_Write(edict_t *ent) {
             alt ^= 1;
         }
 
-		len = Com_sprintf( entry, sizeof( entry ), "yv %d xv %d string%s \"%s%s\" ",
+		len = Q_snprintf( entry, sizeof( entry ), "yv %d xv %d string%s \"%s%s\" ",
             32 + i * 8, x, alt ? "2" : "", menu->cur == i ? "\x0d" : "", t );
-
+        if( len >= sizeof( entry ) ) {
+            continue;
+        }
         if( total + len >= MAX_STRING_CHARS )
             break;
         memcpy( string + total, entry, len );
