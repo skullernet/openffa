@@ -32,6 +32,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	GAME_INCLUDE
 #include "g_public.h"
 
+// features this game supports
+#define G_FEATURES  (GMF_CLIENTNUM|GMF_MVDSPEC|GMF_WANT_ALL_DISCONNECTS)
+
 // the "gameversion" client command will print this plus compile date
 #define	GAMEVERSION	"openffa"
 

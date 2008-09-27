@@ -667,7 +667,7 @@ static void G_Init (void) {
     }
 
     // export our own features
-    gi.cvar_forceset( "g_features", va( "%d", GMF_CLIENTNUM|GMF_MVDSPEC ) );
+    gi.cvar_forceset( "g_features", va( "%d", G_FEATURES ) );
 }
 
 static void G_WriteGame (const char *filename, qboolean autosave) {
