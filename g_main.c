@@ -163,12 +163,21 @@ static void G_SaveScores( void ) {
     int i;
     size_t len;
 
-    len = Q_snprintf( path, sizeof( path ), "%s/highscores/%s.txt",
-        game.dir, level.mapname );
-    if( len >= sizeof( path ) ) {
+    if( !game.dir[0] ) {
         return;
     }
 
+    len = Q_concat( path, sizeof( path ), game.dir, "/highscores", NULL );
+    if( len >= sizeof( path ) ) {
+        return;
+    }
+    Q_mkdir( path );
+
+    len = Q_concat( path, sizeof( path ), game.dir, "/highscores/",
+        level.mapname, ".txt", NULL );
+    if( len >= sizeof( path ) ) {
+        return;
+    }
     fp = fopen( path, "w" );
     if( !fp ) {
         return;
@@ -236,9 +245,16 @@ void G_LoadScores( void ) {
     const char *data;
     score_t *s;
     FILE *fp;
+    size_t len;
 
-    Q_snprintf( path, sizeof( path ), "%s/highscores/%s.txt",
-        game.dir, level.mapname );
+    if( !game.dir[0] ) {
+        return;
+    }
+    len = Q_concat( path, sizeof( path ), game.dir, "/highscores/",
+        level.mapname, ".txt", NULL );
+    if( len >= sizeof( path ) ) {
+        return;
+    }
 
     fp = fopen( path, "r" );
     if( !fp ) {
@@ -534,6 +550,9 @@ static void G_Shutdown (void) {
 	gi.FreeTags (TAG_LEVEL);
 	gi.FreeTags (TAG_GAME);
 
+    // reset our features
+    gi.cvar_forceset( "g_features", "0" );
+
     List_Init( &g_maplist );
 }
 
@@ -548,8 +567,8 @@ is loaded.
 ============
 */
 static void G_Init (void) {
-    char path[MAX_OSPATH];
-    char *s;
+    cvar_t *cv;
+    size_t len;
 
 	gi.dprintf ("==== InitGame ====\n");
 
@@ -620,28 +639,35 @@ static void G_Init (void) {
 	globals.num_edicts = game.maxclients+1;
 
     // obtain game path
-    s = getenv( "QUAKE2_GAME_PATH" );
-    if( s && *s ) {
-        Q_strlcpy( game.dir, s, sizeof( game.dir ) );
+    cv = gi.cvar( "fs_gamedir", NULL, 0 );
+    if( cv && cv->string[0] ) {
+        len = Q_strlcpy( game.dir, cv->string, sizeof( game.dir ) );
     } else {
         cvar_t *basedir = gi.cvar( "basedir", NULL, 0 );
         cvar_t *gamedir = gi.cvar( "game", NULL, 0 );
         if( basedir && gamedir ) {
-            Q_concat( game.dir, sizeof( game.dir ),
+            len = Q_concat( game.dir, sizeof( game.dir ),
                 basedir->string, "/", gamedir->string, NULL );
+        } else {
+            len = 0;
         }
     }
 
-    Q_snprintf( path, sizeof( path ), "%s/highscores", game.dir );
-	Q_mkdir( path );
+    if( !len ) {
+        gi.dprintf( "Failed to determine game directory.\n" );
+    } else if( len >= sizeof( game.dir ) ) {
+        gi.dprintf( "Oversize game directory.\n" );
+        game.dir[0] = 0;
+    }
 
     // obtain server features
-    s = getenv( "QUAKE2_SERVER_FEATURES" );
-    if( s && *s ) {
-        game.serverFeatures = atoi( s );
+    cv = gi.cvar( "sv_features", NULL, 0 );
+    if( cv ) {
+        game.serverFeatures = ( int )cv->value;
     }
-    Q_setenv( "QUAKE2_GAME_FEATURES",
-        va( "%d", GMF_CLIENTNUM|GMF_MVDSPEC ) );
+
+    // export our own features
+    gi.cvar_forceset( "g_features", va( "%d", GMF_CLIENTNUM|GMF_MVDSPEC ) );
 }
 
 static void G_WriteGame (const char *filename, qboolean autosave) {
