@@ -57,18 +57,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MATCH_STATE_OVERTIME 6
 #define MATCH_STATE_WAITEXIT 7
 
-// ugly GCC/MSC ABI incompatibility hack
+// nasty hack to work around GCC/MSVC ABI incompatibility
 #if ( defined _WIN32 ) && ( defined __GNUC__ )
-typedef trace_t *(*gi_trace_t)( trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, edict_t *, int );
 #define gi_trace( tr, start, mins, maxs, end, passedict, contentmask ) \
-    do { \
-        (( gi_trace_t )gi.trace)( tr, start, mins, maxs, end, passedict, contentmask ); \
-    } while( 0 )
+        (( trace_t *(*)( trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, edict_t *, int ) )gi.trace) \
+        ( tr, start, mins, maxs, end, passedict, contentmask )
 #else
 #define gi_trace( tr, start, mins, maxs, end, passedict, contentmask ) \
-    do { \
-        *(tr) = gi.trace( start, mins, maxs, end, passedict, contentmask ); \
-    } while( 0 )
+        ( *(tr) = gi.trace( start, mins, maxs, end, passedict, contentmask ) )
 #endif
 
 // view pitching times
