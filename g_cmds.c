@@ -279,19 +279,11 @@ argv(0) god
 */
 void Cmd_God_f (edict_t *ent)
 {
-	char	*msg;
-
-    if( !CheckCheats( ent ) ) {
-        return;
+    if( CheckCheats( ent ) ) {
+        ent->flags ^= FL_GODMODE;
+        gi.cprintf( ent, PRINT_HIGH, "godmode %s\n",
+            ( ent->flags & FL_GODMODE ) ? "ON" : "OFF" );
     }
-
-	ent->flags ^= FL_GODMODE;
-	if (!(ent->flags & FL_GODMODE) )
-		msg = "godmode OFF\n";
-	else
-		msg = "godmode ON\n";
-
-	gi.cprintf (ent, PRINT_HIGH, msg);
 }
 
 
@@ -306,19 +298,11 @@ argv(0) notarget
 */
 void Cmd_Notarget_f (edict_t *ent)
 {
-	char	*msg;
-
-    if( !CheckCheats( ent ) ) {
-        return;
+    if( CheckCheats( ent ) ) {
+        ent->flags ^= FL_NOTARGET;
+        gi.cprintf( ent, PRINT_HIGH, "notarget %s\n",
+            ( ent->flags & FL_NOTARGET ) ? "ON" : "OFF" );
     }
-
-	ent->flags ^= FL_NOTARGET;
-	if (!(ent->flags & FL_NOTARGET) )
-		msg = "notarget OFF\n";
-	else
-		msg = "notarget ON\n";
-
-	gi.cprintf (ent, PRINT_HIGH, msg);
 }
 
 
@@ -331,24 +315,18 @@ argv(0) noclip
 */
 void Cmd_Noclip_f (edict_t *ent)
 {
-	char	*msg;
-
     if( !CheckCheats( ent ) ) {
         return;
     }
 
-	if (ent->movetype == MOVETYPE_NOCLIP)
-	{
+	if( ent->movetype == MOVETYPE_NOCLIP ) {
 		ent->movetype = MOVETYPE_WALK;
-		msg = "noclip OFF\n";
-	}
-	else
-	{
+	} else {
 		ent->movetype = MOVETYPE_NOCLIP;
-		msg = "noclip ON\n";
 	}
 
-	gi.cprintf (ent, PRINT_HIGH, msg);
+	gi.cprintf( ent, PRINT_HIGH, "noclip %s\n",
+        ent->movetype == MOVETYPE_NOCLIP ? "ON" : "OFF" );
 }
 
 
