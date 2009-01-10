@@ -33,7 +33,6 @@ qboolean CanDamage (edict_t *targ, edict_t *inflictor)
 {
 	vec3_t	dest;
 	trace_t	trace;
-    vec_t *bounds[2];
     int i;
 
 // bmodels need special checking because their origin is 0,0,0
@@ -52,17 +51,37 @@ qboolean CanDamage (edict_t *targ, edict_t *inflictor)
 	gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, targ->s.origin, inflictor, MASK_SOLID);
 	if (trace.fraction == 1.0)
 		return qtrue;
-    
-    bounds[0] = targ->absmin;
-    bounds[1] = targ->absmax;
-    for( i = 0; i < 8; i++ ) {
-		dest[0] = bounds[(i>>0)&1][0];
-		dest[1] = bounds[(i>>1)&1][1];
-		dest[2] = bounds[(i>>2)&1][2];
+   
+    if( 1 ) {
+        vec_t *bounds[] = { targ->absmin, targ->absmax };
 
-        gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
-        if (trace.fraction == 1.0)
-            return qtrue;
+        for( i = 0; i < 8; i++ ) {
+            dest[0] = bounds[(i>>0)&1][0];
+            dest[1] = bounds[(i>>1)&1][1];
+            dest[2] = bounds[(i>>2)&1][2];
+
+            gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
+            if (trace.fraction == 1.0)
+                return qtrue;
+        }
+    } else {
+        dest[2] = targ->s.origin[2];
+        for( i = 0; i < 4; i++ ) {
+            if( i & 1 ) {
+                dest[0] = targ->s.origin[0] - 15.0f;
+            } else {
+                dest[0] = targ->s.origin[0] + 15.0f;
+            }
+            if( i & 2 ) {
+                dest[1] = targ->s.origin[1] - 15.0f;
+            } else {
+                dest[1] = targ->s.origin[1] + 15.0f;
+            }
+
+            gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
+            if (trace.fraction == 1.0)
+                return qtrue;
+        }
     }
 
 	return qfalse;
@@ -284,6 +303,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 	if (targ->flags & FL_NO_KNOCKBACK)
 		knockback = 0;
 
+#if USE_MIDAIR
 	//--------------------------------------------------------midair-------------------------------------------
 	if (g_midair->value)
 	{	
@@ -364,6 +384,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 		}
 	}
 	else //-------------------------------------------------End of Midair------------------------------------------
+#endif
 	{
 	// figure momentum add
 		if (!(dflags & DAMAGE_NO_KNOCKBACK))
@@ -388,6 +409,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 		}
 	}
 
+#if USE_MIDAIR
 //	if (midair->value && level.status != MATCH_STATE_PLAYTIME) // Midar: Damage can be received only during a match
 //	{
 //		take = 0;
@@ -395,6 +417,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
 //	}
 //	else
 //	{
+#endif
 		take = damage;
 		save = 0;
 //	}
@@ -498,8 +521,10 @@ void T_RadiusDamage (edict_t *inflictor, edict_t *attacker, float damage, edict_
 	edict_t	*ent = NULL;
 	vec3_t	v;
 	vec3_t	dir;
+#if USE_MIDAIR
 	if (g_midair->value)
 		radius = damage + 40;
+#endif
 
 	while ((ent = findradius(ent, inflictor->s.origin, radius)) != NULL)
 	{
@@ -525,6 +550,7 @@ void T_RadiusDamage (edict_t *inflictor, edict_t *attacker, float damage, edict_
 	}
 }
 
+#if USE_MIDAIR
 //-------------------------------------------------------------------------------
 float MidAir_Height (edict_t *targ)
 {
@@ -538,3 +564,5 @@ float MidAir_Height (edict_t *targ)
 	} else
 		return targ->s.origin[2] - trace.endpos[2];
 }
+#endif
+

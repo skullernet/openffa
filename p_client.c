@@ -1306,20 +1306,19 @@ void ClientDisconnect (edict_t *ent)
 //==============================================================
 
 
-edict_t	*pm_passent;
-
 // pmove doesn't need to know about passent and contentmask
-trace_t	PM_trace (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end)
-{
-    trace_t trace;
+static edict_t	*pm_passent;
+static int      pm_mask;
 
-	if (pm_passent->health > 0)
-		gi_trace (&trace, start, mins, maxs, end, pm_passent, MASK_PLAYERSOLID);
-	else
-		gi_trace (&trace, start, mins, maxs, end, pm_passent, MASK_DEADSOLID);
-
-    return trace;
+#if ( defined _WIN32 ) && ( defined __GNUC__ )
+static trace_t *PM_trace( trace_t *tr, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end ) {
+    return (( trace_hacked_t )gi.trace)( tr, start, mins, maxs, end, pm_passent, pm_mask );
 }
+#else
+static trace_t PM_trace( vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end ) {
+	return gi.trace( start, mins, maxs, end, pm_passent, pm_mask );
+}
+#endif
 
 /*
 ==============
@@ -1358,8 +1357,6 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 		return;
 	}
 
-	pm_passent = ent;
-
 	if (!ent->client->chase_target) {
 		// set up for pmove
 		memset (&pm, 0, sizeof(pm));
@@ -1372,6 +1369,9 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 			client->ps.pmove.pm_type = PM_DEAD;
 		else
 			client->ps.pmove.pm_type = PM_NORMAL;
+
+	    pm_passent = ent;
+        pm_mask = ent->health > 0 ? MASK_PLAYERSOLID : MASK_DEADSOLID;
 
 		client->ps.pmove.gravity = sv_gravity->value;
 		pm.s = client->ps.pmove;
@@ -1390,7 +1390,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 
 		pm.cmd = *ucmd;
 
-		pm.trace = PM_trace;	// adds default parms
+		pm.trace = ( void * )PM_trace;	// adds default parms
 		pm.pointcontents = gi.pointcontents;
 
 		// perform a pmove

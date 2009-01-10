@@ -57,14 +57,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MATCH_STATE_OVERTIME 6
 #define MATCH_STATE_WAITEXIT 7
 
-// nasty hack to work around GCC/MSVC ABI incompatibility
+// nasty hack to work around ABI incompatibility between MSVC and GCC
+// when dealing with aggregate returns (see GCC bug #36834)
 #if ( defined _WIN32 ) && ( defined __GNUC__ )
-#define gi_trace( tr, start, mins, maxs, end, passedict, contentmask ) \
-        (( trace_t *(*)( trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, edict_t *, int ) )gi.trace) \
-        ( tr, start, mins, maxs, end, passedict, contentmask )
+typedef trace_t *(*trace_hacked_t)( trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, edict_t *, int );
+#define gi_trace(a1,a2,a3,a4,a5,a6,a7) ((trace_hacked_t)gi.trace)(a1,a2,a3,a4,a5,a6,a7)
 #else
-#define gi_trace( tr, start, mins, maxs, end, passedict, contentmask ) \
-        ( *(tr) = gi.trace( start, mins, maxs, end, passedict, contentmask ) )
+#define gi_trace(a1,a2,a3,a4,a5,a6,a7) (*(a1)=gi.trace(a2,a3,a4,a5,a6,a7))
 #endif
 
 // view pitching times

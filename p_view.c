@@ -224,7 +224,7 @@ static void P_CalcViewOffset (edict_t *ent) {
 	vec3_t		v;
 
 	if (ent->movetype == MOVETYPE_NOCLIP) {
-        // no view bobbing for spectators please
+        // don't add any kicks/bobs for spectators
         VectorClear( ent->client->ps.kick_angles );
 	    VectorSet( ent->client->ps.viewoffset, 0, 0, ent->viewheight );
         return;
@@ -323,18 +323,9 @@ static void P_CalcViewOffset (edict_t *ent) {
 	// absolutely bound offsets
 	// so the view can never be outside the player box
 
-	if (v[0] < -14)
-		v[0] = -14;
-	else if (v[0] > 14)
-		v[0] = 14;
-	if (v[1] < -14)
-		v[1] = -14;
-	else if (v[1] > 14)
-		v[1] = 14;
-	if (v[2] < -22)
-		v[2] = -22;
-	else if (v[2] > 30)
-		v[2] = 30;
+	clamp( v[0], -14, 14 );
+	clamp( v[1], -14, 14 );
+	clamp( v[2], -22, 30 );
 
 	VectorCopy (v, ent->client->ps.viewoffset);
 }
@@ -367,10 +358,7 @@ static void P_CalcGunOffset (edict_t *ent) {
 			delta -= 360;
 		if (delta < -180)
 			delta += 360;
-		if (delta > 45)
-			delta = 45;
-		if (delta < -45)
-			delta = -45;
+        clamp( delta, -45, 45 );
 		if (i == YAW)
 			ent->client->ps.gunangles[ROLL] += 0.1*delta;
 		ent->client->ps.gunangles[i] += 0.2 * delta;
