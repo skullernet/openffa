@@ -357,8 +357,7 @@ static void ED_ParseField (char *key, char *value, edict_t *ent) {
 				break;
 			case F_VECTOR:
 				if( sscanf (value, "%f %f %f", &vec[0], &vec[1], &vec[2]) != 3 ) {
-                    gi.dprintf( "%s: couldn't parse F_VECTOR '%s' for '%s'\n",
-                        __func__, value, key );
+                    gi.dprintf( "%s: couldn't parse '%s'\n", __func__, key );
                     VectorClear( vec );
                 }
 				((float *)(b+f->ofs))[0] = vec[0];
