@@ -542,30 +542,54 @@ Kill box
 
 /*
 =================
-KillBox
+G_KillBox
 
 Kills all entities that would touch the proposed new positioning
 of ent.  Ent should be unlinked before calling this!
 =================
 */
-qboolean KillBox (edict_t *ent)
+qboolean G_KillBox (edict_t *ent)
 {
-	trace_t		tr;
+    if (g_bugs->value < 2)
+    {
+        edict_t *touch[MAX_EDICTS];
+        int     count;
+        int     i;
 
-	while (1)
-	{
-		gi_trace( &tr, ent->s.origin, ent->mins, ent->maxs, ent->s.origin, NULL, MASK_PLAYERSOLID);
-		if (!tr.ent)
-			break;
+        //r1: much more vicious telefrag code, nukes anything that isn't ent
+        count = gi.BoxEdicts (ent->absmin, ent->absmax, touch, MAX_EDICTS, AREA_SOLID);
+        for (i = 0; i < count; i++)
+        {
+            if (touch[i] == ent)
+                continue;
 
-		// nail it
-		T_Damage (tr.ent, ent, ent, vec3_origin, ent->s.origin, vec3_origin, 100000, 0, DAMAGE_NO_PROTECTION, MOD_TELEFRAG);
+            //no point killing anything that won't clip (eg corpses)
+            if (touch[i]->solid == SOLID_NOT || (touch[i]->svflags & SVF_DEADMONSTER))
+                continue;
 
-		// if we didn't kill it, fail
-		if (tr.ent->solid)
-			return qfalse;
-	}
+            if (touch[i]->inuse)
+                T_Damage (touch[i], ent, ent, vec3_origin, ent->s.origin, vec3_origin, 100000, 0, DAMAGE_NO_PROTECTION, MOD_TELEFRAG);
+        }
+    }
+    else
+    {
+        trace_t     tr;
 
-	return qtrue;		// all clear
+        while (1)
+        {
+            gi_trace (&tr, ent->s.origin, ent->mins, ent->maxs, ent->s.origin, ent, MASK_PLAYERSOLID);
+            if (!tr.ent)
+                break;
+
+            // nail it
+            T_Damage (tr.ent, ent, ent, vec3_origin, ent->s.origin, vec3_origin, 100000, 0, DAMAGE_NO_PROTECTION, MOD_TELEFRAG);
+
+            // if we didn't kill it, fail
+            if (tr.ent->solid)
+                return qfalse;
+        }
+    }
+
+    return qtrue;        // all clear
 }
 

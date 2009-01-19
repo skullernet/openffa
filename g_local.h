@@ -526,13 +526,11 @@ typedef struct
 #define MAP_NOVOTE  2
 
 typedef struct map_entry_s {
-    list_t  entry;
-    int min, max;
+    list_t list, queue;
+    int min_players, max_players;
     int flags;
     char name[1];
 } map_entry_t;
-
-extern list_t           g_maplist;
 
 extern	const gitem_t	g_itemlist[ITEM_TOTAL];
 
@@ -593,8 +591,10 @@ extern	edict_t			*g_edicts;
 #define DF( x )     ( ( ( int )dmflags->value & DF_ ## x ) != 0 )
 
 extern	cvar_t	*maxentities;
+#if USE_MIDAIR
 extern	cvar_t	*g_midair;	
-extern	cvar_t	*g_ctf;		
+extern	cvar_t	*g_ctf;
+#endif
 extern	cvar_t	*dmflags;
 extern	cvar_t	*skill;
 extern	cvar_t	*fraglimit;
@@ -606,6 +606,9 @@ extern  cvar_t	*g_vote_time;
 extern  cvar_t	*g_vote_treshold;
 extern  cvar_t	*g_vote_limit;
 extern  cvar_t	*g_item_ban;
+extern  cvar_t	*g_maps_random;
+extern  cvar_t	*g_bugs;
+extern  cvar_t	*g_teleporter_nofreeze;
 extern	cvar_t	*dedicated;
 
 extern	cvar_t	*filterban;
@@ -629,8 +632,6 @@ extern	cvar_t	*maxclients;
 extern	cvar_t	*flood_msgs;
 extern	cvar_t	*flood_persecond;
 extern	cvar_t	*flood_waitdelay;
-
-extern	cvar_t	*sv_maplist;
 
 //extern  cvar_t  *sv_features;
 
@@ -708,7 +709,7 @@ void G_UpdateItemBans( void );
 //
 // g_utils.c
 //
-qboolean	KillBox (edict_t *ent);
+qboolean	G_KillBox (edict_t *ent);
 void	G_ProjectSource (vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result);
 edict_t *G_Find (edict_t *from, int fieldofs, char *match);
 edict_t *findradius (edict_t *from, vec3_t org, float rad);
@@ -805,8 +806,6 @@ void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 // g_svcmds.c
 //
 void G_ServerCommand (void);
-map_entry_t *G_FindMap( const char *name );
-map_entry_t *G_RandomMap( void );
 
 //
 // p_view.c
@@ -842,6 +841,7 @@ void G_ExitLevel( void );
 void G_StartSound( int index ); 
 void G_RunFrame( void );
 void G_LoadScores( void );
+map_entry_t *G_FindMap( const char *name );
 
 //
 // g_chase.c
@@ -875,6 +875,8 @@ void G_ResetLevel( void );
 #define STAT_DELTA_STRING			19
 #define STAT_RANK_STRING			20
 #define STAT_TIME_STRING			21
+#define	STAT_TIMER2_ICON			22
+#define	STAT_TIMER2				    23
 
 // client_t->anim_priority
 #define	ANIM_BASIC		0		// stand / run
@@ -921,6 +923,12 @@ typedef enum {
     GENDER_MALE,
     GENDER_NEUTRAL
 } gender_t;
+
+typedef enum {
+    GRENADE_NONE,
+    GRENADE_BLEW_UP,
+    GRENADE_THROWN,
+} grenade_state_t;
 
 typedef struct {
     int hits;
@@ -1050,10 +1058,10 @@ struct gclient_s
 	int 		enviro_framenum;
 	int 		powerarmor_framenum;
 
-	qboolean	grenade_blew_up;
-	int 		grenade_framenum;
-	int			silencer_shots;
-	int			weapon_sound;
+	grenade_state_t grenade_state;
+	int 		    grenade_framenum;
+	int         silencer_shots;
+	int         weapon_sound;
 
 	int 		pickup_framenum;
 
@@ -1063,6 +1071,7 @@ struct gclient_s
 	int			flood_whenhead;		    // head pointer for when said
 
 	int 		respawn_framenum;	// can respawn when time > this
+    int         observer_framenum;
 
 	edict_t		*chase_target;		// player we are chasing
 

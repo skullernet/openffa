@@ -441,7 +441,7 @@ void func_wall_use (edict_t *self, edict_t *other, edict_t *activator)
 	{
 		self->solid = SOLID_BSP;
 		self->svflags &= ~SVF_NOCLIENT;
-		KillBox (self);
+		G_KillBox (self);
 	}
 	else
 	{
@@ -530,7 +530,7 @@ void func_object_use (edict_t *self, edict_t *other, edict_t *activator)
 	self->solid = SOLID_BSP;
 	self->svflags &= ~SVF_NOCLIENT;
 	self->use = NULL;
-	KillBox (self);
+	G_KillBox (self);
 	func_object_release (self);
 }
 
@@ -1295,17 +1295,32 @@ void teleporter_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_
 		return;
 	}
 
-	// unlink to make sure it can't possibly interfere with KillBox
-	gi.unlinkentity (other);
+	// unlink to make sure it can't possibly interfere with G_KillBox
+	//gi.unlinkentity (other);
 
 	VectorCopy (dest->s.origin, other->s.origin);
 	VectorCopy (dest->s.origin, other->s.old_origin);
 	other->s.origin[2] += 10;
 
-	// clear the velocity and hold them in place briefly
-	VectorClear (other->velocity);
-	other->client->ps.pmove.pm_time = 160>>3;		// hold time
-	other->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
+    if (g_teleporter_nofreeze->value == 0)
+    {
+        // clear the velocity and hold them in place briefly
+        VectorClear (other->velocity);
+        other->client->ps.pmove.pm_time = 160>>3;       // hold time
+        other->client->ps.pmove.pm_flags |= PMF_TIME_TELEPORT;
+    }
+    else
+    {
+        // preserve velocity and 'spit' them out of destination
+        vec_t   len;
+
+        other->velocity[2] = 0;
+
+        len = VectorLength (other->velocity);
+
+        AngleVectors (dest->s.angles, other->velocity, NULL, NULL);
+        VectorScale (other->velocity, len, other->velocity);
+    }
 
 	// draw the teleport splash at source and on the player
 	self->owner->s.event = EV_PLAYER_TELEPORT;
@@ -1318,10 +1333,11 @@ void teleporter_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_
 	VectorClear (other->client->ps.viewangles);
 	VectorClear (other->client->v_angle);
 
-	// kill anything at the destination
-	KillBox (other);
-
+    // we must link before killbox since it uses absmin/absmax
 	gi.linkentity (other);
+
+	// kill anything at the destination
+	G_KillBox (other);
 }
 
 /*QUAKED misc_teleporter (1 0 0) (-32 -32 -24) (32 32 -16)

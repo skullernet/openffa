@@ -661,8 +661,9 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 {
 	int		i, j;
 	edict_t	*other;
-	char	text[150];
+	char	text[150], *p;
 	gclient_t *cl = ent->client;
+    size_t len, total;
 
 	if (gi.argc () < 2 && !arg0)
 		return;
@@ -673,15 +674,22 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
     }
 
 	if (team)
-		Q_snprintf (text, sizeof(text), "(%s): ", cl->pers.netname);
+		total = Q_scnprintf (text, sizeof(text), "(%s): ", cl->pers.netname);
 	else
-		Q_snprintf (text, sizeof(text), "%s: ", cl->pers.netname);
+		total = Q_scnprintf (text, sizeof(text), "%s: ", cl->pers.netname);
 
-	if (arg0) {
-		Q_strlcat (text, gi.argv(0), sizeof(text));
-		Q_strlcat (text, " ", sizeof(text));
+    for (i = arg0 ? 0 : 1; i < gi.argc(); i++) {
+        p = gi.argv (i);
+        len = strlen (p);
+        if (!len)
+            continue;
+        if (total + len + 1 >= sizeof (text))
+            break;
+        memcpy (text + total, p, len);
+        text[total + len] = ' ';
+        total += len + 1;
     }
-	Q_strlcat (text, gi.args(), sizeof(text));
+    text[total] = 0;
 
     j = flood_msgs->value;
 	if (j > 0) {
@@ -772,7 +780,7 @@ static void Cmd_Observe_f(edict_t *ent) {
 		gi.cprintf( ent, PRINT_HIGH, "Changed to spectator mode.\n" );
         return;
     }
-    if( level.framenum - ent->client->respawn_framenum < 5*HZ ) {
+    if( level.framenum - ent->client->observer_framenum < 5*HZ ) {
 		gi.cprintf( ent, PRINT_HIGH, "You may not change modes too soon.\n" );
         return;
     }
@@ -810,7 +818,7 @@ static void Cmd_Chase_f( edict_t *ent ) {
         return;
     }
     if( ent->client->pers.connected != CONN_SPECTATOR ) {
-        if( level.framenum - ent->client->respawn_framenum < 5*HZ ) {
+        if( level.framenum - ent->client->observer_framenum < 5*HZ ) {
 		    gi.cprintf( ent, PRINT_HIGH, "You may not change modes too soon.\n" );
             return;
         }
@@ -834,13 +842,13 @@ static void Cmd_Chase_f( edict_t *ent ) {
 }
 
 
-static const char weapnames[WEAP_TOTAL][16] = {
-    "None",         "Blaster",  "Shotgun",      "S.Shotgun",    "Machinegun",
-    "Chaingun",     "Grenades", "G.Launcher",   "R.Launcher",
-    "H.Blaster",    "Railgun",  "BFG10K"
+static const char weapnames[WEAP_TOTAL][12] = {
+    "None",         "Blaster",      "Shotgun",      "S.Shotgun",
+    "Machinegun",   "Chaingun",     "Grenades",     "G.Launcher",
+    "R.Launcher",   "H.Blaster",    "Railgun",      "BFG10K"
 };
 
-static void Cmd_Stats_f( edict_t *ent ) {
+void Cmd_Stats_f( edict_t *ent, qboolean check_other ) {
     int i;
     weapstat_t *s;
     char acc[16];
@@ -849,7 +857,7 @@ static void Cmd_Stats_f( edict_t *ent ) {
     char dths[16];
     edict_t *other;
 
-    if( gi.argc() > 1 ) {
+    if( check_other && gi.argc() > 1 ) {
         other = G_SetPlayer( ent, 1 );
         if( !other ) {
             return;
@@ -865,13 +873,13 @@ static void Cmd_Stats_f( edict_t *ent ) {
         }
     }
     if( i == WEAP_BFG ) {
-        gi.cprintf( ent, PRINT_HIGH, "No stats available for %s.\n",
+        gi.cprintf( ent, PRINT_HIGH, "No accuracy stats available for %s.\n",
             other->client->pers.netname );
         return;
     }
 
     gi.cprintf( ent, PRINT_HIGH,
-        "Statistics for %s:\n"
+        "Accuracy stats for %s:\n\n"
         "Weapon     Acc%% Hits/Atts Frgs Dths\n"
         "---------- ---- --------- ---- ----\n",
         other->client->pers.netname );
@@ -889,6 +897,10 @@ static void Cmd_Stats_f( edict_t *ent ) {
             } else {
                 strcpy( frgs, "    " );
             }
+        } else {
+            strcpy( acc, "    " );
+            strcpy( hits, "         " );
+            strcpy( frgs, "    " );
         }
         if( s->deaths ) {
             sprintf( dths, "%4d", s->deaths );
@@ -902,7 +914,7 @@ static void Cmd_Stats_f( edict_t *ent ) {
     }
 
     gi.cprintf( ent, PRINT_HIGH,
-        "Total damage given/recvd: %d/%d\n",
+        "\nTotal damage given/recvd: %d/%d\n",
         other->client->resp.damage_given,
         other->client->resp.damage_recvd );
 }
@@ -1219,7 +1231,7 @@ static void Cmd_Vote_f( edict_t *ent ) {
     char *s;
 
     if( !mask ) {
-        gi.cprintf( ent, PRINT_HIGH, "Voting is disabled.\n" );
+        gi.cprintf( ent, PRINT_HIGH, "Voting is disabled on this server.\n" );
         return;
     }
 
@@ -1357,7 +1369,7 @@ static void select_test( edict_t *ent, pmenu_t *menu ) {
             break;
         }
         if( ent->client->pers.connected != CONN_PREGAME ) {
-            if( level.framenum - ent->client->respawn_framenum < 5*HZ ) {
+            if( level.framenum - ent->client->observer_framenum < 5*HZ ) {
                 gi.cprintf( ent, PRINT_HIGH, "You may not change modes too soon.\n" );
                 break;
             }
@@ -1516,8 +1528,8 @@ void ClientCommand (edict_t *ent)
 		Cmd_Observe_f(ent);
 	else if (Q_stricmp(cmd, "chase") == 0)
 		Cmd_Chase_f(ent);
-	else if (Q_stricmp(cmd, "stats") == 0)
-		Cmd_Stats_f(ent);
+	else if (Q_stricmp(cmd, "stats") == 0 || Q_stricmp(cmd, "accuracy") == 0)
+		Cmd_Stats_f(ent, qfalse);
 	else if (Q_stricmp(cmd, "vote") == 0)
 		Cmd_Vote_f(ent);
 	else if (Q_stricmp(cmd, "yes") == 0)

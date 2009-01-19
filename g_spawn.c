@@ -706,12 +706,22 @@ static const char dm_statusbar[] =
 "	yb	-50 "
 "endif "
 
-// timer
+// timer 1 (quad, enviro, breather)
 "if 9 "
 "	xv	246 "
 "	num	2	10 "
 "	xv	296 "
 "	pic	9 "
+"endif "
+
+// timer 2 (pent)
+"if 22 "
+"	yb	-76 "
+"	xv	246 "
+"	num	2	23 "
+"	xv	296 "
+"	pic	22 "
+"	yb	-50 "
 "endif "
 
 //  help / weapon icon 

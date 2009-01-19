@@ -27,7 +27,7 @@ static qboolean	is_quad;
 static byte		is_silenced;
 
 
-void weapon_grenade_fire (edict_t *ent, qboolean held);
+static void weapon_grenade_fire (edict_t *ent, qboolean held);
 
 
 static void P_ProjectSource (gclient_t *client, vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result)
@@ -95,13 +95,24 @@ void ChangeWeapon (edict_t *ent)
 {
 	int i;
 
-	if (ent->client->grenade_framenum)
-	{
-		ent->client->grenade_framenum = level.framenum;
-		ent->client->weapon_sound = 0;
-		weapon_grenade_fire (ent, qfalse);
-		ent->client->grenade_framenum = 0;
-	}
+    //a grenade action is happening
+    if (ent->client->grenade_framenum)
+    {
+        //but it blew up in their hand or they threw it, allow bug to double explode
+        if ((ent->client->grenade_state == GRENADE_BLEW_UP && g_bugs->value >= 2) ||
+            (ent->client->grenade_state == GRENADE_THROWN && g_bugs->value >= 1) ||
+            ent->client->grenade_state == GRENADE_NONE)
+        {
+            //r1: prevent quad on someone making grenades into quad grenades on death explode
+            if (g_bugs->value < 1)
+		        is_quad = (ent->client->quad_framenum > level.framenum);
+
+            ent->client->grenade_framenum = level.framenum;
+            weapon_grenade_fire (ent, qfalse);
+            ent->client->grenade_framenum = 0;
+		    ent->client->grenade_state = GRENADE_NONE;
+        }
+    }
 
 	ent->client->lastweapon = ent->client->weapon;
 	ent->client->weapon = ent->client->newweapon;
@@ -135,14 +146,13 @@ void ChangeWeapon (edict_t *ent)
 	ent->client->anim_priority = ANIM_PAIN;
 	if(ent->client->ps.pmove.pm_flags & PMF_DUCKED)
 	{
-			ent->s.frame = FRAME_crpain1;
-			ent->client->anim_end = FRAME_crpain4;
+		ent->s.frame = FRAME_crpain1;
+		ent->client->anim_end = FRAME_crpain4;
 	}
 	else
 	{
-			ent->s.frame = FRAME_pain301;
-			ent->client->anim_end = FRAME_pain304;
-			
+		ent->s.frame = FRAME_pain301;
+		ent->client->anim_end = FRAME_pain304;	
 	}
 }
 
@@ -463,7 +473,7 @@ GRENADE
 #define GRENADE_MINSPEED	400
 #define GRENADE_MAXSPEED	800
 
-void weapon_grenade_fire (edict_t *ent, qboolean held)
+static void weapon_grenade_fire (edict_t *ent, qboolean held)
 {
 	vec3_t	offset;
 	vec3_t	forward, right;
@@ -474,8 +484,8 @@ void weapon_grenade_fire (edict_t *ent, qboolean held)
 	float	radius;
 
 	radius = damage+40;
-	if (is_quad)
-		damage *= 4;
+    if (is_quad)
+        damage *= 4;
 
 	VectorSet(offset, 8, 8, ent->viewheight-8);
 	AngleVectors (ent->client->v_angle, forward, right, NULL);
@@ -539,6 +549,7 @@ void Weapon_Grenade (edict_t *ent)
 				ent->client->ps.gunframe = 1;
 				ent->client->weaponstate = WEAPON_FIRING;
 				ent->client->grenade_framenum = 0;
+				ent->client->grenade_state = GRENADE_NONE;
 			}
 			else
 			{
@@ -572,22 +583,22 @@ void Weapon_Grenade (edict_t *ent)
 			}
 
 			// they waited too long, detonate it in their hand
-			if (!ent->client->grenade_blew_up && level.framenum >= ent->client->grenade_framenum)
+			if (ent->client->grenade_state != GRENADE_BLEW_UP && level.framenum >= ent->client->grenade_framenum)
 			{
 				ent->client->weapon_sound = 0;
 				weapon_grenade_fire (ent, qtrue);
-				ent->client->grenade_blew_up = qtrue;
+				ent->client->grenade_state = GRENADE_BLEW_UP;
 			}
 
 			if (ent->client->buttons & BUTTON_ATTACK)
 				return;
 
-			if (ent->client->grenade_blew_up)
+			if (ent->client->grenade_state == GRENADE_BLEW_UP)
 			{
 				if (level.framenum >= ent->client->grenade_framenum)
 				{
 					ent->client->ps.gunframe = 15;
-					ent->client->grenade_blew_up = qfalse;
+				    ent->client->grenade_state = GRENADE_NONE;
 				}
 				else
 				{
@@ -600,6 +611,7 @@ void Weapon_Grenade (edict_t *ent)
 		{
 			ent->client->weapon_sound = 0;
 			weapon_grenade_fire (ent, qfalse);
+            ent->client->grenade_state = GRENADE_THROWN;
 		}
 
 		if ((ent->client->ps.gunframe == 15) && (level.framenum < ent->client->grenade_framenum))
@@ -610,6 +622,7 @@ void Weapon_Grenade (edict_t *ent)
 		if (ent->client->ps.gunframe == 16)
 		{
 			ent->client->grenade_framenum = 0;
+		    ent->client->grenade_state = GRENADE_NONE;
 			ent->client->weaponstate = WEAPON_READY;
 		}
 	}
@@ -623,7 +636,7 @@ GRENADE LAUNCHER
 ======================================================================
 */
 
-void weapon_grenadelauncher_fire (edict_t *ent)
+static void weapon_grenadelauncher_fire (edict_t *ent)
 {
 	vec3_t	offset;
 	vec3_t	forward, right;
@@ -677,7 +690,7 @@ ROCKET
 ======================================================================
 */
 
-void Weapon_RocketLauncher_Fire (edict_t *ent)
+static void weapon_rocketlauncher_fire (edict_t *ent)
 {
 	vec3_t	offset, start;
 	vec3_t	forward, right;
@@ -726,7 +739,7 @@ void Weapon_RocketLauncher (edict_t *ent)
 	static const int	pause_frames[]	= {25, 33, 42, 50, 0};
 	static const int	fire_frames[]	= {5, 0};
 
-	Weapon_Generic (ent, 4, 12, 50, 54, pause_frames, fire_frames, Weapon_RocketLauncher_Fire);
+	Weapon_Generic (ent, 4, 12, 50, 54, pause_frames, fire_frames, weapon_rocketlauncher_fire);
 }
 
 
@@ -738,7 +751,7 @@ BLASTER / HYPERBLASTER
 ======================================================================
 */
 
-void Blaster_Fire (edict_t *ent, vec3_t g_offset, int damage, qboolean hyper, int effect)
+static void blaster_fire (edict_t *ent, vec3_t g_offset, int damage, qboolean hyper, int effect)
 {
 	vec3_t	forward, right;
 	vec3_t	start;
@@ -770,10 +783,9 @@ void Blaster_Fire (edict_t *ent, vec3_t g_offset, int damage, qboolean hyper, in
     }
 }
 
-
-void Weapon_Blaster_Fire (edict_t *ent)
+static void weapon_blaster_fire (edict_t *ent)
 {
-	Blaster_Fire (ent, vec3_origin, 15, qfalse, EF_BLASTER);
+	blaster_fire (ent, vec3_origin, 15, qfalse, EF_BLASTER);
     ent->client->resp.stats[WEAP_BLASTER].atts++;
 	ent->client->ps.gunframe++;
 }
@@ -783,11 +795,11 @@ void Weapon_Blaster (edict_t *ent)
 	static const int	pause_frames[]	= {19, 32, 0};
 	static const int	fire_frames[]	= {5, 0};
 
-	Weapon_Generic (ent, 4, 8, 52, 55, pause_frames, fire_frames, Weapon_Blaster_Fire);
+	Weapon_Generic (ent, 4, 8, 52, 55, pause_frames, fire_frames, weapon_blaster_fire);
 }
 
 
-void Weapon_HyperBlaster_Fire (edict_t *ent)
+static void weapon_hyperblaster_fire (edict_t *ent)
 {
 	float	rotation;
 	vec3_t	offset;
@@ -816,7 +828,7 @@ void Weapon_HyperBlaster_Fire (edict_t *ent)
 				effect = EF_HYPERBLASTER;
 			else
 				effect = 0;
-			Blaster_Fire (ent, offset, 15, qtrue, effect);
+			blaster_fire (ent, offset, 15, qtrue, effect);
 			if (!DF( INFINITE_AMMO ) )
 				ent->client->inventory[ent->client->ammo_index]--;
 
@@ -853,7 +865,7 @@ void Weapon_HyperBlaster (edict_t *ent)
 	static const int	pause_frames[]	= {0};
 	static const int	fire_frames[]	= {6, 7, 8, 9, 10, 11, 0};
 
-	Weapon_Generic (ent, 5, 20, 49, 53, pause_frames, fire_frames, Weapon_HyperBlaster_Fire);
+	Weapon_Generic (ent, 5, 20, 49, 53, pause_frames, fire_frames, weapon_hyperblaster_fire);
 }
 
 /*
@@ -864,7 +876,7 @@ MACHINEGUN / CHAINGUN
 ======================================================================
 */
 
-void Machinegun_Fire (edict_t *ent)
+static void weapon_machinegun_fire (edict_t *ent)
 {
 	int	i;
 	vec3_t		start;
@@ -946,10 +958,10 @@ void Weapon_Machinegun (edict_t *ent)
 	static const int	pause_frames[]	= {23, 45, 0};
 	static const int	fire_frames[]	= {4, 5, 0};
 
-	Weapon_Generic (ent, 3, 5, 45, 49, pause_frames, fire_frames, Machinegun_Fire);
+	Weapon_Generic (ent, 3, 5, 45, 49, pause_frames, fire_frames, weapon_machinegun_fire);
 }
 
-void Chaingun_Fire (edict_t *ent)
+static void weapon_chaingun_fire (edict_t *ent)
 {
 	int			i;
 	int			shots;
@@ -1068,7 +1080,7 @@ void Weapon_Chaingun (edict_t *ent)
 	static const int	pause_frames[]	= {38, 43, 51, 61, 0};
 	static const int	fire_frames[]	= {5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 0};
 
-	Weapon_Generic (ent, 4, 31, 61, 64, pause_frames, fire_frames, Chaingun_Fire);
+	Weapon_Generic (ent, 4, 31, 61, 64, pause_frames, fire_frames, weapon_chaingun_fire);
 }
 
 
@@ -1080,7 +1092,7 @@ SHOTGUN / SUPERSHOTGUN
 ======================================================================
 */
 
-void weapon_shotgun_fire (edict_t *ent)
+static void weapon_shotgun_fire (edict_t *ent)
 {
 	vec3_t		start;
 	vec3_t		forward, right;
@@ -1137,7 +1149,7 @@ void Weapon_Shotgun (edict_t *ent)
 }
 
 
-void weapon_supershotgun_fire (edict_t *ent)
+static void weapon_supershotgun_fire (edict_t *ent)
 {
 	vec3_t		start;
 	vec3_t		forward, right;
@@ -1205,7 +1217,7 @@ RAILGUN
 ======================================================================
 */
 
-void weapon_railgun_fire (edict_t *ent)
+static void weapon_railgun_fire (edict_t *ent)
 {
 	vec3_t		start;
 	vec3_t		forward, right;
@@ -1264,7 +1276,7 @@ BFG10K
 ======================================================================
 */
 
-void weapon_bfg_fire (edict_t *ent)
+static void weapon_bfg_fire (edict_t *ent)
 {
 	vec3_t	offset, start;
 	vec3_t	forward, right;

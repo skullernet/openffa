@@ -27,7 +27,7 @@ static void SetChaseStats( gclient_t *client ) {
 
 	// layouts are independant in chasecam mode
 	client->ps.stats[STAT_LAYOUTS] = 0;
-	if (client->showscores)
+	if (client->showscores || client->menu)
 		client->ps.stats[STAT_LAYOUTS] |= 1;
 
 	client->ps.stats[STAT_CHASE] = CS_PLAYERSKINS + playernum;
@@ -111,6 +111,7 @@ static void UpdateChaseCamHack( gclient_t *client ) {
 }
 
 static void UpdateChaseCam( gclient_t *client ) {
+    edict_t *ent = client->edict;
 	edict_t *targ = client->chase_target;
 
 	client->ps = targ->client->ps;
@@ -123,6 +124,10 @@ static void UpdateChaseCam( gclient_t *client ) {
     } else {
 		client->ps.pmove.pm_type = PM_FREEZE;
     }
+
+    VectorCopy( ent->client->ps.viewangles, ent->s.angles );
+    VectorCopy( ent->client->ps.viewangles, ent->client->v_angle );
+    VectorScale( ent->client->ps.pmove.origin, 0.125f, ent->s.origin );
 }
 
 void SetChaseTarget( edict_t *ent, edict_t *targ ) {

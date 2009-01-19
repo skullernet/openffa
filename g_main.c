@@ -44,8 +44,11 @@ cvar_t	*g_vote_mask;
 cvar_t	*g_vote_time;
 cvar_t	*g_vote_treshold;
 cvar_t	*g_vote_limit;
-cvar_t	*g_randomize;
+cvar_t	*g_maps_random;
+cvar_t	*g_maps_file;
 cvar_t	*g_item_ban;
+cvar_t	*g_bugs;
+cvar_t  *g_teleporter_nofreeze;
 cvar_t	*dedicated;
 
 cvar_t	*filterban;
@@ -71,7 +74,8 @@ cvar_t	*flood_msgs;
 cvar_t	*flood_persecond;
 cvar_t	*flood_waitdelay;
 
-cvar_t	*sv_maplist;
+static LIST_DECL( g_map_list );
+static LIST_DECL( g_map_queue );
 
 //cvar_t  *sv_features;
 
@@ -267,7 +271,7 @@ void G_LoadScores( void ) {
             break;
         }
         token = COM_Parse( &data );
-        if( !token[0] ) {
+        if( !*token ) {
             continue;
         }
 
@@ -286,6 +290,167 @@ void G_LoadScores( void ) {
     qsort( level.scores, level.numscores, sizeof( score_t ), ScoreCmp );
 }
 
+map_entry_t *G_FindMap( const char *name ) {
+    map_entry_t *map;
+
+    LIST_FOR_EACH( map_entry_t, map, &g_map_list, list ) {
+        if( !Q_stricmp( map->name, name ) ) {
+            return map;
+        }
+    }
+    return NULL;
+}
+
+static int QDECL random_cmp( const void *p1, const void *p2 ) {
+    int r = rand();
+
+    return 1 - ( ( r ^ ( r >> 8 ) ^ ( r >> 16 ) ) % 3 );
+}
+
+static qboolean G_RebuildMapQueue( void ) {
+    map_entry_t *pool[256], *map;
+    int i, count;
+
+    List_Init( &g_map_queue );
+
+    // build the queue from available map list
+    count = 0;
+    LIST_FOR_EACH( map_entry_t, map, &g_map_list, list ) {
+        if( map->flags & MAP_NOAUTO ) {
+            continue;
+        }
+        pool[count++] = map;
+        if( count == 256 ) {
+            break;
+        }
+    }
+
+    if( !count ) {
+        return qfalse;
+    }
+
+    gi.dprintf( "Map queue: %d entries\n", count );
+
+    // randomize it
+    if( g_maps_random->value > 0 ) {
+        qsort( pool, count, sizeof( map_entry_t * ), random_cmp );
+    }
+
+    for( i = 0; i < count; i++ ) {
+        List_Append( &g_map_queue, &pool[i]->queue );
+        //gi.dprintf( "%d: %s\n", i, pool[i]->name );
+    }
+    return qtrue;
+}
+
+static map_entry_t *G_FindSuitableMap( void ) {
+    int total = G_CalcRanks( NULL );
+    map_entry_t *map;
+
+    LIST_FOR_EACH( map_entry_t, map, &g_map_queue, queue ) {
+        if( total >= map->min_players && total <= map->max_players ) {
+            return map;
+        }
+    }
+    return NULL;
+}
+
+static void G_PickNextMap( void ) {
+    map_entry_t *map;
+
+    // if map list is empty, stay on the same level
+    if( LIST_EMPTY( &g_map_list ) ) {
+        return;
+    }
+
+    // pick the suitable map
+    map = G_FindSuitableMap();
+    if( !map ) {
+        // if map queue is empty, rebuild it
+        if( !G_RebuildMapQueue() ) {
+            return;
+        }
+        map = G_FindSuitableMap();
+        if( !map ) {
+            gi.dprintf( "Couldn't find next map!\n" );
+            return;
+        }
+    }
+
+    List_Delete( &map->queue );
+
+    gi.dprintf( "Next map is %s.\n", map->name );
+    strcpy( level.nextmap, map->name );
+}
+
+static void G_LoadMapList( void ) {
+    char path[MAX_OSPATH];
+    char buffer[MAX_STRING_CHARS];
+    char *token;
+    const char *data;
+    map_entry_t *map;
+    FILE *fp;
+    size_t len;
+    int linenum, nummaps;
+
+    if( !game.dir[0] ) {
+        return;
+    }
+    len = Q_concat( path, sizeof( path ), game.dir, "/mapcfg/",
+        g_maps_file->string, ".txt", NULL );
+    if( len >= sizeof( path ) ) {
+        return;
+    }
+
+    fp = fopen( path, "r" );
+    if( !fp ) {
+        gi.dprintf( "Couldn't load '%s'\n", path );
+        return;
+    }
+
+    linenum = nummaps = 0;
+    while( 1 ) {
+        data = fgets( buffer, sizeof( buffer ), fp );
+        if( !data ) {
+            break;
+        }
+
+        linenum++;
+
+        token = COM_Parse( &data );
+        if( !*token ) {
+            continue;
+        }
+
+        len = strlen( token );
+        if( len >= MAX_QPATH ) {
+            gi.dprintf( "%s: oversize mapname at line %d\n",
+                __func__, linenum );
+            continue;
+        }
+
+        map = G_Malloc( sizeof( *map ) + len );
+        memcpy( map->name, token, len + 1 );
+
+        token = COM_Parse( &data );
+        map->min_players = atoi( token );
+
+        token = COM_Parse( &data );
+        map->max_players = *token ? atoi( token ) : game.maxclients;
+
+        token = COM_Parse( &data );
+        map->flags = atoi( token );
+
+        List_Append( &g_map_list, &map->list );
+        nummaps++;
+    }
+
+    fclose( fp );
+
+    gi.dprintf( "Loaded %d maps from '%s'\n",
+        nummaps, path );
+}
+
 /*
 =================
 EndDMLevel
@@ -294,9 +459,6 @@ The timelimit or fraglimit has been exceeded
 =================
 */
 void EndDMLevel ( void ) {
-    int r = g_randomize->value;
-    map_entry_t *map;
-
     G_RegisterScore();
 
 	BeginIntermission();
@@ -312,32 +474,18 @@ void EndDMLevel ( void ) {
 		return;
 	}
 
-    // empty map list?
-    if( LIST_EMPTY( &g_maplist ) ) {
-        return;
-    }
-
-    if( r < 1 ) {
-        // sequental maplist traversal
-        map = G_FindMap( level.mapname );
-        if( map ) {
-            map = LIST_NEXT_CYCLE( map_entry_t, map, &g_maplist, entry );
-        } else {
-            map = LIST_FIRST( map_entry_t, &g_maplist, entry );
-        }
-    } else {
-        map = G_RandomMap();
-        if( r > 1 && !Q_stricmp( map->name, level.mapname ) ) {
-            map = LIST_NEXT_CYCLE( map_entry_t, map, &g_maplist, entry );
-        }
-    }
-
-    Com_Printf( "Next map is %s.\n", map->name );
-    strcpy( level.nextmap, map->name );
+    G_PickNextMap();
 }
 
 void G_StartSound( int index ) {
     gi.sound( &g_edicts[0], 0, index, 1, ATTN_NONE, 0 );
+}
+
+static void G_SetTimeVar( int remaining ) {
+    int sec = remaining % 60;
+    int min = remaining / 60;
+    
+    gi.cvar_set( "time_remaining", va( "%d:%02d", min, sec ) );
 }
 
 /*
@@ -366,6 +514,8 @@ static void CheckDMRules( void ) {
             G_WriteTime( remaining );
             gi.multicast( NULL, MULTICAST_ALL );
 
+            G_SetTimeVar( remaining );
+
             // notify
             switch( remaining ) {
             case 10:
@@ -385,7 +535,9 @@ static void CheckDMRules( void ) {
                 break;
             }
         }
-	}
+	} else if( timelimit->modified ) {
+        gi.cvar_set( "time_remaining", "" );
+    }
 
 	if( fraglimit->value > 0 ) {
 		for( i = 0, c = game.clients; i < game.maxclients; i++, c++ ) {
@@ -553,7 +705,8 @@ static void G_Shutdown (void) {
     // reset our features
     gi.cvar_forceset( "g_features", "0" );
 
-    List_Init( &g_maplist );
+    List_Init( &g_map_list );
+    List_Init( &g_map_list );
 }
 
 
@@ -600,14 +753,20 @@ static void G_Init (void) {
 	fraglimit = gi.cvar ("fraglimit", "0", CVAR_SERVERINFO);
 	timelimit = gi.cvar ("timelimit", "0", CVAR_SERVERINFO);
 
+    gi.cvar( "time_remaining", "", CVAR_SERVERINFO );
+    gi.cvar_set( "time_remaining", "" );
+
 	g_select_empty = gi.cvar ("g_select_empty", "0", CVAR_ARCHIVE);
 	g_idletime = gi.cvar ("g_idletime", "0", 0);
 	g_vote_mask = gi.cvar ("g_vote_mask", "0", 0);
 	g_vote_time = gi.cvar ("g_vote_time", "120", 0);
 	g_vote_treshold = gi.cvar ("g_vote_treshold", "50", 0);
 	g_vote_limit = gi.cvar ("g_vote_limit", "0", 0);
-	g_randomize = gi.cvar ("g_randomize", "1", 0);
+	g_maps_random = gi.cvar ("g_maps_random", "1", 0);
+	g_maps_file = gi.cvar ("g_maps_file", "", CVAR_LATCH);
 	g_item_ban = gi.cvar ("g_item_ban", "0", 0);
+	g_bugs = gi.cvar ("g_bugs", "0", 0);
+	g_teleporter_nofreeze = gi.cvar ("g_teleporter_nofreeze", "0", 0);
 
 	run_pitch = gi.cvar ("run_pitch", "0.002", 0);
 	run_roll = gi.cvar ("run_roll", "0.005", 0);
@@ -619,9 +778,6 @@ static void G_Init (void) {
 	flood_msgs = gi.cvar ("flood_msgs", "4", 0);
 	flood_persecond = gi.cvar ("flood_persecond", "4", 0);
 	flood_waitdelay = gi.cvar ("flood_waitdelay", "10", 0);
-
-	// dm map list
-	sv_maplist = gi.cvar ("sv_maplist", "", 0);
 
     // force deathmatch
     //gi.cvar_set( "coop", "0" ); //atu
@@ -658,6 +814,14 @@ static void G_Init (void) {
     } else if( len >= sizeof( game.dir ) ) {
         gi.dprintf( "Oversize game directory.\n" );
         game.dir[0] = 0;
+    }
+
+    if( strchr( g_maps_file->string, '/' ) || strstr( g_maps_file->string, ".." ) ) {
+        gi.dprintf( "'g_maps_file' should be a single filename, not a path.\n" );
+        gi.cvar_forceset( "g_maps_file", "" );
+    }
+    if( g_maps_file->string[0] ) {
+        G_LoadMapList();
     }
 
     // obtain server features

@@ -19,7 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 #include "g_local.h"
 
-
+void Cmd_Stats_f( edict_t *ent, qboolean check_other );
 
 /*
 ======================================================================
@@ -49,7 +49,7 @@ void MoveClientToIntermission (edict_t *ent)
 	ent->client->invincible_framenum = 0;
 	ent->client->breather_framenum = 0;
 	ent->client->enviro_framenum = 0;
-	ent->client->grenade_blew_up = qfalse;
+	ent->client->grenade_state = GRENADE_NONE;
 	ent->client->grenade_framenum = 0;
 
 	ent->viewheight = 0;
@@ -64,6 +64,8 @@ void MoveClientToIntermission (edict_t *ent)
     gi.unlinkentity( ent );
 
     PMenu_Close( ent );
+
+    Cmd_Stats_f( ent, qfalse );
 
 	// add the layout
 	DeathmatchScoreboardMessage (ent);
@@ -155,11 +157,16 @@ int G_CalcRanks( gclient_t **ranks ) {
 	total = 0;
 	for( i = 0; i < game.maxclients; i++ ) {
         if( game.clients[i].pers.connected == CONN_SPAWNED ) {
-            ranks[total++] = &game.clients[i];
+            if( ranks ) {
+                ranks[total] = &game.clients[i];
+            }
+            total++;
         }
 	}
 
-    qsort( ranks, total, sizeof( gclient_t * ), G_PlayerCmp );
+    if( ranks ) {
+        qsort( ranks, total, sizeof( gclient_t * ), G_PlayerCmp );
+    }
 
     return total;
 }
@@ -270,7 +277,7 @@ void DeathmatchScoreboardMessage( edict_t *ent ) {
     }
 
     // add spectators in no particular order
-	for( i = 0; i < game.maxclients; i++ ) {
+	for( i = 0, j = 0; i < game.maxclients; i++ ) {
         c = &game.clients[i];
         if( c->pers.connected != CONN_PREGAME && c->pers.connected != CONN_SPECTATOR ) {
             continue;
@@ -292,8 +299,8 @@ void DeathmatchScoreboardMessage( edict_t *ent ) {
         }
 
 		len = Q_snprintf( entry, sizeof( entry ),
-		    "yv %d string%s \"%2d %-15s %-16s %4d %4d\"",
-            y, c == ent->client ? "" : "2", numranks + i + 1,
+		    "yv %d string%s \"%2d %-15s %-16.16s %4d %4d\"",
+            y, c == ent->client ? "" : "2", numranks + j + 1,
             c->pers.netname, status, sec / 60, c->ping );
         if( len >= sizeof( entry ) ) {
             continue;
@@ -303,6 +310,7 @@ void DeathmatchScoreboardMessage( edict_t *ent ) {
         memcpy( string + total, entry, len );
         total += len;
         y += 8;
+        j++;
     }
 
     string[total] = 0;
@@ -470,17 +478,12 @@ void G_SetStats (edict_t *ent)
 	}
 
 	//
-	// timers
+	// timer 1 (quad, enviro, breather)
 	//
 	if (ent->client->quad_framenum > level.framenum)
 	{
 		ent->client->ps.stats[STAT_TIMER_ICON] = level.images.quad;
 		ent->client->ps.stats[STAT_TIMER] = (ent->client->quad_framenum - level.framenum)/HZ;
-	}
-	else if (ent->client->invincible_framenum > level.framenum)
-	{
-		ent->client->ps.stats[STAT_TIMER_ICON] = level.images.invulnerability;
-		ent->client->ps.stats[STAT_TIMER] = (ent->client->invincible_framenum - level.framenum)/HZ;
 	}
 	else if (ent->client->enviro_framenum > level.framenum)
 	{
@@ -496,6 +499,22 @@ void G_SetStats (edict_t *ent)
 	{
 		ent->client->ps.stats[STAT_TIMER_ICON] = 0;
 		ent->client->ps.stats[STAT_TIMER] = 0;
+	}
+
+	//
+	// timer 2 (pent)
+	//
+	ent->client->ps.stats[STAT_TIMER2_ICON] = 0;
+	ent->client->ps.stats[STAT_TIMER2] = 0;
+	if (ent->client->invincible_framenum > level.framenum)
+	{
+		if( ent->client->ps.stats[STAT_TIMER_ICON] ) {
+    		ent->client->ps.stats[STAT_TIMER2_ICON] = level.images.invulnerability;
+		    ent->client->ps.stats[STAT_TIMER2] = (ent->client->invincible_framenum - level.framenum)/HZ;
+        } else {
+    		ent->client->ps.stats[STAT_TIMER_ICON] = level.images.invulnerability;
+		    ent->client->ps.stats[STAT_TIMER] = (ent->client->invincible_framenum - level.framenum)/HZ;
+        }
 	}
 
 	//
@@ -542,6 +561,8 @@ void G_SetStats (edict_t *ent)
     } else {
         if( timelimit->value > 0 ) {
     	    ent->client->ps.stats[STAT_TIME_STRING] = CS_TIME;
+        } else {
+    	    ent->client->ps.stats[STAT_TIME_STRING] = 0;
         }
         if( ent->client->pers.connected == CONN_SPAWNED ) {
             ent->client->ps.stats[STAT_FRAGS_STRING] = CS_PRIVATE + PCS_FRAGS;

@@ -52,7 +52,7 @@ qboolean CanDamage (edict_t *targ, edict_t *inflictor)
 	if (trace.fraction == 1.0)
 		return qtrue;
    
-    if( 1 ) {
+    if( g_bugs->value < 1 ) {
         vec_t *bounds[] = { targ->absmin, targ->absmax };
 
         for( i = 0; i < 8; i++ ) {

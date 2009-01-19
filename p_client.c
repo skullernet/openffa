@@ -829,6 +829,16 @@ void CopyToBodyQue (edict_t *ent)
 	body = &g_edicts[game.maxclients + level.body_que + 1];
 	level.body_que = (level.body_que + 1) % BODY_QUEUE_SIZE;
 
+    // send an effect on the removed body
+    if (body->s.modelindex)
+    {
+        gi.WriteByte (svc_temp_entity);
+        gi.WriteByte (TE_BLOOD);
+        gi.WritePosition (body->s.origin);
+        gi.WriteDir (vec3_origin);
+        gi.multicast (body->s.origin, MULTICAST_PVS);
+    }  
+
 	gi.unlinkentity (body);
 	body->s = ent->s;
 	body->s.number = body - g_edicts;
@@ -870,8 +880,6 @@ void respawn (edict_t *self)
     self->client->ps.pmove.pm_time = 14;
 
     self->client->respawn_framenum = level.framenum;
-
-    return;
 }
 
 /* 
@@ -879,39 +887,45 @@ void respawn (edict_t *self)
  */
 void spectator_respawn (edict_t *ent)
 {
-    int total, mz;
+    int total;
 
 	// clear client on respawn
     memset( &ent->client->resp, 0, sizeof( ent->client->resp ) );
-
-    PutClientInServer (ent);
 
     total = G_UpdateRanks();
 
     // notify others
 	if (ent->client->pers.connected == CONN_SPAWNED) {
-        mz = MZ_LOGIN;
 		gi.bprintf (PRINT_HIGH, "%s entered the game (%d player%s)\n",
             ent->client->pers.netname, total, total == 1 ? "" : "s" );
 
+        PutClientInServer (ent);
+
         G_ScoreChanged( ent );
+
+        // add a teleportation effect
+        ent->s.event = EV_PLAYER_TELEPORT;
 
     	// hold in place briefly
 	    ent->client->ps.pmove.pm_flags = PMF_TIME_TELEPORT;
 	    ent->client->ps.pmove.pm_time = 14;
 	} else {
-		mz = MZ_LOGOUT;
 		gi.bprintf (PRINT_HIGH, "%s moved to the sidelines (%d player%s)\n",
             ent->client->pers.netname, total, total == 1 ? "" : "s" );
+
+        // send effect on removed player
+        gi.WriteByte (svc_temp_entity);
+        gi.WriteByte (TE_BLOOD);
+        gi.WritePosition (ent->s.origin);
+        gi.WriteDir (vec3_origin);
+        gi.multicast (ent->s.origin, MULTICAST_PVS);
+
+        PutClientInServer (ent);
     }
 
-	// add a teleportation effect
-    gi.WriteByte (svc_muzzleflash);
-    gi.WriteShort (ent-g_edicts);
-    gi.WriteByte (mz);
-    gi.multicast (ent->s.origin, MULTICAST_PVS);
-    
 	ent->client->respawn_framenum = level.framenum;
+	ent->client->observer_framenum = level.framenum;
+    ent->client->activity_framenum = level.framenum;
 }
 
 //==============================================================
@@ -942,6 +956,8 @@ void PutClientInServer (edict_t *ent)
 	client_persistant_t	pers;
 	client_respawn_t	resp;
     client_level_t      lvl;
+    vec3_t temp, temp2;
+    trace_t tr;
 
 	index = ent-g_edicts-1;
 	client = ent->client;
@@ -1028,10 +1044,25 @@ void PutClientInServer (edict_t *ent)
 	// sknum is player num and weapon number
 	// weapon number will be added in changeweapon
 	ent->s.skinnum = ent - g_edicts - 1;
-
 	ent->s.frame = 0;
-	VectorCopy (spawn_origin, ent->s.origin);
-	ent->s.origin[2] += 1;	// make sure off ground
+
+    // try to properly clip to the floor / spawn
+    VectorCopy (spawn_origin, temp);
+    VectorCopy (spawn_origin, temp2);
+    temp[2] -= 64;
+    temp2[2] += 16;
+    gi_trace (&tr, temp2, ent->mins, ent->maxs, temp, ent, MASK_PLAYERSOLID);
+    if (!tr.allsolid && !tr.startsolid)
+    {
+        VectorCopy (tr.endpos, ent->s.origin);
+        ent->groundentity = tr.ent;
+    }
+    else
+    {
+	    VectorCopy (spawn_origin, ent->s.origin);
+        ent->s.origin[2] += 1; // make sure off ground
+    }
+
 	VectorCopy (ent->s.origin, ent->s.old_origin);
 
 	spawn_angles[ROLL] = 0;
@@ -1054,13 +1085,12 @@ void PutClientInServer (edict_t *ent)
 		return;
 	} 
 
-    client->activity_framenum = level.framenum;
+    // we must link before killbox since it uses absmin/absmax
+	gi.linkentity (ent);
 
-	if (!KillBox (ent))
+	if (!G_KillBox (ent))
 	{	// could't spawn in?
 	}
-
-	gi.linkentity (ent);
 
 	// force the current weapon up
 	client->newweapon = client->weapon;
@@ -1342,15 +1372,15 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 	client->level.cmd_angles[1] = SHORT2ANGLE(ucmd->angles[1]);
 	client->level.cmd_angles[2] = SHORT2ANGLE(ucmd->angles[2]);
 
-    if( ucmd->forwardmove >= 10 || ucmd->upmove >= 10 || ucmd->sidemove >= 10 ) {
+    if( abs( ucmd->forwardmove ) >= 10 || abs( ucmd->upmove ) >= 10 || abs( ucmd->sidemove ) >= 10 ) {
         client->activity_framenum = level.framenum;
     }
 
 	if (level.intermission_framenum)
 	{
 		client->ps.pmove.pm_type = PM_FREEZE;
-		// can exit intermission after five seconds
-        if( level.framenum - level.intermission_framenum > 5 * HZ ) {
+		// can exit intermission after 7 seconds
+        if( level.framenum - level.intermission_framenum > 7 * HZ ) {
             if( ucmd->buttons & BUTTON_ANY )
 	    		G_ExitLevel();
         }

@@ -2024,7 +2024,7 @@ Kills everything inside when fired, irrespective of protection.
 */
 void use_killbox (edict_t *self, edict_t *other, edict_t *activator)
 {
-	KillBox (self);
+	G_KillBox (self);
 }
 
 void SP_func_killbox (edict_t *ent)
