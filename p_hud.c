@@ -65,7 +65,9 @@ void MoveClientToIntermission (edict_t *ent)
 
     PMenu_Close( ent );
 
-    Cmd_Stats_f( ent, qfalse );
+    if( PLAYER_SPAWNED( ent ) || ent->client->chase_target ) {
+        Cmd_Stats_f( ent, qfalse );
+    }
 
 	// add the layout
 	DeathmatchScoreboardMessage (ent);
@@ -87,7 +89,7 @@ void BeginIntermission (void)
 		return;		// already activated
 
 	// respawn any dead clients
-	for (i=0 ; i<maxclients->value ; i++)
+	for (i=0 ; i<game.maxclients ; i++)
 	{
 		client = g_edicts + 1 + i;
 		if (!client->inuse)
@@ -122,7 +124,7 @@ void BeginIntermission (void)
 	VectorCopy (ent->s.angles, level.intermission_angle);
 
 	// move all clients to the intermission point
-	for (i=0 ; i<maxclients->value ; i++)
+	for (i=0 ; i<game.maxclients ; i++)
 	{
 		client = g_edicts + 1 + i;
 		if (!client->inuse)
@@ -187,7 +189,7 @@ void HighScoresMessage( void ) {
         "yv 0 "
         "cstring \"High Scores for %s\""
         "yv 16 "
-        "cstring2 \"  # Name             FPH Date     \"",
+        "cstring2 \"  # Name             FPH Date      \"",
         level.mapname );
 
     y = 24;
@@ -195,12 +197,12 @@ void HighScoresMessage( void ) {
         s = &level.scores[i];
 
         tm = localtime( &s->time );
-        len = strftime( date, sizeof( date ), "%d %b %y", tm );
+        len = strftime( date, sizeof( date ), "%Y-%m-%d", tm );
         if( len < 1 ) {
             strcpy( date, "???" );
         }
 		len = Q_snprintf( entry, sizeof( entry ),
-		    "yv %d cstring \"%c%2d %-15.15s %4d %-8s\"",
+		    "yv %d cstring \"%c%2d %-15.15s %4d %-10s\"",
             y, s->time == level.record ? '*' : ' ',
             i + 1, s->name, s->score, date );
         if( len >= sizeof( entry ) ) {
@@ -234,13 +236,21 @@ void DeathmatchScoreboardMessage( edict_t *ent ) {
     int     y, sec, eff;
 	gclient_t	*ranks[MAX_CLIENTS];
 	gclient_t	*c;
+    time_t      t;
+    struct tm   *tm;
 
-	strcpy( string,
+    t = time( NULL );
+    tm = localtime( &t );
+    strftime( status, sizeof( status ), "[%Y-%m-%d %H:%M]", tm );
+
+	total = Q_scnprintf( string, sizeof( string ),
+        "xv 0 "
+        "yv 18 "
+        "cstring \"%s\""
         "xv -16 "
         "yv 26 "
-        "string \"Player          Frg Dth Eff% FPH Time Ping\""
-        "xv -40 " );
-	total = strlen( string );
+        "string \"Player          Frg Dth Eff%% FPH Time Ping\""
+        "xv -40 ", status );
 
     numranks = G_CalcRanks( ranks );
 
@@ -276,7 +286,7 @@ void DeathmatchScoreboardMessage( edict_t *ent ) {
         y += 8;
     }
 
-    // add spectators in no particular order
+    // add spectators in fixed order
 	for( i = 0, j = 0; i < game.maxclients; i++ ) {
         c = &game.clients[i];
         if( c->pers.connected != CONN_PREGAME && c->pers.connected != CONN_SPECTATOR ) {
@@ -292,15 +302,15 @@ void DeathmatchScoreboardMessage( edict_t *ent ) {
         }
 
         if( c->chase_target ) {
-            Q_snprintf( status, sizeof( status ), "(chasing %s)",
+            Q_snprintf( status, sizeof( status ), "(chasing %.8s)",
                 c->chase_target->client->pers.netname );
         } else {
             strcpy( status, "(observing)" );
         }
 
 		len = Q_snprintf( entry, sizeof( entry ),
-		    "yv %d string%s \"%2d %-15s %-16.16s %4d %4d\"",
-            y, c == ent->client ? "" : "2", numranks + j + 1,
+		    "yv %d string%s \"   %-15s %-18s%3d %4d\"",
+            y, c == ent->client ? "" : "2",
             c->pers.netname, status, sec / 60, c->ping );
         if( len >= sizeof( entry ) ) {
             continue;
@@ -311,6 +321,16 @@ void DeathmatchScoreboardMessage( edict_t *ent ) {
         total += len;
         y += 8;
         j++;
+    }
+
+    // add server info
+    if( sv_hostname && sv_hostname->string[0] ) {
+        len = Q_scnprintf( entry, sizeof( entry ), "xl 8 yb -37 string2 \"%s\"",
+            sv_hostname->string );
+        if( total + len < MAX_STRING_CHARS ) {
+            memcpy( string + total, entry, len );
+            total += len;
+        }
     }
 
     string[total] = 0;
@@ -373,7 +393,7 @@ void G_PrivateString( edict_t *ent, int index, const char *string ) {
     int i;
 
     if( index < 0 || index >= MAX_PRIVATE ) {
-        gi.error( "G_PrivateString: index %d out of range", index );
+        gi.error( "%s: index %d out of range", __func__, index );
     }
 
     if( !strcmp( ent->client->level.strings[index], string ) ) {
@@ -401,6 +421,180 @@ void G_PrivateString( edict_t *ent, int index, const char *string ) {
         }
     }
 }
+
+/*
+=============
+visible
+
+returns 1 if the entity is visible to self, even if not infront ()
+=============
+*/
+static qboolean visible (edict_t *self, edict_t *other, int mask) {
+    vec3_t  spot1;
+    vec3_t  spot2;
+    trace_t trace;
+    int     i;
+
+    VectorCopy (self->s.origin, spot1);
+    spot1[2] += self->viewheight;
+
+    VectorCopy (other->s.origin, spot2);
+    spot2[2] += other->viewheight;
+
+    for (i = 0; i < 10; i++) {
+        gi_trace (&trace, spot1, vec3_origin, vec3_origin, spot2, self, mask);
+
+        if (trace.fraction == 1.0)
+            return qtrue;
+
+        if (trace.ent == world && trace.surface &&
+            (trace.surface->flags & (SURF_TRANS33|SURF_TRANS66)))
+        {
+            mask &= ~MASK_WATER;
+            VectorCopy (trace.endpos, spot1);
+            continue;
+        }
+
+        break;
+    }
+    return qfalse;
+}
+
+/*
+==============
+TDM_GetPlayerIdView
+
+Find the best player for the id view and return configstring index.
+Code below comes from OpenTDM.
+==============
+*/
+static edict_t *find_by_tracing( edict_t *ent ) {
+    edict_t     *ignore;
+    vec3_t      forward;
+    trace_t     tr;
+    vec3_t      start;
+    vec3_t      mins = { -4, -4, -4 };
+    vec3_t      maxs = { 4, 4, 4 };
+    int         i;
+    int         tracemask;
+
+    VectorCopy (ent->s.origin, start);
+    start[2] += ent->viewheight;
+
+    AngleVectors (ent->client->v_angle, forward, NULL, NULL);
+
+    VectorScale (forward, 4096, forward);
+    VectorAdd (ent->s.origin, forward, forward);
+
+    ignore = ent;
+
+    tracemask = CONTENTS_SOLID|CONTENTS_MONSTER|MASK_WATER;
+
+    // find best player through tracing
+    for (i = 0; i < 10; i++) {
+        gi_trace (&tr, start, mins, maxs, forward, ignore, tracemask);
+
+        // hit transparent water
+        if (tr.ent == world && tr.surface &&
+            (tr.surface->flags & (SURF_TRANS33|SURF_TRANS66)))
+        {
+            tracemask &= ~MASK_WATER;
+            VectorCopy (tr.endpos, start);
+            continue;
+        }
+
+        if (tr.ent == world || tr.fraction == 1.0f)
+            break;
+
+        // we hit something that's a player and it's alive!
+        // note, we trace twice so we hit water planes
+        if (tr.ent && tr.ent->client && tr.ent->health > 0 &&
+            visible (tr.ent, ent, CONTENTS_SOLID | MASK_WATER))
+        {
+            return tr.ent;
+        }
+
+        VectorCopy (tr.endpos, start);
+        ignore = tr.ent;
+    }
+
+    return NULL;
+}
+
+static edict_t *find_by_angles( edict_t *ent ) {
+    vec3_t      forward;
+    edict_t     *who, *best;
+    vec3_t      dir;
+    float       distance, bdistance = 0.0f;
+    float       bd = 0.0f, d;
+
+    AngleVectors (ent->client->v_angle, forward, NULL, NULL);
+    best = NULL;
+
+    // if trace was unsuccessful, try guessing based on angles
+    for (who = g_edicts + 1; who <= g_edicts + game.maxclients; who++) {
+        if (!who->inuse)
+            continue;
+        if (!PLAYER_SPAWNED(who))
+            continue;
+        if (who->health <= 0)
+            continue;
+        
+        if (who == ent)
+            continue;
+
+        VectorSubtract (who->s.origin, ent->s.origin, dir);
+        distance = VectorLength (dir);
+
+        VectorNormalize (dir);
+        d = DotProduct (forward, dir);
+
+        // note, we trace twice so we hit water planes
+        if (d > bd &&
+            visible (ent, who, CONTENTS_SOLID | MASK_WATER) &&
+            visible (who, ent, CONTENTS_SOLID | MASK_WATER))
+        {
+            bdistance = distance;
+            bd = d;
+            best = who;
+        }
+    }
+
+    if (!best) {
+        return NULL;
+    }
+
+    // allow variable slop based on proximity
+    if ((bdistance < 150 && bd > 0.50f) ||
+        (bdistance < 250 && bd > 0.90f) ||
+        (bdistance < 600 && bd > 0.96f) ||
+        bd > 0.98f)
+    {
+        return best;
+    }
+
+    return NULL;
+}
+
+static int G_GetPlayerIdView( edict_t *ent ) {
+    edict_t *target;
+
+    if( ent->client->pers.flags & CPF_NOVIEWID ) {
+        return 0;
+    }
+
+    target = find_by_tracing( ent );
+    if( !target ) {
+        target = find_by_angles( ent );
+        if( !target ) {
+            return 0;
+        }
+    }
+
+    return CS_PLAYERNAMES + ( target - g_edicts ) - 1;
+}
+
+
 
 /*
 ===============
@@ -550,7 +744,13 @@ void G_SetStats (edict_t *ent)
 	else
 		ent->client->ps.stats[STAT_HELPICON] = 0;
 
-	ent->client->ps.stats[STAT_SPECTATOR] = 0;
+    if( ent->client->pers.connected == CONN_PREGAME ) {
+	    ent->client->ps.stats[STAT_SPECTATOR] = CS_PREGAME;
+    } else if( ent->client->pers.connected == CONN_SPECTATOR ) {
+    	ent->client->ps.stats[STAT_SPECTATOR] = CS_SPECMODE;
+    } else {
+    	ent->client->ps.stats[STAT_SPECTATOR] = 0;
+    }
 	ent->client->ps.stats[STAT_CHASE] = 0;
 
     if( level.intermission_framenum ) {
@@ -558,6 +758,7 @@ void G_SetStats (edict_t *ent)
         ent->client->ps.stats[STAT_FRAGS_STRING] = 0;
         ent->client->ps.stats[STAT_DELTA_STRING] = 0;
         ent->client->ps.stats[STAT_RANK_STRING] = 0;
+        ent->client->ps.stats[STAT_VIEWID] = 0;
     } else {
         if( timelimit->value > 0 ) {
     	    ent->client->ps.stats[STAT_TIME_STRING] = CS_TIME;
@@ -573,6 +774,7 @@ void G_SetStats (edict_t *ent)
             ent->client->ps.stats[STAT_DELTA_STRING] = 0;
             ent->client->ps.stats[STAT_RANK_STRING] = 0;
         }
+        ent->client->ps.stats[STAT_VIEWID] = G_GetPlayerIdView( ent );
     }
 
 }

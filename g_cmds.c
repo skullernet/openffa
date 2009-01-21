@@ -728,20 +728,39 @@ void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 	}
 }
 
+static void Cmd_Players_f( edict_t *ent ) {
+    edict_t *other;
+    gclient_t *c;
+    int i, time, idle;
+
+    gi.cprintf( ent, PRINT_HIGH,
+        "id score ping time name            idle\n"
+        "-- ----- ---- ---- --------------- ----\n" );
+
+    for( i = 0; i < game.maxclients; i++ ) {
+        other = &g_edicts[ i + 1 ];
+		if( !( c = other->client ) ) {
+            continue;
+        }
+        if( c->pers.connected <= CONN_CONNECTED ) {
+            continue;
+        }
+        time = ( level.framenum - c->level.enter_framenum ) / HZ;
+        idle = ( level.framenum - c->level.activity_framenum ) / HZ;
+        gi.cprintf( ent, PRINT_HIGH, "%2d %5d %4d %4d %-15s %4d\n",
+            i, c->resp.score, c->ping, time / 60, c->pers.netname, idle );
+    }
+}
+
 edict_t *G_SetPlayer( edict_t *ent, int arg ) {
-    edict_t     *other;
-	int			i;
+    edict_t     *other, *match;
+	int			i, count;
 	char		*s;
 
 	s = gi.argv(arg);
 
 	// numeric values are just slot numbers
-	for( i = 0; s[i]; i++ ) {
-		if( !Q_isdigit( s[i] ) ) {
-			break;
-		}
-	} 
-	if( !s[i] ) {
+	if( COM_IsUint( s ) ) {
 		i = atoi(s);
 		if (i < 0 || i >= game.maxclients) {
 			gi.cprintf (ent, PRINT_HIGH, "Bad client slot number: %d\n", i);
@@ -750,38 +769,60 @@ edict_t *G_SetPlayer( edict_t *ent, int arg ) {
 
         other = &g_edicts[ i + 1 ];
 		if (!other->client || other->client->pers.connected <= CONN_CONNECTED) {
-			gi.cprintf (ent, PRINT_HIGH, "Client #%d is not active.\n", i);
+			gi.cprintf (ent, PRINT_HIGH, "Client %d is not active.\n", i);
 			return NULL;
 		}
 		return other;
 	}
 
 	// check for a name match
-    for( i = 1; i <= game.maxclients; i++ ) {
-        other = &g_edicts[i];
+    match = NULL;
+    count = 0;
+    for( i = 0; i < game.maxclients; i++ ) {
+        other = &g_edicts[ i + 1 ];
 		if (!other->client ) {
             continue;
         }
         if( other->client->pers.connected <= CONN_CONNECTED) {
             continue;
         }
-		if (!strcmp(other->client->pers.netname, s)) {
-			return other;
+		if (!Q_stricmp(other->client->pers.netname, s)) {
+			return other; // exact match
 		}
+		if (Q_stristr(other->client->pers.netname, s)) {
+            match = other; // partial match
+            count++;
+        }
 	}
 
-	gi.cprintf( ent, PRINT_HIGH, "Client \"%s\" is not on the server.\n", s);
-	return NULL;
+    if( !match ) {
+    	gi.cprintf( ent, PRINT_HIGH, "No clients matching '%s' found.\n", s );
+	    return NULL;
+    }
+
+    if( count > 1 ) {
+    	gi.cprintf( ent, PRINT_HIGH, "'%s' matches multiple clients.\n", s );
+	    return NULL;
+    }
+
+    return match;
 }
 
-static void Cmd_Observe_f(edict_t *ent) {
+static qboolean G_SpecRateLimited( edict_t *ent ) {
+    if( level.framenum - ent->client->observer_framenum < 5*HZ ) {
+		gi.cprintf( ent, PRINT_HIGH, "You may not change modes too soon.\n" );
+        return qtrue;
+    }
+    return qfalse;
+}
+
+static void Cmd_Observe_f( edict_t *ent ) {
     if( ent->client->pers.connected == CONN_PREGAME ) {
         ent->client->pers.connected = CONN_SPECTATOR;
 		gi.cprintf( ent, PRINT_HIGH, "Changed to spectator mode.\n" );
         return;
     }
-    if( level.framenum - ent->client->observer_framenum < 5*HZ ) {
-		gi.cprintf( ent, PRINT_HIGH, "You may not change modes too soon.\n" );
+    if( G_SpecRateLimited( ent ) ) {
         return;
     }
     if( ent->client->pers.connected == CONN_SPECTATOR ) {
@@ -818,8 +859,7 @@ static void Cmd_Chase_f( edict_t *ent ) {
         return;
     }
     if( ent->client->pers.connected != CONN_SPECTATOR ) {
-        if( level.framenum - ent->client->observer_framenum < 5*HZ ) {
-		    gi.cprintf( ent, PRINT_HIGH, "You may not change modes too soon.\n" );
+        if( G_SpecRateLimited( ent ) ) {
             return;
         }
         ent->client->pers.connected = CONN_SPECTATOR;
@@ -827,8 +867,8 @@ static void Cmd_Chase_f( edict_t *ent ) {
     }
     if( target ) {
         if( target == ent->client->chase_target ) {
-	        gi.cprintf( ent, PRINT_HIGH, "Client \"%s\" is already being chased.\n",
-                target->client->pers.netname);
+	        gi.cprintf( ent, PRINT_HIGH,
+                "You are already chasing this client.\n");
             return;
         }
         SetChaseTarget( ent, target );
@@ -841,6 +881,23 @@ static void Cmd_Chase_f( edict_t *ent ) {
     }
 }
 
+static void Cmd_Join_f( edict_t *ent ) {
+    switch( ent->client->pers.connected ) {
+    case CONN_PREGAME:
+    case CONN_SPECTATOR:
+        if( G_SpecRateLimited( ent ) ) {
+            return;
+        }
+        ent->client->pers.connected = CONN_SPAWNED;
+        spectator_respawn( ent );
+        break;
+    case CONN_SPAWNED:
+	    gi.cprintf( ent, PRINT_HIGH, "You are already in the game.\n" );
+        break;
+    default:
+        break;
+    }
+}
 
 static const char weapnames[WEAP_TOTAL][12] = {
     "None",         "Blaster",      "Shotgun",      "S.Shotgun",
@@ -862,6 +919,8 @@ void Cmd_Stats_f( edict_t *ent, qboolean check_other ) {
         if( !other ) {
             return;
         }
+    } else if( ent->client->chase_target ) {
+        other = ent->client->chase_target;
     } else {
         other = ent;
     }
@@ -917,6 +976,14 @@ void Cmd_Stats_f( edict_t *ent, qboolean check_other ) {
         "\nTotal damage given/recvd: %d/%d\n",
         other->client->resp.damage_given,
         other->client->resp.damage_recvd );
+}
+
+static void Cmd_Id_f( edict_t *ent ) {
+    ent->client->pers.flags ^= CPF_NOVIEWID;
+
+    gi.cprintf( ent, PRINT_HIGH,
+        "Player identification display is now %sabled.\n",
+        ( ent->client->pers.flags & CPF_NOVIEWID ) ? "dis" : "en" );
 }
 
 static void Cmd_CastVote_f( edict_t *ent, qboolean accepted ) {
@@ -1369,8 +1436,7 @@ static void select_test( edict_t *ent, pmenu_t *menu ) {
             break;
         }
         if( ent->client->pers.connected != CONN_PREGAME ) {
-            if( level.framenum - ent->client->observer_framenum < 5*HZ ) {
-                gi.cprintf( ent, PRINT_HIGH, "You may not change modes too soon.\n" );
+            if( G_SpecRateLimited( ent ) ) {
                 break;
             }
         }
@@ -1464,6 +1530,8 @@ void ClientCommand (edict_t *ent)
         return;
     }
 
+    //ent->client->level.activity_framenum = level.framenum;
+
 	cmd = gi.argv(0);
 
 	if (Q_stricmp (cmd, "say") == 0) {
@@ -1472,6 +1540,10 @@ void ClientCommand (edict_t *ent)
 	}
 	if (Q_stricmp (cmd, "say_team") == 0) {
 		Cmd_Say_f (ent, qtrue, qfalse);
+		return;
+	}
+	if (Q_stricmp (cmd, "players") == 0 || Q_stricmp (cmd, "playerlist") == 0) {
+		Cmd_Players_f (ent);
 		return;
 	}
 
@@ -1524,12 +1596,18 @@ void ClientCommand (edict_t *ent)
 		Cmd_PutAway_f (ent);
 	else if (Q_stricmp (cmd, "wave") == 0)
 		Cmd_Wave_f (ent);
-	else if (Q_stricmp(cmd, "observe") == 0)
+	else if (Q_stricmp(cmd, "observe") == 0 || Q_stricmp(cmd, "spectate") == 0 ||
+             Q_stricmp(cmd, "spec") == 0 || Q_stricmp(cmd, "obs") == 0 ||
+             Q_stricmp(cmd, "observer") == 0 || Q_stricmp(cmd, "spectator") == 0 )
 		Cmd_Observe_f(ent);
 	else if (Q_stricmp(cmd, "chase") == 0)
 		Cmd_Chase_f(ent);
+	else if (Q_stricmp(cmd, "join") == 0)
+		Cmd_Join_f(ent);
 	else if (Q_stricmp(cmd, "stats") == 0 || Q_stricmp(cmd, "accuracy") == 0)
-		Cmd_Stats_f(ent, qfalse);
+		Cmd_Stats_f(ent, qtrue);
+	else if (Q_stricmp(cmd, "id") == 0)
+		Cmd_Id_f(ent);
 	else if (Q_stricmp(cmd, "vote") == 0)
 		Cmd_Vote_f(ent);
 	else if (Q_stricmp(cmd, "yes") == 0)

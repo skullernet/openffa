@@ -30,7 +30,8 @@ static void SetChaseStats( gclient_t *client ) {
 	if (client->showscores || client->menu)
 		client->ps.stats[STAT_LAYOUTS] |= 1;
 
-	client->ps.stats[STAT_CHASE] = CS_PLAYERSKINS + playernum;
+	client->ps.stats[STAT_CHASE] = CS_PLAYERNAMES + playernum;
+	client->ps.stats[STAT_SPECTATOR] = CS_SPECMODE;
 
     // STAT_FRAGS is no longer used for HUD,
     // but the server reports it in status responses
@@ -205,7 +206,7 @@ void GetChaseTarget(edict_t *ent)
 	int i;
 	edict_t *other;
 
-	for (i = 1; i <= maxclients->value; i++) {
+	for (i = 1; i <= game.maxclients; i++) {
 		other = g_edicts + i;
 		if (other->inuse && other->client->pers.connected == CONN_SPAWNED) {
             SetChaseTarget( ent, other );

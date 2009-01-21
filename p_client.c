@@ -149,7 +149,7 @@ static int ModToWeapon( int mod ) {
     }
 }
 
-void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
+static void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 {
 	int			mod, weapon;
 	char		*message, *name;
@@ -271,6 +271,9 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
             }
             gi.cprintf( ent, PRINT_MEDIUM, "%s %s.\n", name, message );
         }
+        if( dedicated->value ) {
+            gi.dprintf( "%s %s.\n", self->client->pers.netname, message );
+        }
         self->client->resp.score--;
         self->enemy = NULL;
         G_ScoreChanged( self );
@@ -372,6 +375,10 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
                 gi.cprintf( ent, PRINT_MEDIUM,"%s %s %s%s\n",
                     name, message, name2, message2 );
             }
+            if( dedicated->value ) {
+                gi.dprintf( "%s %s %s%s\n", self->client->pers.netname,
+                    message, attacker->client->pers.netname, message2 );
+            }
 
             if (ff) {
                 attacker->client->resp.score--;
@@ -395,26 +402,39 @@ void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
     G_UpdateRanks();
 }
 
+static int damaging;
+
+void G_BeginDamage( void ) {
+    damaging = 1;
+}
+
 void G_AccountDamage( edict_t *targ, edict_t *inflictor, edict_t *attacker, int points ) {
     int weapon;
+
+    if( !damaging ) {
+        return;
+    }
 
     targ->client->resp.damage_recvd += points;
     attacker->client->resp.damage_given += points;
 
-    if( inflictor->spawnflags & 4096 ) {
-        return;
+    // don't count multiple damage as multiple hits
+    if( damaging == 1 ) {
+        weapon = ModToWeapon( meansOfDeath & ~MOD_FRIENDLY_FIRE );
+        attacker->client->resp.stats[weapon].hits++;
     }
 
-    inflictor->spawnflags |= 4096;
+    damaging++;
+}
 
-    weapon = ModToWeapon( meansOfDeath & ~MOD_FRIENDLY_FIRE );
-    attacker->client->resp.stats[weapon].hits++;
+void G_EndDamage( void ) {
+    damaging = 0;
 }
 
 
 void Touch_Item (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf);
 
-void TossClientWeapon (edict_t *self)
+static void TossClientWeapon (edict_t *self)
 {
 	gitem_t		*item;
 	edict_t		*drop;
@@ -430,7 +450,7 @@ void TossClientWeapon (edict_t *self)
 	if (!DF( QUAD_DROP ))
 		quad = qfalse;
 	else
-		quad = (self->client->quad_framenum > (level.framenum + 10));
+		quad = (self->client->quad_framenum > (level.framenum + 1*HZ));
 
 	if (item && quad)
 		spread = 22.5;
@@ -462,7 +482,7 @@ void TossClientWeapon (edict_t *self)
 LookAtKiller
 ==================
 */
-void LookAtKiller (edict_t *self, edict_t *inflictor, edict_t *attacker)
+static void LookAtKiller (edict_t *self, edict_t *inflictor, edict_t *attacker)
 {
 	vec3_t		dir;
 
@@ -601,6 +621,16 @@ void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 =======================================================================
 */
 
+static edict_t *SelectRandomDeathmatchSpawnPoint( void ) {
+    edict_t *spot;
+    int selection;
+
+    selection = rand_byte() % level.numspawns;
+    spot = level.spawns[selection];
+
+    return spot;
+}
+
 /*
 ================
 PlayersRangeFromSpot
@@ -608,23 +638,22 @@ PlayersRangeFromSpot
 Returns the distance to the nearest player from the given spot
 ================
 */
-float	PlayersRangeFromSpot (edict_t *spot)
-{
+static float PlayersRangeFromSpot (edict_t *spot) {
 	edict_t	*player;
 	float	bestplayerdistance;
 	vec3_t	v;
 	int		n;
 	float	playerdistance;
 
-
 	bestplayerdistance = 9999999;
 
-	for (n = 1; n <= maxclients->value; n++)
-	{
+	for (n = 1; n <= game.maxclients; n++) {
 		player = &g_edicts[n];
 
 		if (!player->inuse)
 			continue;
+        if (!PLAYER_SPAWNED(player))
+            continue;
 
 		if (player->health <= 0)
 			continue;
@@ -639,6 +668,47 @@ float	PlayersRangeFromSpot (edict_t *spot)
 	return bestplayerdistance;
 }
 
+static edict_t *SelectRandomDeathmatchSpawnPointAvoidingTwoClosest (void) {
+	edict_t	*spot, *spot1, *spot2;
+	int		selection;
+	float	range, range1, range2;
+    int     i;
+
+	range1 = range2 = 99999;
+	spot1 = spot2 = NULL;
+
+    for( i = 0; i < level.numspawns; i++ ) {
+        spot = level.spawns[i];
+
+		range = PlayersRangeFromSpot(spot);
+		if (range < range1) {
+			range1 = range;
+			spot1 = spot;
+		}
+	}
+
+    for( i = 0; i < level.numspawns; i++ ) {
+        spot = level.spawns[i];
+
+        if( spot == spot1 ) {
+            continue; // already recorded this one
+        }
+
+		range = PlayersRangeFromSpot(spot);
+		if (range < range2) {
+			range2 = range;
+			spot2 = spot;
+		}
+	}
+
+    do {
+        selection = rand_byte() % level.numspawns;
+        spot = level.spawns[selection];
+    } while (spot == spot1 || spot == spot2);
+
+	return spot;
+}
+
 /*
 ================
 SelectRandomDeathmatchSpawnPoint
@@ -647,52 +717,32 @@ go to a random point, but NOT the two points closest
 to other players
 ================
 */
-edict_t *SelectRandomDeathmatchSpawnPoint (void)
-{
+static edict_t *SelectRandomDeathmatchSpawnPointAvoidingTwoClosestBugged (void) {
 	edict_t	*spot, *spot1, *spot2;
-	int		count = 0;
 	int		selection;
 	float	range, range1, range2;
+    int     i;
 
-	spot = NULL;
 	range1 = range2 = 99999;
 	spot1 = spot2 = NULL;
 
-	while ((spot = G_Find (spot, FOFS(classname), "info_player_deathmatch")) != NULL)
-	{
-		count++;
+    for( i = 0; i < level.numspawns; i++ ) {
+        spot = level.spawns[i];
+
 		range = PlayersRangeFromSpot(spot);
-		if (range < range1)
-		{
+		if (range < range1) {
 			range1 = range;
 			spot1 = spot;
-		}
-		else if (range < range2)
-		{
+		} else if (range < range2) {
 			range2 = range;
 			spot2 = spot;
 		}
 	}
 
-	if (!count)
-		return NULL;
-
-	if (count <= 2)
-	{
-		spot1 = spot2 = NULL;
-	}
-	else
-		count -= 2;
-
-	selection = rand() % count;
-
-	spot = NULL;
-	do
-	{
-		spot = G_Find (spot, FOFS(classname), "info_player_deathmatch");
-		if (spot == spot1 || spot == spot2)
-			selection++;
-	} while(selection--);
+    do {
+        selection = rand_byte() % level.numspawns;
+        spot = level.spawns[selection];
+    } while (spot == spot1 || spot == spot2);
 
 	return spot;
 }
@@ -703,37 +753,49 @@ SelectFarthestDeathmatchSpawnPoint
 
 ================
 */
-edict_t *SelectFarthestDeathmatchSpawnPoint (void)
-{
+static edict_t *SelectFarthestDeathmatchSpawnPoint (void) {
 	edict_t	*bestspot;
 	float	bestdistance, bestplayerdistance;
 	edict_t	*spot;
-
+    int     i;
 
 	spot = NULL;
 	bestspot = NULL;
 	bestdistance = 0;
-	while ((spot = G_Find (spot, FOFS(classname), "info_player_deathmatch")) != NULL)
-	{
+    for( i = 0; i < level.numspawns; i++ ) {
+        spot = level.spawns[i];
 		bestplayerdistance = PlayersRangeFromSpot (spot);
 
-		if (bestplayerdistance > bestdistance)
-		{
+		if (bestplayerdistance > bestdistance) {
 			bestspot = spot;
 			bestdistance = bestplayerdistance;
 		}
 	}
 
-	if (bestspot)
-	{
+	if (bestspot) {
 		return bestspot;
 	}
 
 	// if there is a player just spawned on each and every start spot
 	// we have no choice to turn one into a telefrag meltdown
-	spot = G_Find (NULL, FOFS(classname), "info_player_deathmatch");
+	spot = level.spawns[0];
 
 	return spot;
+}
+
+static edict_t *SelectDeathmatchSpawnPoint (void) {
+	if( DF( SPAWN_FARTHEST ) ) {
+		return SelectFarthestDeathmatchSpawnPoint ();
+    }
+    if( level.numspawns > 2 ) {
+        if( g_spawn_mode->value == 0 ) {
+            return SelectRandomDeathmatchSpawnPointAvoidingTwoClosestBugged();
+        }
+        if( g_spawn_mode->value == 1 ) {
+            return SelectRandomDeathmatchSpawnPointAvoidingTwoClosest();
+        }
+    }
+	return SelectRandomDeathmatchSpawnPoint();
 }
 
 /*
@@ -743,20 +805,16 @@ SelectSpawnPoint
 Chooses a player start, deathmatch start, coop start, etc
 ============
 */
-void	SelectSpawnPoint (edict_t *ent, vec3_t origin, vec3_t angles)
-{
+static void SelectSpawnPoint (edict_t *ent, vec3_t origin, vec3_t angles) {
 	edict_t	*spot = NULL;
 
-	if ( DF(SPAWN_FARTHEST) )
-		spot = SelectFarthestDeathmatchSpawnPoint ();
-	else
-		spot = SelectRandomDeathmatchSpawnPoint ();
+    if( level.numspawns && PLAYER_SPAWNED( ent ) ) {
+        spot = SelectDeathmatchSpawnPoint();
+    }
 
 	// find a single player start spot
-	if (!spot)
-	{
-		while ((spot = G_Find (spot, FOFS(classname), "info_player_start")) != NULL)
-		{
+	if (!spot) {
+		while ((spot = G_Find (spot, FOFS(classname), "info_player_start")) != NULL) {
 			if (!game.spawnpoint[0] && !spot->targetname)
 				break;
 
@@ -767,19 +825,19 @@ void	SelectSpawnPoint (edict_t *ent, vec3_t origin, vec3_t angles)
 				break;
 		}
 
-		if (!spot)
-		{
-			if (!game.spawnpoint[0])
-			{	// there wasn't a spawnpoint without a target, so use any
+		if (!spot) {
+			if (!game.spawnpoint[0]) {
+                // there wasn't a spawnpoint without a target, so use any
 				spot = G_Find (spot, FOFS(classname), "info_player_start");
 			}
-			if (!spot)
-				gi.error ("Couldn't find spawn point %s\n", game.spawnpoint);
+			if (!spot) {
+				gi.dprintf ("Couldn't find spawn point %s\n", game.spawnpoint);
+                spot = world;
+            }
 		}
 	}
 
 	VectorCopy (spot->s.origin, origin);
-	origin[2] += 9;
 	VectorCopy (spot->s.angles, angles);
 }
 
@@ -913,6 +971,8 @@ void spectator_respawn (edict_t *ent)
 		gi.bprintf (PRINT_HIGH, "%s moved to the sidelines (%d player%s)\n",
             ent->client->pers.netname, total, total == 1 ? "" : "s" );
 
+		TossClientWeapon (ent);
+
         // send effect on removed player
         gi.WriteByte (svc_temp_entity);
         gi.WriteByte (TE_BLOOD);
@@ -925,7 +985,7 @@ void spectator_respawn (edict_t *ent)
 
 	ent->client->respawn_framenum = level.framenum;
 	ent->client->observer_framenum = level.framenum;
-    ent->client->activity_framenum = level.framenum;
+    ent->client->level.activity_framenum = level.framenum;
 }
 
 //==============================================================
@@ -1060,7 +1120,7 @@ void PutClientInServer (edict_t *ent)
     else
     {
 	    VectorCopy (spawn_origin, ent->s.origin);
-        ent->s.origin[2] += 1; // make sure off ground
+        ent->s.origin[2] += 9; // make sure off ground
     }
 
 	VectorCopy (ent->s.origin, ent->s.old_origin);
@@ -1198,6 +1258,7 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
     if( !( client->pers.flags & CPF_MVDSPEC ) ) {
     	playernum = ( ent - g_edicts ) - 1;
 	    gi.configstring( CS_PLAYERSKINS + playernum, client->pers.skin );
+	    gi.configstring( CS_PLAYERNAMES + playernum, client->pers.netname );
     }
 
 	// set fov
@@ -1231,7 +1292,7 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
 
     // flags
 	s = Info_ValueForKey (client->pers.userinfo, "uf");
-    client->pers.uf = atoi(s);
+    client->pers.uf = *s ? atoi(s) : UF_LOCALFOV;
 }
 
 
@@ -1288,7 +1349,7 @@ Will not be called between levels.
 */
 void ClientDisconnect (edict_t *ent)
 {
-	int		playernum, total;
+	int		total;
 	conn_t	connected;
 
 	if (!ent->client)
@@ -1328,8 +1389,8 @@ void ClientDisconnect (edict_t *ent)
 	ent->classname = "disconnected";
     ent->svflags = SVF_NOCLIENT;
 
-	playernum = ent-g_edicts-1;
-	gi.configstring (CS_PLAYERSKINS+playernum, "");
+	//playernum = ent-g_edicts-1;
+	//gi.configstring (CS_PLAYERSKINS+playernum, "");
 }
 
 
@@ -1373,7 +1434,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 	client->level.cmd_angles[2] = SHORT2ANGLE(ucmd->angles[2]);
 
     if( abs( ucmd->forwardmove ) >= 10 || abs( ucmd->upmove ) >= 10 || abs( ucmd->sidemove ) >= 10 ) {
-        client->activity_framenum = level.framenum;
+        client->level.activity_framenum = level.framenum;
     }
 
 	if (level.intermission_framenum)
@@ -1482,6 +1543,10 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
             other->touch (other, ent, NULL, NULL);
         }
 	}
+    
+    if( client->oldbuttons != client->buttons ) {
+        client->level.activity_framenum = level.framenum;
+    }
 
 	client->oldbuttons = client->buttons;
 	client->buttons = ucmd->buttons;
@@ -1510,11 +1575,16 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 	}
 
 	if (client->pers.connected == CONN_SPECTATOR) {
-		if (ucmd->upmove >= 10) {
+		if (abs(ucmd->upmove) >= 10) {
 			if (!(client->level.flags & CLF_JUMP_HELD)) {
 				client->level.flags |= CLF_JUMP_HELD;
-				if (client->chase_target)
-					ChaseNext(ent);
+				if (client->chase_target) {
+                    if( ucmd->upmove > 0 ) {
+    					ChaseNext(ent);
+                    } else {
+    					ChasePrev(ent);
+                    }
+                }
 			}
 		} else {
 			client->level.flags &= ~CLF_JUMP_HELD;
@@ -1548,10 +1618,11 @@ void ClientBeginServerFrame (edict_t *ent)
         else
             client->weapon_thunk = qfalse;
 
-        if( g_idletime->value > 0 ) {
-            if( level.framenum - client->activity_framenum > g_idletime->value * HZ ) {
-                gi.bprintf( PRINT_HIGH, "%s inactive for %d seconds\n",
-                    client->pers.netname, ( int )g_idletime->value );
+        if( g_idle_time->value > 0 ) {
+            if( level.framenum - client->level.activity_framenum > g_idle_time->value * HZ ) {
+                gi.bprintf( PRINT_HIGH,
+                    "Removing %s from the game due to inactivity.\n",
+                    client->pers.netname );
                 client->pers.connected = CONN_SPECTATOR;
                 spectator_respawn( ent );
                 return;

@@ -214,7 +214,9 @@ void blaster_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *
 			mod = MOD_HYPERBLASTER;
 		else
 			mod = MOD_BLASTER;
+        G_BeginDamage();
 		T_Damage (other, self, self->owner, self->velocity, self->s.origin, plane->normal, self->dmg, 1, DAMAGE_ENERGY, mod);
+        G_EndDamage();
 	}
 	else
 	{
@@ -286,6 +288,8 @@ static void Grenade_Explode (edict_t *ent)
 	vec3_t		origin;
 	int			mod;
 
+    G_BeginDamage();
+
 	//FIXME: if we are onground then raise our Z just a bit since we are a point?
 	if (ent->enemy)
 	{
@@ -312,6 +316,8 @@ static void Grenade_Explode (edict_t *ent)
 	else
 		mod = MOD_G_SPLASH;
 	T_RadiusDamage(ent, ent->owner, ent->dmg, ent->enemy, ent->dmg_radius, mod);
+
+    G_EndDamage();
 
 	VectorMA (ent->s.origin, -0.02, ent->velocity, origin);
 	gi.WriteByte (svc_temp_entity);
@@ -465,6 +471,8 @@ void rocket_touch (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *su
 	// calculate position for the explosion entity
 	VectorMA (ent->s.origin, -0.02, ent->velocity, origin);
 
+    G_BeginDamage();
+
 	if (other->takedamage)
 	{
 		T_Damage (other, ent, ent->owner, ent->velocity, ent->s.origin, plane->normal, ent->dmg, 0, 0, MOD_ROCKET);
@@ -475,6 +483,8 @@ void rocket_touch (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *su
 	}
 
 	T_RadiusDamage(ent, ent->owner, ent->radius_dmg, other, ent->dmg_radius, MOD_R_SPLASH);
+
+    G_EndDamage();
 
 	gi.WriteByte (svc_temp_entity);
 	if (ent->waterlevel)
@@ -555,8 +565,11 @@ void fire_rail (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick
 			else
 				ignore = NULL;
 
-			if ((tr.ent != self) && (tr.ent->takedamage))
+			if ((tr.ent != self) && (tr.ent->takedamage)) {
+                G_BeginDamage();
 				T_Damage (tr.ent, self, self, aimdir, tr.endpos, tr.plane.normal, damage, kick, 0, MOD_RAILGUN);
+                G_EndDamage();
+            }
 		}
 
 		VectorCopy (tr.endpos, from);

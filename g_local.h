@@ -361,6 +361,7 @@ typedef struct
 #define VOTE_MUTE       16
 #define VOTE_MAP        32
 
+#define MAX_SPAWNS      32
 
 #define ITB_QUAD    1
 #define ITB_INVUL   2
@@ -387,6 +388,9 @@ typedef struct
 	char		mapname[MAX_QPATH];		// the server name (base1, etc)
 	char		nextmap[MAX_QPATH];		// go here when fraglimit is hit
     const char  *entstring;
+
+    edict_t     *spawns[MAX_SPAWNS];
+    int         numspawns;
 
 	//int			status;
     int         warmup_framenum;        // time the warmup was started
@@ -600,7 +604,7 @@ extern	cvar_t	*skill;
 extern	cvar_t	*fraglimit;
 extern	cvar_t	*timelimit;
 extern	cvar_t	*g_select_empty;
-extern	cvar_t	*g_idletime;
+extern	cvar_t	*g_idle_time;
 extern  cvar_t	*g_vote_mask;
 extern  cvar_t	*g_vote_time;
 extern  cvar_t	*g_vote_treshold;
@@ -609,6 +613,7 @@ extern  cvar_t	*g_item_ban;
 extern  cvar_t	*g_maps_random;
 extern  cvar_t	*g_bugs;
 extern  cvar_t	*g_teleporter_nofreeze;
+extern  cvar_t  *g_spawn_mode;
 extern	cvar_t	*dedicated;
 
 extern	cvar_t	*filterban;
@@ -627,6 +632,7 @@ extern	cvar_t	*bob_pitch;
 extern	cvar_t	*bob_roll;
 
 extern	cvar_t	*sv_cheats;
+extern	cvar_t	*sv_hostname;
 extern	cvar_t	*maxclients;
 
 extern	cvar_t	*flood_msgs;
@@ -791,7 +797,9 @@ void InitClientResp (gclient_t *client);
 void InitBodyQue (void);
 void ClientBeginServerFrame (edict_t *ent);
 void G_WriteTime( int remaining ); 
+void G_BeginDamage( void );
 void G_AccountDamage( edict_t *targ, edict_t *inflictor, edict_t *attacker, int points ); 
+void G_EndDamage( void );
 void G_SetDeltaAngles( edict_t *ent, vec3_t angles ); 
 void G_ScoreChanged( edict_t *ent );
 int G_UpdateRanks( void ); 
@@ -870,6 +878,9 @@ void G_ResetLevel( void );
 
 #define CS_OBSERVE          ( CS_GENERAL + 1 )
 #define CS_TIME             ( CS_GENERAL + 2 )
+#define CS_SPECMODE         ( CS_GENERAL + 3 )
+#define CS_PREGAME          ( CS_GENERAL + 4 )
+#define CS_PLAYERNAMES      ( CS_GENERAL + 10 )
 
 #define STAT_FRAGS_STRING			18
 #define STAT_DELTA_STRING			19
@@ -877,6 +888,7 @@ void G_ResetLevel( void );
 #define STAT_TIME_STRING			21
 #define	STAT_TIMER2_ICON			22
 #define	STAT_TIMER2				    23
+#define	STAT_VIEWID				    24
 
 // client_t->anim_priority
 #define	ANIM_BASIC		0		// stand / run
@@ -937,8 +949,10 @@ typedef struct {
     int deaths;
 } weapstat_t;
 
-#define CPF_LOOPBACK     1
-#define CPF_MVDSPEC      2
+#define CPF_LOOPBACK    1
+#define CPF_MVDSPEC     2
+#define CPF_ADMIN       4
+#define CPF_NOVIEWID    8
 
 // client data that stays across multiple level loads
 typedef struct {
@@ -970,6 +984,7 @@ typedef struct {
 // but cleared on level changes
 typedef struct {
 	int			enter_framenum;		// level.framenum the client entered the game
+    int         activity_framenum;  // level.framenum last activity was seen
     int         flags;
 	vec3_t		cmd_angles;			// angles sent over in the last command
     char        strings[MAX_PRIVATE][MAX_NETNAME]; // private configstrings
@@ -1010,7 +1025,6 @@ struct gclient_s
 	int			buttons;
 	int			oldbuttons;
 	int			latched_buttons;
-    int         activity_framenum;    // last activity seen
 
 	qboolean	weapon_thunk;
 

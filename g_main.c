@@ -39,7 +39,7 @@ cvar_t	*timelimit;
 cvar_t	*maxclients;
 cvar_t	*maxentities;
 cvar_t	*g_select_empty;
-cvar_t	*g_idletime;
+cvar_t	*g_idle_time;
 cvar_t	*g_vote_mask;
 cvar_t	*g_vote_time;
 cvar_t	*g_vote_treshold;
@@ -49,6 +49,7 @@ cvar_t	*g_maps_file;
 cvar_t	*g_item_ban;
 cvar_t	*g_bugs;
 cvar_t  *g_teleporter_nofreeze;
+cvar_t  *g_spawn_mode;
 cvar_t	*dedicated;
 
 cvar_t	*filterban;
@@ -69,6 +70,7 @@ cvar_t	*bob_pitch;
 cvar_t	*bob_roll;
 
 cvar_t	*sv_cheats;
+cvar_t	*sv_hostname;
 
 cvar_t	*flood_msgs;
 cvar_t	*flood_persecond;
@@ -302,9 +304,7 @@ map_entry_t *G_FindMap( const char *name ) {
 }
 
 static int QDECL random_cmp( const void *p1, const void *p2 ) {
-    int r = rand();
-
-    return 1 - ( ( r ^ ( r >> 8 ) ^ ( r >> 16 ) ) % 3 );
+    return 1 - ( rand_byte() % 3 );
 }
 
 static qboolean G_RebuildMapQueue( void ) {
@@ -661,6 +661,7 @@ void G_RunFrame (void)
             }
         }
     } else {
+#if 0
         if( level.warmup_framenum ) {
             delta = level.framenum - level.warmup_framenum;
         } else if( level.countdown_framenum ) {
@@ -679,7 +680,9 @@ void G_RunFrame (void)
                     level.match_framenum = level.framenum;
                 }
             }
-        } else {
+        } else
+#endif
+        {
     	    // see if it is time to end a deathmatch
 	        CheckDMRules();
         }
@@ -723,6 +726,8 @@ static void G_Init (void) {
     cvar_t *cv;
     size_t len;
 
+    srand( time( NULL ) );
+
 	gi.dprintf ("==== InitGame ====\n");
 
 	gun_x = gi.cvar ("gun_x", "0", 0);
@@ -740,6 +745,7 @@ static void G_Init (void) {
 
 	// latched vars
 	sv_cheats = gi.cvar ("cheats", "0", CVAR_SERVERINFO|CVAR_LATCH);
+	sv_hostname = gi.cvar ("hostname", NULL, 0);
 	gi.cvar ("gamename", GAMEVERSION , CVAR_SERVERINFO | CVAR_LATCH);
 	gi.cvar ("gamedate", __DATE__ , CVAR_SERVERINFO | CVAR_LATCH);
 
@@ -757,7 +763,7 @@ static void G_Init (void) {
     gi.cvar_set( "time_remaining", "" );
 
 	g_select_empty = gi.cvar ("g_select_empty", "0", CVAR_ARCHIVE);
-	g_idletime = gi.cvar ("g_idletime", "0", 0);
+	g_idle_time = gi.cvar ("g_idle_time", "0", 0);
 	g_vote_mask = gi.cvar ("g_vote_mask", "0", 0);
 	g_vote_time = gi.cvar ("g_vote_time", "120", 0);
 	g_vote_treshold = gi.cvar ("g_vote_treshold", "50", 0);
@@ -767,6 +773,7 @@ static void G_Init (void) {
 	g_item_ban = gi.cvar ("g_item_ban", "0", 0);
 	g_bugs = gi.cvar ("g_bugs", "0", 0);
 	g_teleporter_nofreeze = gi.cvar ("g_teleporter_nofreeze", "0", 0);
+	g_spawn_mode = gi.cvar ("g_spawn_mode", "1", 0);
 
 	run_pitch = gi.cvar ("run_pitch", "0.002", 0);
 	run_roll = gi.cvar ("run_roll", "0.005", 0);
