@@ -1093,9 +1093,6 @@ void PutClientInServer (edict_t *ent)
 	VectorClear( ent->velocity );
 
 	// clear playerstate values
-	client->ps.pmove.origin[0] = spawn_origin[0]*8;
-	client->ps.pmove.origin[1] = spawn_origin[1]*8;
-	client->ps.pmove.origin[2] = spawn_origin[2]*8;
 	client->ps.fov = client->pers.fov;
 	client->ps.gunindex = gi.modelindex(client->weapon->view_model);
 
@@ -1122,10 +1119,14 @@ void PutClientInServer (edict_t *ent)
     else
     {
 	    VectorCopy (spawn_origin, ent->s.origin);
-        ent->s.origin[2] += 9; // make sure off ground
+        ent->s.origin[2] += 10; // make sure off ground
     }
 
 	VectorCopy (ent->s.origin, ent->s.old_origin);
+
+	client->ps.pmove.origin[0] = ent->s.origin[0]*8;
+	client->ps.pmove.origin[1] = ent->s.origin[1]*8;
+	client->ps.pmove.origin[2] = ent->s.origin[2]*8;
 
 	spawn_angles[ROLL] = 0;
 
