@@ -20,6 +20,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "g_local.h"
 
+extern list_t g_map_list;
+
 static void Svcmd_Test_f( void ) {
 	gi.cprintf (NULL, PRINT_HIGH, "Svcmd_Test_f()\n");
 }
@@ -34,6 +36,23 @@ static void Svcmd_NextMap_f( void ) {
         return;
     }
     Q_strlcpy( level.nextmap, gi.argv( 2 ), sizeof( level.nextmap ) );
+}
+
+static void Svcmd_MapList_f( void ) {
+    map_entry_t *map;
+
+    if( LIST_EMPTY( &g_map_list ) ) {
+        Com_Printf( "Map list is empty\n" );
+        return;
+    }
+
+    Com_Printf( "map             min max flg hits   in  out\n"
+                "--------------- --- --- --- ---- ---- ----\n" );
+    LIST_FOR_EACH( map_entry_t, map, &g_map_list, list ) {
+        Com_Printf( "%-15.15s %3d %3d %3d %4d %4d %4d\n",
+            map->name, map->min_players, map->max_players, map->flags,
+            map->num_hits, map->num_in, map->num_out );
+    }
 }
 
 /*
@@ -60,6 +79,8 @@ void G_ServerCommand (void) {
 		Svcmd_Reset_f ();
     else if (!strcmp (cmd, "nextmap"))
 		Svcmd_NextMap_f ();
+    else if (!strcmp (cmd, "maplist"))
+		Svcmd_MapList_f ();
 	else
 		Com_Printf( "Unknown server command \"%s\"\n", cmd);
 }

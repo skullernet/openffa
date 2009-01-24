@@ -146,6 +146,7 @@ void SetChaseTarget( edict_t *ent, edict_t *targ ) {
         VectorCopy( ent->client->ps.viewangles, ent->s.angles );
         VectorCopy( ent->client->ps.viewangles, ent->client->v_angle );
         VectorScale( ent->client->ps.pmove.origin, 0.125f, ent->s.origin );
+	    ent->client->chase_mode = CHASE_NONE;
         ClientEndServerFrame( ent );
     } else {
         ent->client->clientNum = ( targ - g_edicts ) - 1;
@@ -155,6 +156,27 @@ void SetChaseTarget( edict_t *ent, edict_t *targ ) {
 	    ChaseEndServerFrame( ent );
     }
 
+}
+
+void UpdateChaseTargets( chase_mode_t mode, edict_t *targ ) {
+	edict_t *other;
+    int i;
+
+    for( i = 0; i < game.maxclients; i++ ) {
+		other = &g_edicts[ i + 1 ];
+		if( !other->inuse ) {
+            continue;
+        }
+        if( other->client->pers.connected != CONN_SPECTATOR ) {
+            continue;
+        }
+        if( other->client->chase_mode != mode ) {
+            continue;
+        }
+        if( other->client->chase_target != targ ) {
+            SetChaseTarget( other, targ );
+        }
+    }
 }
 
 void ChaseNext(edict_t *ent)
@@ -201,20 +223,55 @@ void ChasePrev(edict_t *ent)
     SetChaseTarget( ent, e );
 }
 
-void GetChaseTarget(edict_t *ent)
-{
-	int i;
+qboolean GetChaseTarget( edict_t *ent, chase_mode_t mode ) {
+	gclient_t *ranks[MAX_CLIENTS];
 	edict_t *other;
+    int i;
 
-	for (i = 1; i <= game.maxclients; i++) {
-		other = g_edicts + i;
-		if (other->inuse && other->client->pers.connected == CONN_SPAWNED) {
-            SetChaseTarget( ent, other );
-			return;
-		}
-	}
+    if( mode == CHASE_LEADER ) {
+        if( G_CalcRanks( ranks ) ) {
+            other = ranks[0]->edict;
+            goto found;
+        }
+        goto notfound;
+    }
+
+    for( i = 0; i < game.maxclients; i++ ) {
+		other = &g_edicts[ i + 1 ];
+		if( !other->inuse ) {
+            continue;
+        }
+        if( !PLAYER_SPAWNED( other ) ) {
+            continue;
+        }
+        switch( mode ) {
+        case CHASE_NONE:
+            goto found;
+        case CHASE_QUAD:
+            if( other->client->quad_framenum > level.framenum ) {
+                goto found;
+            }
+            break;
+        case CHASE_INVU:
+            if( other->client->invincible_framenum > level.framenum ) {
+                goto found;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+notfound:
 	gi.cprintf(ent, PRINT_HIGH, "No players to chase.\n");
+    return qfalse;
+
+found:
+    SetChaseTarget( ent, other );
+    ent->client->chase_mode = mode;
+    return qtrue;
 }
+
 
 void ChaseEndServerFrame( edict_t *ent ) {
     gclient_t *c = ent->client;

@@ -905,6 +905,7 @@ newanim:
 }
 
 void IntermissionEndServerFrame( edict_t *ent ) {
+	ent->client->ps.stats[STAT_FLASHES] = 0;
     ent->client->ps.blend[3] = 0;
     ent->client->ps.fov = 90;
     VectorClear( ent->client->ps.kick_angles );

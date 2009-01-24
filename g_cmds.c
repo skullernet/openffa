@@ -33,6 +33,7 @@ static void SelectNextItem (edict_t *ent, int itflags) {
     }
 	if (cl->chase_target) {
 		ChaseNext(ent);
+	    cl->chase_mode = CHASE_NONE;
 		return;
 	}
 
@@ -68,6 +69,7 @@ static void SelectPrevItem (edict_t *ent, int itflags) {
     }
 	if (cl->chase_target) {
 		ChasePrev(ent);
+	    cl->chase_mode = CHASE_NONE;
 		return;
 	}
 
@@ -835,29 +837,49 @@ static void Cmd_Observe_f( edict_t *ent ) {
 
 static void Cmd_Chase_f( edict_t *ent ) {
     edict_t *target = NULL;
+    chase_mode_t mode = CHASE_NONE;
 
     if( gi.argc() == 2 ) {
-        target = G_SetPlayer( ent, 1 );
-        if( !target ) {
-            return;
-        }
-        if( !PLAYER_SPAWNED( target ) ) {
-	        gi.cprintf( ent, PRINT_HIGH, "Client \"%s\" is not in the game.\n",
-                target->client->pers.netname);
-            return;
+        char *who = gi.argv( 1 );
+
+        if( !Q_stricmp( who, "quad" ) ) {
+            mode = CHASE_QUAD;
+        } else if( !Q_stricmp( who, "inv" ) ||
+                   !Q_stricmp( who, "pent" ) )
+        {
+            mode = CHASE_INVU;
+        } else if( !Q_stricmp( who, "top" ) || 
+                   !Q_stricmp( who, "topfragger" ) ||
+                   !Q_stricmp( who, "leader" ) )
+        {
+            mode = CHASE_LEADER;
+        } else {
+            target = G_SetPlayer( ent, 1 );
+            if( !target ) {
+                return;
+            }
+            if( !PLAYER_SPAWNED( target ) ) {
+                gi.cprintf( ent, PRINT_HIGH,
+                    "Player '%s' is not in the game.\n",
+                    target->client->pers.netname);
+                return;
+            }
         }
     }
 
+    // changing from pregame mode into spectator
     if( ent->client->pers.connected == CONN_PREGAME ) {
         ent->client->pers.connected = CONN_SPECTATOR;
 		gi.cprintf( ent, PRINT_HIGH, "Changed to spectator mode.\n" );
         if( target ) {
             SetChaseTarget( ent, target );
         } else {
-    		GetChaseTarget( ent );
+    		GetChaseTarget( ent, mode );
         }
         return;
     }
+
+    // respawn the spectator
     if( ent->client->pers.connected != CONN_SPECTATOR ) {
         if( G_SpecRateLimited( ent ) ) {
             return;
@@ -865,16 +887,17 @@ static void Cmd_Chase_f( edict_t *ent ) {
         ent->client->pers.connected = CONN_SPECTATOR;
         spectator_respawn( ent );
     }
+
     if( target ) {
         if( target == ent->client->chase_target ) {
 	        gi.cprintf( ent, PRINT_HIGH,
-                "You are already chasing this client.\n");
+                "You are already chasing this player.\n");
             return;
         }
         SetChaseTarget( ent, target );
     } else {
-        if( !ent->client->chase_target ) {
-            GetChaseTarget( ent );
+        if( !ent->client->chase_target || mode != CHASE_NONE ) {
+            GetChaseTarget( ent, mode );
         } else {
             SetChaseTarget( ent, NULL );
         }
@@ -987,7 +1010,7 @@ static void Cmd_Id_f( edict_t *ent ) {
 }
 
 static void Cmd_CastVote_f( edict_t *ent, qboolean accepted ) {
-    if( !level.vote.framenum ) {
+    if( !level.vote.proposal ) {
         gi.cprintf( ent, PRINT_HIGH, "No vote in progress.\n" );
         return;
     }
@@ -1006,7 +1029,7 @@ static void Cmd_CastVote_f( edict_t *ent, qboolean accepted ) {
     gi.cprintf( ent, PRINT_HIGH, "Vote cast.\n" );
 }
 
-int G_CalcVote( int *acc, int *rej ) {
+static int G_CalcVote( int *acc, int *rej ) {
     int i;
     gclient_t *client;
     int total = 0, accepted = 0, rejected = 0;
@@ -1020,6 +1043,17 @@ int G_CalcVote( int *acc, int *rej ) {
         }
         total++;
         if( client->level.vote.index == level.vote.index ) {
+            if( client->pers.flags & CPF_ADMIN ) {
+                // admin vote decides immediately
+                if( client->level.vote.accepted ) {
+                    *acc = INT_MAX;
+                    *rej = 0;
+                } else {
+                    *acc = 0;
+                    *rej = INT_MAX;
+                }
+                return total;
+            }
             if( client->level.vote.accepted ) {
                 accepted++;
             } else {
@@ -1046,10 +1080,16 @@ qboolean G_CheckVote( void ) {
 	if( !level.vote.proposal ) {
 		return qfalse;
 	}
+
+    // is vote initiator gone?
+    if( !level.vote.initiator->pers.connected ) {
+        gi.bprintf( PRINT_HIGH, "Vote aborted due to the initiator disconnect.\n" );
+        goto finish;
+    }
     
-    // is our victim gone?
+    // is vote victim gone?
     if( level.vote.victim && !level.vote.victim->pers.connected ) {
-        gi.bprintf( PRINT_HIGH, "Vote aborted.\n" );
+        gi.bprintf( PRINT_HIGH, "Vote aborted due to the victim disconnect.\n" );
         goto finish;
     }
 
@@ -1057,7 +1097,7 @@ qboolean G_CheckVote( void ) {
         goto finish;
     }
 
-    if( acc > treshold ) {
+    if( acc > treshold || ( level.vote.initiator->pers.flags & CPF_ADMIN ) ) {
         switch( level.vote.proposal ) {
         case VOTE_TIMELIMIT:
             gi.bprintf( PRINT_HIGH, "Vote passed. Timelimit set to %d.\n", level.vote.value );
@@ -1211,9 +1251,9 @@ static qboolean Vote_Items( edict_t *ent ) {
             bit = ITB_QUAD|ITB_INVUL|ITB_BFG;
         } else if( !strcmp( s, "quad" ) ) {
             bit = ITB_QUAD;
-        } else if( !strcmp( s, "inv" ) || !strcmp( s, "invul" ) ) {
+        } else if( !strcmp( s, "inv" ) || !strcmp( s, "pent" ) ) {
             bit = ITB_INVUL;
-        } else if( !strcmp( s, "bfg" ) ) {
+        } else if( !strcmp( s, "bfg" ) || !strcmp( s, "10k" ) ) {
             bit = ITB_BFG;
         } else {
             gi.cprintf( ent, PRINT_HIGH, "Item %s is not known.\n", s );
@@ -1251,6 +1291,10 @@ static qboolean Vote_Victim( edict_t *ent ) {
         gi.cprintf( ent, PRINT_HIGH, "You can't %s local client.\n", gi.argv( 1 ) );
         return qfalse;
     }
+    if( other->client->pers.flags & CPF_ADMIN ) {
+        gi.cprintf( ent, PRINT_HIGH, "You can't %s an admin.\n", gi.argv( 1 ) );
+        return qfalse;
+    }
 
     level.vote.victim = other->client;
     return qtrue;
@@ -1262,12 +1306,12 @@ static qboolean Vote_Map( edict_t *ent ) {
 
     map = G_FindMap( name );
     if( !map ) {
-        gi.cprintf( ent, PRINT_HIGH, "Map %s is not on the list.\n", name );
+        gi.cprintf( ent, PRINT_HIGH, "Map '%s' is not available on this server.\n", name );
         return qfalse;
     }
 
     if( map->flags & MAP_NOVOTE ) {
-        gi.cprintf( ent, PRINT_HIGH, "Map %s is not subject to voting.\n", map->name );
+        gi.cprintf( ent, PRINT_HIGH, "Map '%s' is not available for voting.\n", map->name );
         return qfalse;
     }
 
@@ -1310,13 +1354,15 @@ static void Cmd_Vote_f( edict_t *ent ) {
         G_BuildProposal( buffer );
         G_CalcVote( &acc, &rej );
         gi.cprintf( ent, PRINT_HIGH,
-            "Proposal: %s\n"
-            "Accepted: %d%%\n"
-            "Rejected: %d%%\n"
-            "Treshold: %d%%\n"
-            "Timeout : %d sec\n",
+            "Proposal   %s\n"
+            "Accepted   %d%%\n"
+            "Rejected   %d%%\n"
+            "Treshold   %d%%\n"
+            "Timeout    %d sec remaining\n"
+            "Initiator  %s\n",
             buffer, acc, rej, treshold,
-            ( level.vote.framenum - level.framenum ) / HZ );
+            ( level.vote.framenum - level.framenum ) / HZ,
+            level.vote.initiator->pers.netname );
         return;
     }
 
@@ -1327,31 +1373,37 @@ static void Cmd_Vote_f( edict_t *ent ) {
 //
     if( !strcmp( s, "help" ) || !strcmp( s, "h" ) ) {
         gi.cprintf( ent, PRINT_HIGH,
-            "Usage: vote [yes|no|help|proposal] [argument]\n"
-            "Available proposal(s):\n" );
+            "Usage: vote [yes/no/help/proposal] [argument]\n"
+            "Available proposals:\n" );
         if( mask & VOTE_FRAGLIMIT ) {
-            gi.cprintf( ent, PRINT_HIGH, "   fraglimit|fl <count>\n" );
+            gi.cprintf( ent, PRINT_HIGH,
+                " fraglimit/fl <frags>      Change frag limit\n" );
         }
         if( mask & VOTE_TIMELIMIT ) {
-            gi.cprintf( ent, PRINT_HIGH, "   timelimit|tl <seconds>\n" );
+            gi.cprintf( ent, PRINT_HIGH,
+                " timelimit/tl <minutes>    Change time limit\n" );
         }
         if( mask & VOTE_ITEMS ) {
-            gi.cprintf( ent, PRINT_HIGH, "   items [+|-]<quad|inv|bfg> [...]\n" );
+            gi.cprintf( ent, PRINT_HIGH,
+                " items [+|-]<quad/inv/bfg> Enable/disable items\n" );
         }
         if( mask & VOTE_KICK ) {
-            gi.cprintf( ent, PRINT_HIGH, "   kick <name|id>\n" );
+            gi.cprintf( ent, PRINT_HIGH,
+                " kick <player_id>          Kick player from the server\n" );
         }
         if( mask & VOTE_MUTE ) {
-            gi.cprintf( ent, PRINT_HIGH, "   mute <name|id>\n" );
+            gi.cprintf( ent, PRINT_HIGH,
+                " mute <player_id>          Disallow player to talk\n" );
         }
         if( mask & VOTE_MAP ) {
-            gi.cprintf( ent, PRINT_HIGH, "   map <name>\n" );
-        }
-        if( mask & (VOTE_KICK|VOTE_MUTE) ) {
             gi.cprintf( ent, PRINT_HIGH,
-                "You may use 'skins' command to obtain player ID.\n"
-                "In case name/ID are ambiguous, ID is matched first.\n");
+                " map <name>                Change current map\n" );
         }
+        gi.cprintf( ent, PRINT_HIGH,
+            "Available commands:\n"
+                " yes                       Accept current vote\n"
+                " no                        Deny current vote\n"
+                " help                      Show this help\n" );
         return;
     }
     if( !strcmp( s, "yes" ) || !strcmp( s, "y" ) ) {
@@ -1382,7 +1434,7 @@ static void Cmd_Vote_f( edict_t *ent ) {
     }
 
     if( limit > 0 && ent->client->level.vote.count >= limit ) {
-        gi.cprintf( ent, PRINT_HIGH, "You may not initiate too many votes.\n" );
+        gi.cprintf( ent, PRINT_HIGH, "You may not initiate any more votes.\n" );
         return;
     }
 
@@ -1402,7 +1454,7 @@ static void Cmd_Vote_f( edict_t *ent ) {
     }
 
     if( argc < 3 ) {
-        gi.cprintf( ent, PRINT_HIGH, "Insufficient arguments. Type 'vote help' for usage.\n" );
+        gi.cprintf( ent, PRINT_HIGH, "Argument required for '%s'. Type 'vote help' for usage.\n", v->name );
         return;
     }
 
@@ -1410,6 +1462,7 @@ static void Cmd_Vote_f( edict_t *ent ) {
         return;
     }
 
+    level.vote.initiator = ent->client;
     level.vote.proposal = v->bit;
     level.vote.framenum = level.framenum + g_vote_time->value * HZ;
     level.vote.index++;
@@ -1427,12 +1480,60 @@ static void Cmd_Vote_f( edict_t *ent ) {
     }
 }
 
+static void Cmd_Admin_f( edict_t *ent ) {
+    char *p;
+
+    if( ent->client->pers.flags & CPF_ADMIN ) {
+        gi.bprintf( PRINT_HIGH, "%s is no longer an admin.\n",
+            ent->client->pers.netname );
+        ent->client->pers.flags &= ~CPF_ADMIN;
+        return;
+    }
+    if( gi.argc() < 2 ) {
+        gi.cprintf( ent, PRINT_HIGH, "Usage: %s <password>\n", gi.argv( 0 ) );
+        return;
+    }
+    p = gi.argv( 1 );
+    if( !g_admin_password->string[0] || strcmp( g_admin_password->string, p ) ) {
+        gi.cprintf( ent, PRINT_HIGH, "Bad admin password.\n" );
+        return;
+    }
+
+    ent->client->pers.flags |= CPF_ADMIN;
+    gi.bprintf( PRINT_HIGH, "%s became an admin.\n",
+        ent->client->pers.netname );
+
+    G_CheckVote();
+}
+
+static qboolean become_spectator( edict_t *ent ) {
+    switch( ent->client->pers.connected ) {
+    case CONN_PREGAME:
+        ent->client->pers.connected = CONN_SPECTATOR;
+        return qtrue;
+    case CONN_SPAWNED:
+        if( G_SpecRateLimited( ent ) ) {
+            return qfalse;
+        }
+        ent->client->pers.connected = CONN_SPECTATOR;
+        spectator_respawn( ent );
+        return qtrue;
+    case CONN_SPECTATOR:
+        return qtrue;
+    default:
+        return qfalse;
+    }
+}
 
 static void select_test( edict_t *ent, pmenu_t *menu ) {
     switch( menu->cur ) {
     case 3:
         if( ent->client->pers.connected == CONN_SPAWNED ) {
-            PMenu_Close( ent );
+            if( G_SpecRateLimited( ent ) ) {
+                break;
+            }
+            ent->client->pers.connected = CONN_SPECTATOR;
+            spectator_respawn( ent );
             break;
         }
         if( ent->client->pers.connected != CONN_PREGAME ) {
@@ -1443,15 +1544,41 @@ static void select_test( edict_t *ent, pmenu_t *menu ) {
         ent->client->pers.connected = CONN_SPAWNED;
         spectator_respawn( ent );
         break;
-    case 4:
+    case 5:
+        if( become_spectator( ent ) ) {
+            if( ent->client->chase_target ) {
+                SetChaseTarget( ent, NULL );
+            }
+            PMenu_Close( ent );
+        }
         break;
     case 6:
-        Cmd_Observe_f( ent );
+        if( become_spectator( ent ) ) {
+            if( !ent->client->chase_target ) {
+                GetChaseTarget( ent, CHASE_NONE );
+            }
+            PMenu_Close( ent );
+        }
         break;
     case 7:
-        Cmd_Chase_f( ent );
+        if( become_spectator( ent ) ) {
+            GetChaseTarget( ent, CHASE_LEADER );
+            PMenu_Close( ent );
+        }
         break;
-    case 12:
+    case 8:
+        if( become_spectator( ent ) ) {
+            GetChaseTarget( ent, CHASE_QUAD );
+            PMenu_Close( ent );
+        }
+        break;
+    case 9:
+        if( become_spectator( ent ) ) {
+            GetChaseTarget( ent, CHASE_INVU );
+            PMenu_Close( ent );
+        }
+        break;
+    case 11:
         PMenu_Close( ent );
         break;
     }
@@ -1462,17 +1589,16 @@ static pmenu_entry_t main_menu[] = {
     { NULL },
     { NULL },
     { NULL, PMENU_ALIGN_LEFT, select_test },
-//    { "*Voting menu", PMENU_ALIGN_LEFT, select_test },
     { NULL },
-    { NULL },
-    { NULL, PMENU_ALIGN_LEFT, select_test },
-    { NULL, PMENU_ALIGN_LEFT, select_test },
-    { NULL },
-    //{ "*Help", PMENU_ALIGN_LEFT, select_test },
-    { NULL },
-    { NULL },
+    { "*Enter freefloat mode", PMENU_ALIGN_LEFT, select_test },
+    { "*Enter chasecam mode", PMENU_ALIGN_LEFT, select_test },
+    { "*Autocam - Frag Leader", PMENU_ALIGN_LEFT, select_test },
+    { "*Autocam - Quad Runner", PMENU_ALIGN_LEFT, select_test },
+    { "*Autocam - Pent Runner", PMENU_ALIGN_LEFT, select_test },
     { NULL },
     { "*Exit menu", PMENU_ALIGN_LEFT, select_test },
+//    { "*Voting menu", PMENU_ALIGN_LEFT, select_test },
+    { NULL },
     { NULL },
     { NULL },
     { "Use [ and ] to move cursor", PMENU_ALIGN_CENTER },
@@ -1488,25 +1614,14 @@ void Cmd_Menu_f( edict_t *ent ) {
 
     switch( ent->client->pers.connected ) {
     case CONN_PREGAME:
-        main_menu[3].text = "*Enter the game";
-        main_menu[6].text = "*Enter OBSERVER mode";
-        main_menu[7].text = "*Enter CHASECAM mode";
-        break;
     case CONN_SPECTATOR:
         main_menu[3].text = "*Enter the game";
-        if( ent->client->chase_target ) {
-            main_menu[6].text = "*Enter OBSERVER mode";
-            main_menu[7].text = "*Leave CHASECAM mode";
-        } else {
-            main_menu[6].text = "*Leave OBSERVER mode";
-            main_menu[7].text = "*Enter CHASECAM mode";
-        }
+        break;
+    case CONN_SPAWNED:
+        main_menu[3].text = "*Leave the game";
         break;
     default:
-        main_menu[3].text = "*Return to game";
-        main_menu[6].text = "*Enter OBSERVER mode";
-        main_menu[7].text = "*Enter CHASECAM mode";
-        break;
+        return;
     }
 
     ent->client->showscores = qfalse;
@@ -1614,6 +1729,8 @@ void ClientCommand (edict_t *ent)
 		Cmd_CastVote_f(ent, qtrue);
 	else if (Q_stricmp(cmd, "no") == 0)
 		Cmd_CastVote_f(ent, qfalse);
+	else if (Q_stricmp(cmd, "admin") == 0 || Q_stricmp(cmd, "referee") == 0)
+		Cmd_Admin_f(ent);
 	else if (Q_stricmp(cmd, "menu") == 0)
 		Cmd_Menu_f(ent);
 	else	// anything that doesn't match a command will be a chat

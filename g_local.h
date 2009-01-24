@@ -462,6 +462,7 @@ typedef struct
 
         int     value;
         struct gclient_s    *victim;
+        struct gclient_s    *initiator;
     } vote;
 
 	edict_t		*current_entity;	// entity running from G_RunFrame
@@ -533,6 +534,7 @@ typedef struct map_entry_s {
     list_t list, queue;
     int min_players, max_players;
     int flags;
+    int num_hits, num_in, num_out; // for statistics
     char name[1];
 } map_entry_t;
 
@@ -609,6 +611,7 @@ extern  cvar_t	*g_vote_mask;
 extern  cvar_t	*g_vote_time;
 extern  cvar_t	*g_vote_treshold;
 extern  cvar_t	*g_vote_limit;
+extern  cvar_t  *g_admin_password;
 extern  cvar_t	*g_item_ban;
 extern  cvar_t	*g_maps_random;
 extern  cvar_t	*g_bugs;
@@ -852,15 +855,6 @@ void G_LoadScores( void );
 map_entry_t *G_FindMap( const char *name );
 
 //
-// g_chase.c
-//
-void ChaseEndServerFrame( edict_t *ent );
-void ChaseNext(edict_t *ent);
-void ChasePrev(edict_t *ent);
-void GetChaseTarget(edict_t *ent);
-void SetChaseTarget( edict_t *ent, edict_t *targ );
-
-//
 // g_spawn.c
 //
 void G_SpawnEntities (const char *mapname, const char *entities, const char *spawnpoint);
@@ -941,6 +935,13 @@ typedef enum {
     GRENADE_BLEW_UP,
     GRENADE_THROWN,
 } grenade_state_t;
+
+typedef enum {
+    CHASE_NONE,
+    CHASE_LEADER,
+    CHASE_QUAD,
+    CHASE_INVU
+} chase_mode_t;
 
 typedef struct {
     int hits;
@@ -1087,7 +1088,8 @@ struct gclient_s
 	int 		respawn_framenum;	// can respawn when time > this
     int         observer_framenum;
 
-	edict_t		*chase_target;		// player we are chasing
+	edict_t		    *chase_target;		// player we are chasing
+    chase_mode_t    chase_mode;
 
 	// values saved and restored from edicts when changing levels
 	int			health;
@@ -1258,11 +1260,20 @@ struct edict_s
 //
 // p_menu.c
 //
-
 pmenu_t *PMenu_Open( edict_t *ent, pmenu_entry_t *entries, int cur, int num, void *arg );
 void PMenu_Close( edict_t *ent ); 
 void PMenu_Update( edict_t *ent );
 void PMenu_Next( edict_t *ent ); 
 void PMenu_Prev( edict_t *ent );
 void PMenu_Select( edict_t *ent ); 
+
+//
+// g_chase.c
+//
+void ChaseEndServerFrame( edict_t *ent );
+void ChaseNext(edict_t *ent);
+void ChasePrev(edict_t *ent);
+qboolean GetChaseTarget( edict_t *ent, chase_mode_t mode );
+void SetChaseTarget( edict_t *ent, edict_t *targ );
+void UpdateChaseTargets( chase_mode_t mode, edict_t *targ );
 

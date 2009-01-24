@@ -86,6 +86,8 @@ int G_UpdateRanks( void ) {
     G_PrivateString( c->edict, PCS_DELTA, buffer );
     Q_snprintf( buffer, sizeof( buffer ), "1/%d", total );
     G_PrivateString( c->edict, PCS_RANK, va( "%5s", buffer ) );
+    
+    UpdateChaseTargets( CHASE_LEADER, c->edict );
 
     // other players
     for( i = 1; i < total; i++ ) {
@@ -1194,6 +1196,13 @@ void ClientBegin (edict_t *ent)
     memset( &ent->client->resp, 0, sizeof( ent->client->resp ) );
 
     if( ent->client->level.flags & CLF_FIRST_TIME ) {
+        map_entry_t *map = G_FindMap( level.mapname );
+
+        // track map stats
+        if( map ) {
+            map->num_in++;
+        }
+        
     	gi.bprintf (PRINT_HIGH, "%s connected\n", ent->client->pers.netname);
         ent->client->level.flags &= ~CLF_FIRST_TIME;
     }
@@ -1378,6 +1387,15 @@ void ClientDisconnect (edict_t *ent)
     PMenu_Close( ent );
 
     G_CheckVote();
+
+    if( connected > CONN_CONNECTED ) {
+        map_entry_t *map = G_FindMap( level.mapname );
+
+        // track map stats
+        if( map ) {
+            map->num_out++;
+        }
+    }
 
 	gi.unlinkentity (ent);
 	ent->s.modelindex = 0;
@@ -1566,7 +1584,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 			if (client->chase_target) {
                 SetChaseTarget( ent, NULL );
 			} else {
-				GetChaseTarget(ent);
+				GetChaseTarget(ent, CHASE_NONE);
             }
 		} else if (!client->weapon_thunk) {
 			client->weapon_thunk = qtrue;
@@ -1584,6 +1602,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
                     } else {
     					ChasePrev(ent);
                     }
+	                client->chase_mode = CHASE_NONE;
                 }
 			}
 		} else {

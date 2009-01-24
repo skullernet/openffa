@@ -44,6 +44,7 @@ cvar_t	*g_vote_mask;
 cvar_t	*g_vote_time;
 cvar_t	*g_vote_treshold;
 cvar_t	*g_vote_limit;
+cvar_t	*g_admin_password;
 cvar_t	*g_maps_random;
 cvar_t	*g_maps_file;
 cvar_t	*g_item_ban;
@@ -76,7 +77,7 @@ cvar_t	*flood_msgs;
 cvar_t	*flood_persecond;
 cvar_t	*flood_waitdelay;
 
-static LIST_DECL( g_map_list );
+LIST_DECL( g_map_list );
 static LIST_DECL( g_map_queue );
 
 //cvar_t  *sv_features;
@@ -272,6 +273,11 @@ void G_LoadScores( void ) {
         if( !data ) {
             break;
         }
+
+        if( data[0] == '#' || data[0] == '/' ) {
+            continue;
+        }
+
         token = COM_Parse( &data );
         if( !*token ) {
             continue;
@@ -378,6 +384,7 @@ static void G_PickNextMap( void ) {
     }
 
     List_Delete( &map->queue );
+    map->num_hits++;
 
     gi.dprintf( "Next map is %s.\n", map->name );
     strcpy( level.nextmap, map->name );
@@ -417,6 +424,10 @@ static void G_LoadMapList( void ) {
 
         linenum++;
 
+        if( data[0] == '#' || data[0] == '/' ) {
+            continue;
+        }
+
         token = COM_Parse( &data );
         if( !*token ) {
             continue;
@@ -440,6 +451,13 @@ static void G_LoadMapList( void ) {
 
         token = COM_Parse( &data );
         map->flags = atoi( token );
+
+        if( map->min_players < 0 ) {
+            map->min_players = 0;
+        }
+        if( map->max_players > game.maxclients ) {
+            map->max_players = game.maxclients;
+        }
 
         List_Append( &g_map_list, &map->list );
         nummaps++;
@@ -689,7 +707,7 @@ void G_RunFrame (void)
 
         // check vote timeout
         if( level.vote.proposal && level.framenum > level.vote.framenum ) {
-            gi.bprintf( PRINT_HIGH, "Vote failed.\n" );
+            gi.bprintf( PRINT_HIGH, "Vote timed out.\n" );
             level.vote.proposal = 0;
         }
     }
@@ -768,6 +786,7 @@ static void G_Init (void) {
 	g_vote_time = gi.cvar ("g_vote_time", "120", 0);
 	g_vote_treshold = gi.cvar ("g_vote_treshold", "50", 0);
 	g_vote_limit = gi.cvar ("g_vote_limit", "0", 0);
+	g_admin_password = gi.cvar ("g_admin_password", "", 0);
 	g_maps_random = gi.cvar ("g_maps_random", "1", 0);
 	g_maps_file = gi.cvar ("g_maps_file", "", CVAR_LATCH);
 	g_item_ban = gi.cvar ("g_item_ban", "0", 0);

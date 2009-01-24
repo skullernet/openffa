@@ -312,6 +312,8 @@ void Use_Quad (edict_t *ent, gitem_t *item)
 	else
 		ent->client->quad_framenum = level.framenum + timeout;
 
+    UpdateChaseTargets( CHASE_QUAD, ent );
+
 	gi.sound(ent, CHAN_ITEM, gi.soundindex("items/damage.wav"), 1, ATTN_NORM, 0);
 }
 
@@ -356,6 +358,8 @@ void	Use_Invulnerability (edict_t *ent, gitem_t *item)
 		ent->client->invincible_framenum += 300;
 	else
 		ent->client->invincible_framenum = level.framenum + 300;
+
+    UpdateChaseTargets( CHASE_INVU, ent );
 
 	gi.sound(ent, CHAN_ITEM, gi.soundindex("items/protect.wav"), 1, ATTN_NORM, 0);
 }
