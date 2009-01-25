@@ -672,6 +672,7 @@ static float PlayersRangeFromSpot (edict_t *spot) {
 
 static edict_t *SelectRandomDeathmatchSpawnPointAvoidingTelefrag( void ) {
     edict_t *spot;
+    float range;
     int i;
 
     for( i = 0; i < level.numspawns; i++ ) {
