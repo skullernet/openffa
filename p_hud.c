@@ -91,6 +91,9 @@ void BeginIntermission (void)
 	if (level.intermission_framenum)
 		return;		// already activated
 
+	level.intermission_framenum = level.framenum;
+    level.vote.proposal = 0;
+
 	// respawn any dead clients
 	for (i=0 ; i<game.maxclients ; i++)
 	{
@@ -100,9 +103,6 @@ void BeginIntermission (void)
 		if (client->health <= 0)
 			respawn(client);
 	}
-
-	level.intermission_framenum = level.framenum;
-    level.vote.proposal = 0;
 
 	// find an intermission spot
 	ent = G_Find (NULL, FOFS(classname), "info_player_intermission");
@@ -123,8 +123,10 @@ void BeginIntermission (void)
 		}
 	}
 
-	VectorCopy (ent->s.origin, level.intermission_origin);
-	VectorCopy (ent->s.angles, level.intermission_angle);
+    if( ent ) {
+    	VectorCopy (ent->s.origin, level.intermission_origin);
+	    VectorCopy (ent->s.angles, level.intermission_angle);
+    }
 
 	// move all clients to the intermission point
 	for (i=0 ; i<game.maxclients ; i++)

@@ -670,6 +670,23 @@ static float PlayersRangeFromSpot (edict_t *spot) {
 	return bestplayerdistance;
 }
 
+static edict_t *SelectRandomDeathmatchSpawnPointAvoidingTelefrag( void ) {
+    edict_t *spot;
+    int i;
+
+    for( i = 0; i < level.numspawns; i++ ) {
+        spot = level.spawns[i];
+
+        range = PlayersRangeFromSpot(spot);
+        if( range > 64 ) {
+            return spot;
+        }
+    }
+
+    // all spots were taken
+    return SelectRandomDeathmatchSpawnPoint();
+}
+
 static edict_t *SelectRandomDeathmatchSpawnPointAvoidingTwoClosest (void) {
 	edict_t	*spot, *spot1, *spot2;
 	int		selection;
@@ -786,9 +803,17 @@ static edict_t *SelectFarthestDeathmatchSpawnPoint (void) {
 }
 
 static edict_t *SelectDeathmatchSpawnPoint (void) {
+    // in the first 5 seconds of a level start,
+    // avoid telefrags above all other conditions
+    if( level.framenum < 5 * HZ ) {
+        return SelectRandomDeathmatchSpawnPointAvoidingTelefrag();
+    }
+
+    // spawn farthest overrides g_spawn_mode
 	if( DF( SPAWN_FARTHEST ) ) {
 		return SelectFarthestDeathmatchSpawnPoint ();
     }
+
     if( level.numspawns > 2 ) {
         if( g_spawn_mode->value == 0 ) {
             return SelectRandomDeathmatchSpawnPointAvoidingTwoClosestBugged();
@@ -1138,7 +1163,7 @@ void PutClientInServer (edict_t *ent)
 	VectorCopy( spawn_angles, client->v_angle );
 
 	// spawn a spectator
-	if (client->pers.connected != CONN_SPAWNED) {
+	if (client->pers.connected != CONN_SPAWNED || level.intermission_framenum) {
 		ent->movetype = MOVETYPE_NOCLIP;
 		ent->solid = SOLID_NOT;
 		ent->svflags |= SVF_NOCLIENT;
