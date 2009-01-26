@@ -36,7 +36,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define G_FEATURES  (GMF_CLIENTNUM|GMF_MVDSPEC|GMF_WANT_ALL_DISCONNECTS)
 
 // the "gameversion" client command will print this plus compile date
-#define	GAMEVERSION	"openffa"
+#define	GAMEVERSION	"OpenFFA"
 
 // protocol bytes that can be directly added to messages
 #define	svc_muzzleflash		1
