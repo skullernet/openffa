@@ -26,18 +26,14 @@ static void PMenu_Write(edict_t *ent) {
 	size_t total, len;
 	pmenu_entry_t *p;
 	int x;
-	pmenu_t *menu = ent->client->menu;
+	pmenu_t *menu = &ent->client->menu;
 	const char *t;
     qboolean alt;
-
-	if (!menu) {
-		return;
-	}
 
 	strcpy( string, "xv 32 yv 8 picn inventory " );
     total = strlen( string );
 
-	for (i = 0, p = menu->entries; i < menu->num; i++, p++) {
+	for (i = 0, p = menu->entries; i < MAX_MENU_ENTRIES; i++, p++) {
 		if (!p->text || !p->text[0])
 			continue; // blank line
 		t = p->text;
@@ -81,77 +77,44 @@ static void PMenu_Write(edict_t *ent) {
 // this is so that a static set of pmenu entries can be used
 // for multiple clients and changed without interference
 // note that arg will be freed when the menu is closed, it must be allocated memory
-pmenu_t *PMenu_Open( edict_t *ent, pmenu_entry_t *entries, int cur, int num, void *arg ) {
-	pmenu_t *menu;
-	pmenu_entry_t *p;
+void PMenu_Open( edict_t *ent, const pmenu_entry_t *entries ) {
+	pmenu_t *menu = &ent->client->menu;
+	const pmenu_entry_t *p;
 	int i;
 
 	if (!ent->client)
-		return NULL;
+		return;
 
-	if (ent->client->menu) {
-		gi.dprintf("warning, ent already has a menu\n");
-		PMenu_Close(ent);
-	}
-
-	menu = G_Malloc( sizeof( pmenu_t ) + sizeof( pmenu_entry_t ) * ( num - 1 ) );
-	menu->arg = arg;
-	for (i = 0; i < num; i++) {
+	for (i = 0; i < MAX_MENU_ENTRIES; i++ ) {
         menu->entries[i].select = entries[i].select;
         menu->entries[i].align = entries[i].align;
 		menu->entries[i].text = entries[i].text;
     }
 
-	menu->num = num;
-
-	if (cur < 0 || !entries[cur].select) {
-		for (i = 0, p = entries; i < num; i++, p++)
-			if (p->select)
-				break;
-	} else {
-		i = cur;
+	menu->cur = -1;
+    for (i = 0, p = menu->entries; i < MAX_MENU_ENTRIES; i++, p++) {
+        if (p->select) {
+		    menu->cur = i;
+            break;
+        }
     }
 
-	if (i >= num)
-		menu->cur = -1;
-	else
-		menu->cur = i;
-
-	ent->client->menu = menu;
-
-	PMenu_Write(ent);
-	gi.unicast (ent, qtrue);
-    ent->client->menu_framenum = level.framenum;
-    ent->client->menu_dirty = qfalse;
-
-	return menu;
+    //ent->client->menu_framenum = 0;
+    ent->client->menu_dirty = qtrue;
+    ent->client->layout = LAYOUT_MENU;
 }
 
 void PMenu_Close( edict_t *ent ) {
-	pmenu_t *menu = ent->client->menu;
-	//int i;
-
-	if (!menu)
+	if (ent->client->layout != LAYOUT_MENU) {
 		return;
-
-	/*for (i = 0; i < menu->num; i++)
-		if (menu->entries[i].text)
-			gi.TagFree(menu->entries[i].text);*/
-	gi.TagFree(menu);
-	ent->client->menu = NULL;
-}
-
-// only use on pmenu's that have been called with PMenu_Open
-void PMenu_UpdateEntry(pmenu_entry_t *entry, const char *text, int align, pmenu_select_t select) {
-	if (entry->text)
-		gi.TagFree(entry->text);
-	entry->text = G_CopyString(text);
-	entry->align = align;
-	entry->select = select;
+	}
+	memset( &ent->client->menu, 0, sizeof( ent->client->menu ) );
+    ent->client->menu_dirty = qfalse;
+    ent->client->layout = LAYOUT_NONE;
 }
 
 void PMenu_Update( edict_t *ent ) {
-	if (!ent->client->menu) {
+	if (ent->client->layout != LAYOUT_MENU) {
 		return;
 	}
 
@@ -159,34 +122,36 @@ void PMenu_Update( edict_t *ent ) {
         return;
     }
 
-	if (level.framenum - ent->client->menu_framenum < 1*HZ ) {
+	//if (level.framenum - ent->client->menu_framenum < 1*HZ ) {
         //return;
-    }
+    //}
 
     // been a second or more since last update, update now
     PMenu_Write( ent );
     gi.unicast( ent, qtrue );
-    ent->client->menu_framenum = level.framenum;
+    //ent->client->menu_framenum = level.framenum;
     ent->client->menu_dirty = qfalse;
 }
 
 void PMenu_Next( edict_t *ent ) {
-	pmenu_t *menu = ent->client->menu;
+	pmenu_t *menu = &ent->client->menu;
 	pmenu_entry_t *p;
 	int i;
 
-	if (!menu) {
+	if (ent->client->layout != LAYOUT_MENU) {
 		return;
 	}
 
 	if (menu->cur < 0)
 		return; // no selectable entries
+    if (menu->cur >= MAX_MENU_ENTRIES)
+        menu->cur = 0;
 
 	i = menu->cur;
 	p = menu->entries + menu->cur;
 	do {
 		i++, p++;
-		if (i == menu->num)
+		if (i == MAX_MENU_ENTRIES)
 			i = 0, p = menu->entries;
 		if (p->select)
 			break;
@@ -195,26 +160,27 @@ void PMenu_Next( edict_t *ent ) {
 	menu->cur = i;
 
 	ent->client->menu_dirty = qtrue;
-	//PMenu_Update(ent);
 }
 
 void PMenu_Prev( edict_t *ent ) {
-	pmenu_t *menu = ent->client->menu;
+	pmenu_t *menu = &ent->client->menu;
 	pmenu_entry_t *p;
 	int i;
 
-	if (!menu) {
+	if (ent->client->layout != LAYOUT_MENU) {
 		return;
 	}
 
 	if (menu->cur < 0)
 		return; // no selectable entries
+    if (menu->cur >= MAX_MENU_ENTRIES)
+        menu->cur = 0;
 
 	i = menu->cur;
 	p = menu->entries + menu->cur;
 	do {
 		if (i == 0) {
-			i = menu->num - 1;
+			i = MAX_MENU_ENTRIES - 1;
 			p = menu->entries + i;
 		} else {
 			i--, p--;
@@ -226,23 +192,24 @@ void PMenu_Prev( edict_t *ent ) {
 	menu->cur = i;
 
 	ent->client->menu_dirty = qtrue;
-	//PMenu_Update(ent);
 }
 
 void PMenu_Select( edict_t *ent ) {
-	pmenu_t *menu = ent->client->menu;
+	pmenu_t *menu = &ent->client->menu;
 	pmenu_entry_t *p;
 
-	if (!menu) {
+	if (ent->client->layout != LAYOUT_MENU) {
 		return;
 	}
 
 	if (menu->cur < 0)
 		return; // no selectable entries
+    if (menu->cur >= MAX_MENU_ENTRIES)
+        menu->cur = 0;
 
 	p = menu->entries + menu->cur;
 
 	if (p->select)
-		p->select(ent, menu);
+		p->select(ent);
 }
 

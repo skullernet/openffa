@@ -36,9 +36,9 @@ void Weapon_GrenadeLauncher (edict_t *ent);
 void Weapon_Railgun (edict_t *ent);
 void Weapon_BFG (edict_t *ent);
 
-gitem_armor_t jacketarmor_info	= { 25,  50, .30, .00, ARMOR_JACKET};
-gitem_armor_t combatarmor_info	= { 50, 100, .60, .30, ARMOR_COMBAT};
-gitem_armor_t bodyarmor_info	= {100, 200, .80, .60, ARMOR_BODY};
+static const gitem_armor_t jacketarmor_info	= { 25,  50, .30, .00, ARMOR_JACKET};
+static const gitem_armor_t combatarmor_info	= { 50, 100, .60, .30, ARMOR_COMBAT};
+static const gitem_armor_t bodyarmor_info	= {100, 200, .80, .60, ARMOR_BODY};
 
 #define HEALTH_IGNORE_MAX	1
 #define HEALTH_TIMED		2
@@ -548,8 +548,8 @@ int ArmorIndex (edict_t *ent)
 qboolean Pickup_Armor (edict_t *ent, edict_t *other)
 {
 	int				old_armor_index;
-	gitem_armor_t	*oldinfo;
-	gitem_armor_t	*newinfo;
+	const gitem_armor_t	*oldinfo;
+	const gitem_armor_t	*newinfo;
 	int				newcount;
 	float			salvage;
 	int				salvagecount;

@@ -98,13 +98,15 @@ void ChangeWeapon (edict_t *ent)
     //a grenade action is happening
     if (ent->client->grenade_framenum)
     {
+        int bugs = (int)g_bugs->value;
+
         //but it blew up in their hand or they threw it, allow bug to double explode
-        if ((ent->client->grenade_state == GRENADE_BLEW_UP && g_bugs->value >= 2) ||
-            (ent->client->grenade_state == GRENADE_THROWN && g_bugs->value >= 1) ||
+        if ((ent->client->grenade_state == GRENADE_BLEW_UP && bugs >= 2) ||
+            (ent->client->grenade_state == GRENADE_THROWN && bugs >= 1) ||
             ent->client->grenade_state == GRENADE_NONE)
         {
             //r1: prevent quad on someone making grenades into quad grenades on death explode
-            if (g_bugs->value < 1)
+            if (bugs < 1)
 		        is_quad = (ent->client->quad_framenum > level.framenum);
 
             ent->client->grenade_framenum = level.framenum;

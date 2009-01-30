@@ -78,6 +78,10 @@ cvar_t  *flood_msgs;
 cvar_t  *flood_persecond;
 cvar_t  *flood_waitdelay;
 
+cvar_t  *flood_waves;
+cvar_t  *flood_perwave;
+cvar_t  *flood_wavedelay;
+
 LIST_DECL( g_map_list );
 static LIST_DECL( g_map_queue );
 
@@ -126,7 +130,7 @@ void ClientEndServerFrames (void) {
         }
 
         // if the scoreboard is up, update it
-        if( c->showscores && !( level.framenum & 31 ) ) {
+        if( c->layout == LAYOUT_SCORES && !( level.framenum & 31 ) ) {
             DeathmatchScoreboardMessage( c->edict );
             gi.unicast( c->edict, qfalse );
         }
@@ -497,7 +501,7 @@ void EndDMLevel ( void ) {
 }
 
 void G_StartSound( int index ) {
-    gi.sound( world, 0, index, 1, ATTN_NONE, 0 );
+    gi.sound( world, CHAN_RELIABLE, index, 1, ATTN_NONE, 0 );
 }
 
 static void G_SetTimeVar( int remaining ) {
@@ -559,7 +563,7 @@ static void CheckDMRules( void ) {
         gi.cvar_set( "time_remaining", "" );
     }
 
-    if( fraglimit->value > 0 ) {
+    if( (int)fraglimit->value > 0 ) {
         for( i = 0, c = game.clients; i < game.maxclients; i++, c++ ) {
             if( c->pers.connected != CONN_SPAWNED ) {
                 continue;
@@ -657,7 +661,7 @@ void G_RunFrame (void)
     } else if( level.intermission_framenum ) {
         delta = level.framenum - level.intermission_framenum;
         if( delta == 1*HZ ) {
-            if( rand() & 1 ) {
+            if( rand_byte() & 1 ) {
                 G_StartSound( level.sounds.xian );
             } else {
                 G_StartSound( level.sounds.makron );
@@ -671,8 +675,7 @@ void G_RunFrame (void)
                 HighScoresMessage();
                 gi.multicast( NULL, MULTICAST_ALL_R );
             } else {
-                ent = &g_edicts[1];
-                for( i = 1; i <= game.maxclients; i++, ent++ ) {
+                for( i = 0, ent = &g_edicts[1]; i < game.maxclients; i++, ent++ ) {
                     if( ent->client->pers.connected > CONN_CONNECTED ) {
                         DeathmatchScoreboardMessage( ent );
                         gi.unicast( ent, qtrue );
@@ -808,10 +811,15 @@ static void G_Init (void) {
     bob_pitch = gi.cvar ("bob_pitch", "0.002", 0);
     bob_roll = gi.cvar ("bob_roll", "0.002", 0);
 
-    // flood control
+    // chat flood control
     flood_msgs = gi.cvar ("flood_msgs", "4", 0);
     flood_persecond = gi.cvar ("flood_persecond", "4", 0);
     flood_waitdelay = gi.cvar ("flood_waitdelay", "10", 0);
+
+    // wave flood control
+    flood_waves = gi.cvar ("flood_waves", "4", 0);
+    flood_perwave = gi.cvar ("flood_perwave", "30", 0);
+    flood_wavedelay = gi.cvar ("flood_wavedelay", "120", 0);
 
     // force deathmatch
     //gi.cvar_set( "coop", "0" ); //atu

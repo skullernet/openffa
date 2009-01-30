@@ -553,7 +553,7 @@ qboolean G_KillBox (edict_t *ent)
     if( level.intermission_framenum ) {
         return qfalse;
     }
-    if (g_bugs->value < 2)
+    if ((int)g_bugs->value < 2)
     {
         edict_t *touch[MAX_EDICTS];
         int     count;

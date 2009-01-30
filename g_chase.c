@@ -27,7 +27,7 @@ static void SetChaseStats( gclient_t *client ) {
 
 	// layouts are independant in chasecam mode
 	client->ps.stats[STAT_LAYOUTS] = 0;
-	if (client->showscores || client->menu)
+	if (client->layout)
 		client->ps.stats[STAT_LAYOUTS] |= 1;
 
 	client->ps.stats[STAT_CHASE] = CS_PLAYERNAMES + playernum;
@@ -36,6 +36,13 @@ static void SetChaseStats( gclient_t *client ) {
     // STAT_FRAGS is no longer used for HUD,
     // but the server reports it in status responses
 	client->ps.stats[STAT_FRAGS] = 0;
+
+    // check view id settings
+    if( client->pers.flags & CPF_NOVIEWID ) {
+        client->ps.stats[STAT_VIEWID] = 0;
+    } else if( targ->client->pers.flags & CPF_NOVIEWID ) {
+        client->ps.stats[STAT_VIEWID] = G_GetPlayerIdView( targ );
+    }
 }
 
 static void UpdateChaseCamHack( gclient_t *client ) {
@@ -129,6 +136,7 @@ static void UpdateChaseCam( gclient_t *client ) {
     VectorCopy( ent->client->ps.viewangles, ent->s.angles );
     VectorCopy( ent->client->ps.viewangles, ent->client->v_angle );
     VectorScale( ent->client->ps.pmove.origin, 0.125f, ent->s.origin );
+    ent->viewheight = targ->viewheight;
 }
 
 void SetChaseTarget( edict_t *ent, edict_t *targ ) {

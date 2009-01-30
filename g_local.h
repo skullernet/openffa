@@ -322,7 +322,7 @@ typedef struct gitem_s
 
 	int			weapmodel;		// weapon model index (for weapons)
 
-	void		*info;
+	const void	*info;
 	int			tag;
 
 	char		*precaches;		// string of all models, sounds, and images this item will use
@@ -641,6 +641,10 @@ extern	cvar_t	*flood_msgs;
 extern	cvar_t	*flood_persecond;
 extern	cvar_t	*flood_waitdelay;
 
+extern	cvar_t	*flood_waves;
+extern	cvar_t	*flood_perwave;
+extern	cvar_t	*flood_wavedelay;
+
 //extern  cvar_t  *sv_features;
 
 #define world	(&g_edicts[0])
@@ -691,6 +695,9 @@ typedef struct
 //
 void Cmd_Help_f (edict_t *ent);
 void Cmd_Score_f (edict_t *ent);
+void Cmd_Stats_f( edict_t *ent, qboolean check_other );
+edict_t *G_SetPlayer( edict_t *ent, int arg );
+void ValidateSelectedItem (edict_t *ent);
 
 //
 // g_items.c
@@ -794,8 +801,6 @@ void respawn (edict_t *ent);
 void spectator_respawn (edict_t *ent);
 void BeginIntermission (void);
 void PutClientInServer (edict_t *ent);
-void InitClientPersistant (gclient_t *client);
-void InitClientResp (gclient_t *client);
 void InitBodyQue (void);
 void ClientBeginServerFrame (edict_t *ent);
 void G_WriteTime( int remaining ); 
@@ -828,11 +833,9 @@ void IntermissionEndServerFrame (edict_t *ent);
 //
 void MoveClientToIntermission (edict_t *client);
 void G_PrivateString( edict_t *ent, int index, const char *string );
+int G_GetPlayerIdView( edict_t *ent );
 void G_SetStats (edict_t *ent);
 int G_CalcRanks( gclient_t **ranks ); 
-void G_SetSpectatorStats (edict_t *ent);
-void G_CheckChaseStats (edict_t *ent);
-void ValidateSelectedItem (edict_t *ent);
 void DeathmatchScoreboardMessage (edict_t *client);
 void HighScoresMessage( void );
 
@@ -846,7 +849,6 @@ void G_RunEntity (edict_t *ent);
 //
 void SaveClientData (void);
 void FetchClientEntData (edict_t *ent);
-qboolean G_CheckVote( void ); 
 void G_ExitLevel( void );
 void G_StartSound( int index ); 
 void G_RunFrame( void );
@@ -894,6 +896,8 @@ void G_ResetLevel( void );
 
 #define PLAYER_SPAWNED( e ) ( (e)->client->pers.connected == CONN_SPAWNED )
 
+#define MAX_MENU_ENTRIES    18
+
 typedef enum {
 	PMENU_ALIGN_LEFT,
 	PMENU_ALIGN_CENTER,
@@ -901,7 +905,7 @@ typedef enum {
 } pmenu_align_t;
 
 struct pmenu_s;
-typedef void (*pmenu_select_t)( struct edict_s *, struct pmenu_s * );
+typedef void (*pmenu_select_t)( struct edict_s * );
 
 typedef struct pmenu_entry_s {
 	char *text;
@@ -910,9 +914,8 @@ typedef struct pmenu_entry_s {
 } pmenu_entry_t;
 
 typedef struct pmenu_s {
-	int cur, num;
-	void *arg;
-	pmenu_entry_t entries[1];
+	int cur;
+	pmenu_entry_t entries[MAX_MENU_ENTRIES];
 } pmenu_t;
 
 typedef enum {
@@ -942,12 +945,25 @@ typedef enum {
     CHASE_INVU
 } chase_mode_t;
 
+typedef enum {
+    LAYOUT_NONE,
+    LAYOUT_SCORES,
+    LAYOUT_MENU
+} layout_t;
+
 typedef struct {
     int hits;
     int atts;
     int frags;
     int deaths;
 } weapstat_t;
+
+#define FLOOD_MSGS  10
+typedef struct {
+	int	    locktill;		    // locked from talking
+	int		when[FLOOD_MSGS];	// when messages were said
+	int		whenhead;		    // head pointer for when said
+} flood_t;
 
 #define CPF_LOOPBACK    1
 #define CPF_MVDSPEC     2
@@ -1014,10 +1030,10 @@ struct gclient_s
 
     edict_t         *edict;
 
-	qboolean	showscores;			// set layout stat
+	layout_t    layout;			// set layout stat
 
-    pmenu_t     *menu;
-    int         menu_framenum;
+    pmenu_t     menu;
+    //int         menu_framenum;
     qboolean    menu_dirty;
     
 	int			ammo_index;
@@ -1079,10 +1095,7 @@ struct gclient_s
 
 	int 		pickup_framenum;
 
-#define FLOOD_MSGS  10
-	int		    flood_locktill;		    // locked from talking
-	int		    flood_when[FLOOD_MSGS];	// when messages were said
-	int			flood_whenhead;		    // head pointer for when said
+    flood_t     chat_flood, wave_flood;
 
 	int 		respawn_framenum;	// can respawn when time > this
     int         observer_framenum;
@@ -1259,7 +1272,7 @@ struct edict_s
 //
 // p_menu.c
 //
-pmenu_t *PMenu_Open( edict_t *ent, pmenu_entry_t *entries, int cur, int num, void *arg );
+void PMenu_Open( edict_t *ent, const pmenu_entry_t *entries );
 void PMenu_Close( edict_t *ent ); 
 void PMenu_Update( edict_t *ent );
 void PMenu_Next( edict_t *ent ); 
@@ -1275,4 +1288,11 @@ void ChasePrev(edict_t *ent);
 qboolean GetChaseTarget( edict_t *ent, chase_mode_t mode );
 void SetChaseTarget( edict_t *ent, edict_t *targ );
 void UpdateChaseTargets( chase_mode_t mode, edict_t *targ );
+
+//
+// g_vote.c
+//
+qboolean G_CheckVote( void ); 
+void Cmd_Vote_f( edict_t *ent );
+void Cmd_CastVote_f( edict_t *ent, qboolean accepted );
 

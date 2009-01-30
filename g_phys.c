@@ -46,7 +46,7 @@ SV_TestEntityPosition
 
 ============
 */
-edict_t	*SV_TestEntityPosition (edict_t *ent)
+static edict_t *SV_TestEntityPosition (edict_t *ent)
 {
 	trace_t	trace;
 	int		mask;
@@ -69,7 +69,7 @@ edict_t	*SV_TestEntityPosition (edict_t *ent)
 SV_CheckVelocity
 ================
 */
-void SV_CheckVelocity (edict_t *ent)
+static void SV_CheckVelocity (edict_t *ent)
 {
 	int		i;
 
@@ -92,7 +92,7 @@ SV_RunThink
 Runs thinking code for this frame if necessary
 =============
 */
-qboolean SV_RunThink (edict_t *ent)
+static qboolean SV_RunThink (edict_t *ent)
 {
 	int	    thinkframe;
 
@@ -117,7 +117,7 @@ SV_Impact
 Two entities have touched, so run their touch functions
 ==================
 */
-void SV_Impact (edict_t *e1, trace_t *trace)
+static void SV_Impact (edict_t *e1, trace_t *trace)
 {
 	edict_t		*e2;
 //	cplane_t	backplane;
@@ -142,7 +142,7 @@ returns the blocked flags (1 = floor, 2 = step / wall)
 */
 #define	STOP_EPSILON	0.1
 
-int ClipVelocity (vec3_t in, vec3_t normal, vec3_t out, float overbounce)
+static int ClipVelocity (vec3_t in, vec3_t normal, vec3_t out, float overbounce)
 {
 	float	backoff;
 	float	change;
@@ -167,159 +167,13 @@ int ClipVelocity (vec3_t in, vec3_t normal, vec3_t out, float overbounce)
 	return blocked;
 }
 
-
-/*
-============
-SV_FlyMove
-
-The basic solid body movement clip that slides along multiple planes
-Returns the clipflags if the velocity was modified (hit something solid)
-1 = floor
-2 = wall / step
-4 = dead stop
-============
-*/
-#define	MAX_CLIP_PLANES	5
-int SV_FlyMove (edict_t *ent, float time, int mask)
-{
-	edict_t		*hit;
-	int			bumpcount, numbumps;
-	vec3_t		dir;
-	float		d;
-	int			numplanes;
-	vec3_t		planes[MAX_CLIP_PLANES];
-	vec3_t		primal_velocity, original_velocity, new_velocity;
-	int			i, j;
-	trace_t		trace;
-	vec3_t		end;
-	float		time_left;
-	int			blocked;
-	
-	numbumps = 4;
-	
-	blocked = 0;
-	VectorCopy (ent->velocity, original_velocity);
-	VectorCopy (ent->velocity, primal_velocity);
-	numplanes = 0;
-	
-	time_left = time;
-
-	ent->groundentity = NULL;
-	for (bumpcount=0 ; bumpcount<numbumps ; bumpcount++)
-	{
-		for (i=0 ; i<3 ; i++)
-			end[i] = ent->s.origin[i] + time_left * ent->velocity[i];
-
-		gi_trace( &trace, ent->s.origin, ent->mins, ent->maxs, end, ent, mask);
-
-		if (trace.allsolid)
-		{	// entity is trapped in another solid
-			VectorCopy (vec3_origin, ent->velocity);
-			return 3;
-		}
-
-		if (trace.fraction > 0)
-		{	// actually covered some distance
-			VectorCopy (trace.endpos, ent->s.origin);
-			VectorCopy (ent->velocity, original_velocity);
-			numplanes = 0;
-		}
-
-		if (trace.fraction == 1)
-			 break;		// moved the entire distance
-
-		hit = trace.ent;
-
-		if (trace.plane.normal[2] > 0.7)
-		{
-			blocked |= 1;		// floor
-			if ( hit->solid == SOLID_BSP)
-			{
-				ent->groundentity = hit;
-				ent->groundentity_linkcount = hit->linkcount;
-			}
-		}
-		if (!trace.plane.normal[2])
-		{
-			blocked |= 2;		// step
-		}
-
-//
-// run the impact function
-//
-		SV_Impact (ent, &trace);
-		if (!ent->inuse)
-			break;		// removed by the impact function
-
-		
-		time_left -= time_left * trace.fraction;
-		
-	// cliped to another plane
-		if (numplanes >= MAX_CLIP_PLANES)
-		{	// this shouldn't really happen
-			VectorCopy (vec3_origin, ent->velocity);
-			return 3;
-		}
-
-		VectorCopy (trace.plane.normal, planes[numplanes]);
-		numplanes++;
-
-//
-// modify original_velocity so it parallels all of the clip planes
-//
-		for (i=0 ; i<numplanes ; i++)
-		{
-			ClipVelocity (original_velocity, planes[i], new_velocity, 1);
-
-			for (j=0 ; j<numplanes ; j++)
-				if ((j != i) && !VectorCompare (planes[i], planes[j]))
-				{
-					if (DotProduct (new_velocity, planes[j]) < 0)
-						break;	// not ok
-				}
-			if (j == numplanes)
-				break;
-		}
-		
-		if (i != numplanes)
-		{	// go along this plane
-			VectorCopy (new_velocity, ent->velocity);
-		}
-		else
-		{	// go along the crease
-			if (numplanes != 2)
-			{
-//				gi.dprintf ("clip velocity, numplanes == %i\n",numplanes);
-				VectorCopy (vec3_origin, ent->velocity);
-				return 7;
-			}
-			CrossProduct (planes[0], planes[1], dir);
-			d = DotProduct (dir, ent->velocity);
-			VectorScale (dir, d, ent->velocity);
-		}
-
-//
-// if original velocity is against the original velocity, stop dead
-// to avoid tiny occilations in sloping corners
-//
-		if (DotProduct (ent->velocity, primal_velocity) <= 0)
-		{
-			VectorCopy (vec3_origin, ent->velocity);
-			return blocked;
-		}
-	}
-
-	return blocked;
-}
-
-
 /*
 ============
 SV_AddGravity
 
 ============
 */
-void SV_AddGravity (edict_t *ent)
+static void SV_AddGravity (edict_t *ent)
 {
 	ent->velocity[2] -= ent->gravity * sv_gravity->value * FRAMETIME;
 }
@@ -339,7 +193,7 @@ SV_PushEntity
 Does not change the entities velocity at all
 ============
 */
-trace_t SV_PushEntity (edict_t *ent, vec3_t push)
+static trace_t SV_PushEntity (edict_t *ent, vec3_t push)
 {
 	trace_t	trace;
 	vec3_t	start;
@@ -360,7 +214,7 @@ retry:
 	VectorCopy (trace.endpos, ent->s.origin);
 	gi.linkentity (ent);
 
-	if (trace.fraction != 1.0)
+	if (trace.fraction != 1.0 || (trace.allsolid && (int)g_bugs->value < 2))
 	{
 		SV_Impact (ent, &trace);
 
@@ -387,9 +241,10 @@ typedef struct {
 	vec3_t	angles;
 	int 	deltayaw;
 } pushed_t;
-pushed_t	pushed[MAX_EDICTS], *pushed_p;
 
-edict_t	*obstacle;
+static pushed_t	pushed[MAX_EDICTS], *pushed_p;
+
+static edict_t	*obstacle;
 
 /*
 ============
@@ -399,7 +254,7 @@ Objects need to be moved back on a failed push,
 otherwise riders would continue to slide.
 ============
 */
-qboolean SV_Push (edict_t *pusher, vec3_t move, vec3_t amove)
+static qboolean SV_Push (edict_t *pusher, vec3_t move, vec3_t amove)
 {
 	int			i, e;
 	edict_t		*check, *block;
@@ -562,7 +417,7 @@ Bmodel objects don't interact with each other, but
 push all box objects
 ================
 */
-void SV_Physics_Pusher (edict_t *ent)
+static void SV_Physics_Pusher (edict_t *ent)
 {
 	vec3_t		move, amove;
 	edict_t		*part, *mv;
@@ -630,7 +485,7 @@ SV_Physics_None
 Non moving objects can only think
 =============
 */
-void SV_Physics_None (edict_t *ent)
+static void SV_Physics_None (edict_t *ent)
 {
 // regular thinking
 	SV_RunThink (ent);
@@ -643,7 +498,7 @@ SV_Physics_Noclip
 A moving object that doesn't obey physics
 =============
 */
-void SV_Physics_Noclip (edict_t *ent)
+static void SV_Physics_Noclip (edict_t *ent)
 {
 // regular thinking
 	if (!SV_RunThink (ent))
@@ -670,7 +525,7 @@ SV_Physics_Toss
 Toss, bounce, and fly movement.  When onground, do nothing.
 =============
 */
-void SV_Physics_Toss (edict_t *ent)
+static void SV_Physics_Toss (edict_t *ent)
 {
 	trace_t		trace;
 	vec3_t		move;
@@ -796,6 +651,7 @@ void G_RunEntity (edict_t *ent)
 		SV_Physics_Toss (ent);
 		break;
 	default:
-		gi.error ("SV_Physics: bad movetype %i", ent->movetype);	
+		gi.error ("%s: bad movetype %i", __func__, ent->movetype);	
 	}
 }
+

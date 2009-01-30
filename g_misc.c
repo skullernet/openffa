@@ -28,7 +28,7 @@ Used to group brushes together just for editor convenience.
 
 //=====================================================
 
-void Use_Areaportal (edict_t *ent, edict_t *other, edict_t *activator)
+static void Use_Areaportal (edict_t *ent, edict_t *other, edict_t *activator)
 {
 	ent->count ^= 1;		// toggle state
 //	gi.dprintf ("portalstate: %i = %i\n", ent->style, ent->count);
@@ -55,7 +55,7 @@ void SP_func_areaportal (edict_t *ent)
 Misc functions
 =================
 */
-void VelocityForDamage (int damage, vec3_t v)
+static void VelocityForDamage (int damage, vec3_t v)
 {
 	v[0] = 100.0 * crandom();
 	v[1] = 100.0 * crandom();
@@ -67,7 +67,7 @@ void VelocityForDamage (int damage, vec3_t v)
 		VectorScale (v, 1.2, v);
 }
 
-void ClipGibVelocity (edict_t *ent)
+static void ClipGibVelocity (edict_t *ent)
 {
 	if (ent->velocity[0] < -300)
 		ent->velocity[0] = -300;
@@ -89,7 +89,7 @@ void ClipGibVelocity (edict_t *ent)
 gibs
 =================
 */
-void gib_think (edict_t *self)
+static void gib_think (edict_t *self)
 {
 	self->s.frame++;
 	self->nextthink = level.framenum + 1;
@@ -101,7 +101,7 @@ void gib_think (edict_t *self)
 	}
 }
 
-void gib_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+static void gib_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
 	vec3_t	normal_angles, right;
 
@@ -126,7 +126,7 @@ void gib_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf
 	}
 }
 
-void gib_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+static void gib_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
 	G_FreeEdict (self);
 }
@@ -282,8 +282,7 @@ void BecomeExplosion1 (edict_t *self)
 	G_FreeEdict (self);
 }
 
-
-void BecomeExplosion2 (edict_t *self)
+static void BecomeExplosion2 (edict_t *self)
 {
 	gi.WriteByte (svc_temp_entity);
 	gi.WriteByte (TE_EXPLOSION2);
@@ -300,7 +299,7 @@ Pathtarget: gets used when an entity that has
 	this path_corner targeted touches it
 */
 
-void path_corner_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+static void path_corner_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
 	vec3_t		v;
 	edict_t		*next;
@@ -380,7 +379,7 @@ void SP_path_corner (edict_t *self)
 /*QUAKED viewthing (0 .5 .8) (-8 -8 -8) (8 8 8)
 Just for the debugging level.  Don't use
 */
-void TH_viewthing(edict_t *ent)
+static void TH_viewthing(edict_t *ent)
 {
 	ent->s.frame = (ent->s.frame + 1) % 7;
 	ent->nextthink = level.framenum + 1;
@@ -435,7 +434,7 @@ START_ON		only valid for TRIGGER_SPAWN walls
 				the wall will initially be present
 */
 
-void func_wall_use (edict_t *self, edict_t *other, edict_t *activator)
+static void func_wall_use (edict_t *self, edict_t *other, edict_t *activator)
 {
 	if (self->solid == SOLID_NOT)
 	{
@@ -507,7 +506,7 @@ void SP_func_wall (edict_t *self)
 This is solid bmodel that will fall if it's support it removed.
 */
 
-void func_object_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+static void func_object_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
 	// only squash thing we fall on top of
 	if (!plane)
@@ -519,13 +518,13 @@ void func_object_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface
 	T_Damage (other, self, self, vec3_origin, self->s.origin, vec3_origin, self->dmg, 1, 0, MOD_CRUSH);
 }
 
-void func_object_release (edict_t *self)
+static void func_object_release (edict_t *self)
 {
 	self->movetype = MOVETYPE_TOSS;
 	self->touch = func_object_touch;
 }
 
-void func_object_use (edict_t *self, edict_t *other, edict_t *activator)
+static void func_object_use (edict_t *self, edict_t *other, edict_t *activator)
 {
 	self->solid = SOLID_BSP;
 	self->svflags &= ~SVF_NOCLIENT;
@@ -581,7 +580,7 @@ void SP_func_object (edict_t *self)
 /*QUAKED misc_blackhole (1 .5 0) (-8 -8 -8) (8 8 8)
 */
 
-void misc_blackhole_use (edict_t *ent, edict_t *other, edict_t *activator)
+static void misc_blackhole_use (edict_t *ent, edict_t *other, edict_t *activator)
 {
 	/*
 	gi.WriteByte (svc_temp_entity);
@@ -592,7 +591,7 @@ void misc_blackhole_use (edict_t *ent, edict_t *other, edict_t *activator)
 	G_FreeEdict (ent);
 }
 
-void misc_blackhole_think (edict_t *self)
+static void misc_blackhole_think (edict_t *self)
 {
 	if (++self->s.frame >= 19) {		
 		self->s.frame = 0;
@@ -617,7 +616,7 @@ void SP_misc_blackhole (edict_t *ent)
 /*QUAKED misc_eastertank (1 .5 0) (-32 -32 -16) (32 32 32)
 */
 
-void misc_eastertank_think (edict_t *self)
+static void misc_eastertank_think (edict_t *self)
 {
 	if (++self->s.frame >= 293) {		
 		self->s.frame = 254;
@@ -642,7 +641,7 @@ void SP_misc_eastertank (edict_t *ent)
 */
 
 
-void misc_easterchick_think (edict_t *self)
+static void misc_easterchick_think (edict_t *self)
 {
 	if (++self->s.frame >= 247) {		
 		self->s.frame = 208;
@@ -667,7 +666,7 @@ void SP_misc_easterchick (edict_t *ent)
 */
 
 
-void misc_easterchick2_think (edict_t *self)
+static void misc_easterchick2_think (edict_t *self)
 {
 	if (++self->s.frame >= 287) {		
 		self->s.frame = 248;
@@ -694,7 +693,7 @@ Not really a monster, this is the Tank Commander's decapitated body.
 There should be a item_commander_head that has this as it's target.
 */
 
-void commander_body_think (edict_t *self)
+static void commander_body_think (edict_t *self)
 {
 	if (++self->s.frame < 24)
 		self->nextthink = level.framenum + 1;
@@ -705,13 +704,13 @@ void commander_body_think (edict_t *self)
 		gi.sound (self, CHAN_BODY, gi.soundindex ("tank/thud.wav"), 1, ATTN_NORM, 0);
 }
 
-void commander_body_use (edict_t *self, edict_t *other, edict_t *activator)
+static void commander_body_use (edict_t *self, edict_t *other, edict_t *activator)
 {
 	NEXT_FRAME( self, commander_body_think );
 	gi.sound (self, CHAN_BODY, gi.soundindex ("tank/pain.wav"), 1, ATTN_NORM, 0);
 }
 
-void commander_body_drop (edict_t *self)
+static void commander_body_drop (edict_t *self)
 {
 	self->movetype = MOVETYPE_TOSS;
 	self->s.origin[2] += 2;
@@ -743,7 +742,7 @@ void SP_monster_commander_body (edict_t *self)
 The origin is the bottom of the banner.
 The banner is 128 tall.
 */
-void misc_banner_think (edict_t *ent)
+static void misc_banner_think (edict_t *ent)
 {
 	ent->s.frame = (ent->s.frame + 1) % 16;
 	ent->nextthink = level.framenum + 1;
@@ -771,7 +770,7 @@ There must be a path for it to follow once it is activated.
 extern void train_use (edict_t *self, edict_t *other, edict_t *activator);
 extern void func_train_find (edict_t *self);
 
-void misc_viper_use  (edict_t *self, edict_t *other, edict_t *activator)
+static void misc_viper_use  (edict_t *self, edict_t *other, edict_t *activator)
 {
 	self->svflags &= ~SVF_NOCLIENT;
 	self->use = train_use;
@@ -822,7 +821,7 @@ void SP_misc_bigviper (edict_t *ent)
 /*QUAKED misc_viper_bomb (1 0 0) (-8 -8 -8) (8 8 8)
 "dmg"	how much boom should the bomb make?
 */
-void misc_viper_bomb_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+static void misc_viper_bomb_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
 	G_UseTargets (self, self->activator);
 
@@ -831,7 +830,7 @@ void misc_viper_bomb_touch (edict_t *self, edict_t *other, cplane_t *plane, csur
 	BecomeExplosion2 (self);
 }
 
-void misc_viper_bomb_prethink (edict_t *self)
+static void misc_viper_bomb_prethink (edict_t *self)
 {
 	vec3_t	v;
 	float	diff;
@@ -850,7 +849,7 @@ void misc_viper_bomb_prethink (edict_t *self)
 	self->s.angles[2] = diff + 10;
 }
 
-void misc_viper_bomb_use (edict_t *self, edict_t *other, edict_t *activator)
+static void misc_viper_bomb_use (edict_t *self, edict_t *other, edict_t *activator)
 {
 	edict_t	*viper;
 
@@ -900,7 +899,7 @@ There must be a path for it to follow once it is activated.
 extern void train_use (edict_t *self, edict_t *other, edict_t *activator);
 extern void func_train_find (edict_t *self);
 
-void misc_strogg_ship_use  (edict_t *self, edict_t *other, edict_t *activator)
+static void misc_strogg_ship_use  (edict_t *self, edict_t *other, edict_t *activator)
 {
 	self->svflags &= ~SVF_NOCLIENT;
 	self->use = train_use;
@@ -936,14 +935,14 @@ void SP_misc_strogg_ship (edict_t *ent)
 
 /*QUAKED misc_satellite_dish (1 .5 0) (-64 -64 0) (64 64 128)
 */
-void misc_satellite_dish_think (edict_t *self)
+static void misc_satellite_dish_think (edict_t *self)
 {
 	self->s.frame++;
 	if (self->s.frame < 38)
 		self->nextthink = level.framenum + 1;
 }
 
-void misc_satellite_dish_use (edict_t *self, edict_t *other, edict_t *activator)
+static void misc_satellite_dish_use (edict_t *self, edict_t *other, edict_t *activator)
 {
 	self->s.frame = 0;
 	NEXT_FRAME( self, misc_satellite_dish_think );
@@ -1067,7 +1066,7 @@ void SP_target_character (edict_t *self)
 /*QUAKED target_string (0 0 1) (-8 -8 -8) (8 8 8)
 */
 
-void target_string_use (edict_t *self, edict_t *other, edict_t *activator)
+static void target_string_use (edict_t *self, edict_t *other, edict_t *activator)
 {
 	edict_t *e;
 	int		n, l;
@@ -1172,7 +1171,7 @@ static void func_clock_format_countdown (edict_t *self)
 	}
 }
 
-void func_clock_think (edict_t *self)
+static void func_clock_think (edict_t *self)
 {
 	if (!self->enemy)
 	{
@@ -1239,7 +1238,7 @@ void func_clock_think (edict_t *self)
 	self->nextthink = level.framenum + 1*HZ;
 }
 
-void func_clock_use (edict_t *self, edict_t *other, edict_t *activator)
+static void func_clock_use (edict_t *self, edict_t *other, edict_t *activator)
 {
 	if (!(self->spawnflags & 8))
 		self->use = NULL;
@@ -1282,7 +1281,7 @@ void SP_func_clock (edict_t *self)
 
 //=================================================================================
 
-void teleporter_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
+static void teleporter_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
 	edict_t		*dest;
 
@@ -1302,7 +1301,7 @@ void teleporter_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_
 	VectorCopy (dest->s.origin, other->s.old_origin);
 	other->s.origin[2] += 10;
 
-    if (g_teleporter_nofreeze->value == 0)
+    if ((int)g_teleporter_nofreeze->value == 0)
     {
         // clear the velocity and hold them in place briefly
         VectorClear (other->velocity);
@@ -1391,7 +1390,7 @@ void SP_misc_teleporter_dest (edict_t *ent)
 }
 
 
-void AnglesNormalize(vec3_t vec)
+static void AnglesNormalize(vec3_t vec)
 {
 	while(vec[0] > 360)
 		vec[0] -= 360;
@@ -1403,7 +1402,7 @@ void AnglesNormalize(vec3_t vec)
 		vec[1] += 360;
 }
 
-float SnapToEights(float x)
+static float SnapToEights(float x)
 {
 	x *= 8.0;
 	if (x > 0.0)
@@ -1414,7 +1413,7 @@ float SnapToEights(float x)
 }
 
 
-void turret_blocked(edict_t *self, edict_t *other)
+static void turret_blocked(edict_t *self, edict_t *other)
 {
 	edict_t	*attacker;
 
@@ -1444,7 +1443,7 @@ Use "angle" to set the starting angle.
 "maxyaw"	max acceptable yaw angle   : default 360
 */
 
-void turret_breach_fire (edict_t *self)
+static void turret_breach_fire (edict_t *self)
 {
 	vec3_t	f, r, u;
 	vec3_t	start;
@@ -1462,7 +1461,7 @@ void turret_breach_fire (edict_t *self)
 	gi.positioned_sound (start, self, CHAN_WEAPON, gi.soundindex("weapons/rocklf1a.wav"), 1, ATTN_NORM, 0);
 }
 
-void turret_breach_think (edict_t *self)
+static void turret_breach_think (edict_t *self)
 {
 	edict_t	*ent;
 	vec3_t	current_angles;
@@ -1567,7 +1566,7 @@ void turret_breach_think (edict_t *self)
 	}
 }
 
-void turret_breach_finish_init (edict_t *self)
+static void turret_breach_finish_init (edict_t *self)
 {
 	// get and save info for muzzle location
 	if (!self->target)

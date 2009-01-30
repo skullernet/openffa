@@ -19,8 +19,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 #include "g_local.h"
 
-void Cmd_Stats_f( edict_t *ent, qboolean check_other );
-
 /*
 ======================================================================
 
@@ -31,7 +29,9 @@ INTERMISSION
 
 void MoveClientToIntermission (edict_t *ent)
 {
-	ent->client->showscores = qtrue;
+    PMenu_Close( ent );
+
+	ent->client->layout = LAYOUT_SCORES;
 	VectorCopy (level.intermission_origin, ent->s.origin);
 	ent->client->ps.pmove.origin[0] = level.intermission_origin[0]*8;
 	ent->client->ps.pmove.origin[1] = level.intermission_origin[1]*8;
@@ -65,8 +65,6 @@ void MoveClientToIntermission (edict_t *ent)
 	ent->solid = SOLID_NOT;
     ent->svflags = SVF_NOCLIENT;
     gi.unlinkentity( ent );
-
-    PMenu_Close( ent );
 
     if( PLAYER_SPAWNED( ent ) || ent->client->chase_target ) {
         Cmd_Stats_f( ent, qfalse );
@@ -367,14 +365,12 @@ Display the scoreboard
 ==================
 */
 void Cmd_Score_f (edict_t *ent) {
-    PMenu_Close( ent );
-
-	if (ent->client->showscores) {
-		ent->client->showscores = qfalse;
+	if (ent->client->layout == LAYOUT_SCORES) {
+		ent->client->layout = 0;
 		return;
 	}
 
-	ent->client->showscores = qtrue;
+	ent->client->layout = LAYOUT_SCORES;
 	DeathmatchScoreboard (ent);
 }
 
@@ -452,6 +448,13 @@ static qboolean visible (edict_t *self, edict_t *other, int mask) {
         if (trace.fraction == 1.0)
             return qtrue;
 
+        // entire move is inside water volume
+        if (trace.allsolid && (trace.contents & MASK_WATER)) {
+            mask &= ~MASK_WATER;
+            continue;
+        }
+
+        // hit transparent water
         if (trace.ent == world && trace.surface &&
             (trace.surface->flags & (SURF_TRANS33|SURF_TRANS66)))
         {
@@ -498,6 +501,12 @@ static edict_t *find_by_tracing( edict_t *ent ) {
     // find best player through tracing
     for (i = 0; i < 10; i++) {
         gi_trace (&tr, start, mins, maxs, forward, ignore, tracemask);
+
+        // entire move is inside water volume
+        if (tr.allsolid && (tr.contents & MASK_WATER)) {
+            tracemask &= ~MASK_WATER;
+            continue;
+        }
 
         // hit transparent water
         if (tr.ent == world && tr.surface &&
@@ -581,12 +590,8 @@ static edict_t *find_by_angles( edict_t *ent ) {
     return NULL;
 }
 
-static int G_GetPlayerIdView( edict_t *ent ) {
+int G_GetPlayerIdView( edict_t *ent ) {
     edict_t *target;
-
-    if( ent->client->pers.flags & CPF_NOVIEWID ) {
-        return 0;
-    }
 
     target = find_by_tracing( ent );
     if( !target ) {
@@ -733,7 +738,7 @@ void G_SetStats (edict_t *ent)
 	//
 	ent->client->ps.stats[STAT_LAYOUTS] = 0;
 
-    if (ent->client->health <= 0 || level.intermission_framenum || ent->client->showscores || ent->client->menu )
+    if (ent->client->health <= 0 || level.intermission_framenum || ent->client->layout )
         ent->client->ps.stats[STAT_LAYOUTS] |= 1;
 
 	//
@@ -779,7 +784,11 @@ void G_SetStats (edict_t *ent)
             ent->client->ps.stats[STAT_DELTA_STRING] = 0;
             ent->client->ps.stats[STAT_RANK_STRING] = 0;
         }
-        ent->client->ps.stats[STAT_VIEWID] = G_GetPlayerIdView( ent );
+        if( ent->client->pers.flags & CPF_NOVIEWID ) {
+            ent->client->ps.stats[STAT_VIEWID] = 0;
+        } else {
+            ent->client->ps.stats[STAT_VIEWID] = G_GetPlayerIdView( ent );
+        }
     }
 
 }

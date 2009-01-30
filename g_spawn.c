@@ -63,7 +63,6 @@ void SP_trigger_key (edict_t *ent);
 void SP_trigger_counter (edict_t *ent);
 void SP_trigger_elevator (edict_t *ent);
 void SP_trigger_gravity (edict_t *ent);
-void SP_trigger_monsterjump (edict_t *ent);
 
 void SP_target_temp_entity (edict_t *ent);
 void SP_target_speaker (edict_t *ent);
@@ -146,7 +145,6 @@ static const spawn_t	g_spawns[] = {
 	{"trigger_counter", SP_trigger_counter},
 	{"trigger_elevator", SP_trigger_elevator},
 	{"trigger_gravity", SP_trigger_gravity},
-	{"trigger_monsterjump", SP_trigger_monsterjump},
 
 	{"target_temp_entity", SP_target_temp_entity},
 	{"target_speaker", SP_target_speaker},
@@ -448,7 +446,7 @@ All but the first will have the FL_TEAMSLAVE flag set.
 All but the last will have the teamchain field set to the next one
 ================
 */
-void G_FindTeams (void)
+static void G_FindTeams (void)
 {
 	edict_t	*e, *e2, *chain;
 	int		i, j;
@@ -490,7 +488,7 @@ void G_FindTeams (void)
 	gi.dprintf ("%i teams with %i entities\n", c, c2);
 }
 
-void G_ParseString( void ) {
+static void G_ParseString( void ) {
     const char  *entities = level.entstring;
 	edict_t		*ent;
 	int			inhibit = 0;

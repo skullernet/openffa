@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 Fire an origin based temp entity event to the clients.
 "style"		type byte
 */
-void Use_Target_Tent (edict_t *ent, edict_t *other, edict_t *activator)
+static void Use_Target_Tent (edict_t *ent, edict_t *other, edict_t *activator)
 {
 	gi.WriteByte (svc_temp_entity);
 	gi.WriteByte (ent->style);
@@ -55,7 +55,7 @@ Normal sounds play each time the target is used.  The reliable flag can be set f
 Looped sounds are always atten 3 / vol 1, and the use function toggles it on/off.
 Multiple identical looping sounds will just increase volume without any speed cost.
 */
-void Use_Target_Speaker (edict_t *ent, edict_t *other, edict_t *activator)
+static void Use_Target_Speaker (edict_t *ent, edict_t *other, edict_t *activator)
 {
 	int		chan;
 
@@ -121,7 +121,7 @@ Spawns an explosion temporary entity when used.
 "delay"		wait this long before going off
 "dmg"		how much radius damage should be done, defaults to 0
 */
-void target_explosion_explode (edict_t *self)
+static void target_explosion_explode (edict_t *self)
 {
 	float		save;
 
@@ -138,7 +138,7 @@ void target_explosion_explode (edict_t *self)
 	self->delay = save;
 }
 
-void use_target_explosion (edict_t *self, edict_t *other, edict_t *activator)
+static void use_target_explosion (edict_t *self, edict_t *other, edict_t *activator)
 {
 	self->activator = activator;
 
@@ -164,7 +164,7 @@ void SP_target_explosion (edict_t *ent)
 /*QUAKED target_changelevel (1 0 0) (-8 -8 -8) (8 8 8)
 Changes level to "map" when fired
 */
-void use_target_changelevel (edict_t *self, edict_t *other, edict_t *activator)
+static void use_target_changelevel (edict_t *self, edict_t *other, edict_t *activator)
 {
 	if (level.intermission_framenum)
 		return;		// already activated
@@ -224,7 +224,7 @@ Set "sounds" to one of the following:
 		useful for lava/sparks
 */
 
-void use_target_splash (edict_t *self, edict_t *other, edict_t *activator)
+static void use_target_splash (edict_t *self, edict_t *other, edict_t *activator)
 {
 	gi.WriteByte (svc_temp_entity);
 	gi.WriteByte (TE_SPLASH);
@@ -266,7 +266,7 @@ For gibs:
 */
 void ED_CallSpawn (edict_t *ent);
 
-void use_target_spawner (edict_t *self, edict_t *other, edict_t *activator)
+static void use_target_spawner (edict_t *self, edict_t *other, edict_t *activator)
 {
 	edict_t	*ent;
 
@@ -302,7 +302,7 @@ dmg		default is 15
 speed	default is 1000
 */
 
-void use_target_blaster (edict_t *self, edict_t *other, edict_t *activator)
+static void use_target_blaster (edict_t *self, edict_t *other, edict_t *activator)
 {
 	int effect;
 
@@ -337,7 +337,7 @@ void SP_target_blaster (edict_t *self)
 /*QUAKED target_crosslevel_trigger (.5 .5 .5) (-8 -8 -8) (8 8 8) trigger1 trigger2 trigger3 trigger4 trigger5 trigger6 trigger7 trigger8
 Once this trigger is touched/used, any trigger_crosslevel_target with the same trigger number is automatically used when a level is started within the same unit.  It is OK to check multiple triggers.  Message, delay, target, and killtarget also work.
 */
-void trigger_crosslevel_trigger_use (edict_t *self, edict_t *other, edict_t *activator)
+static void trigger_crosslevel_trigger_use (edict_t *self, edict_t *other, edict_t *activator)
 {
 	game.serverflags |= self->spawnflags;
 	G_FreeEdict (self);
@@ -355,7 +355,7 @@ killtarget also work.
 
 "delay"		delay before using targets if the trigger has been activated (default 1)
 */
-void target_crosslevel_target_think (edict_t *self)
+static void target_crosslevel_target_think (edict_t *self)
 {
 	if (self->spawnflags == (game.serverflags & SFL_CROSS_TRIGGER_MASK & self->spawnflags))
 	{
@@ -381,7 +381,7 @@ When triggered, fires a laser.  You can either set a target
 or a direction.
 */
 
-void target_laser_think (edict_t *self)
+static void target_laser_think (edict_t *self)
 {
 	edict_t	*ignore;
 	vec3_t	start;
@@ -446,7 +446,7 @@ void target_laser_think (edict_t *self)
 	self->nextthink = level.framenum + 1;
 }
 
-void target_laser_on (edict_t *self)
+static void target_laser_on (edict_t *self)
 {
 	if (!self->activator)
 		self->activator = self;
@@ -455,14 +455,14 @@ void target_laser_on (edict_t *self)
 	target_laser_think (self);
 }
 
-void target_laser_off (edict_t *self)
+static void target_laser_off (edict_t *self)
 {
 	self->spawnflags &= ~1;
 	self->svflags |= SVF_NOCLIENT;
 	self->nextthink = 0;
 }
 
-void target_laser_use (edict_t *self, edict_t *other, edict_t *activator)
+static void target_laser_use (edict_t *self, edict_t *other, edict_t *activator)
 {
 	self->activator = activator;
 	if (self->spawnflags & 1)
@@ -471,7 +471,7 @@ void target_laser_use (edict_t *self, edict_t *other, edict_t *activator)
 		target_laser_on (self);
 }
 
-void target_laser_start (edict_t *self)
+static void target_laser_start (edict_t *self)
 {
 	edict_t *ent;
 
@@ -544,7 +544,7 @@ All players and monsters are affected.
 "count"		duration of the quake (default:5)
 */
 
-void target_earthquake_think (edict_t *self)
+static void target_earthquake_think (edict_t *self)
 {
 	int		i;
 	edict_t	*e;
@@ -574,7 +574,7 @@ void target_earthquake_think (edict_t *self)
 		self->nextthink = level.framenum + 1;
 }
 
-void target_earthquake_use (edict_t *self, edict_t *other, edict_t *activator)
+static void target_earthquake_use (edict_t *self, edict_t *other, edict_t *activator)
 {
 	self->timestamp = level.time + self->count;
 	self->nextthink = level.framenum + 1;

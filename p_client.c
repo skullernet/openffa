@@ -885,7 +885,7 @@ void InitBodyQue (void)
 	}
 }
 
-void body_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+static void body_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
 	int	n;
 
@@ -905,7 +905,7 @@ void body_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage,
 	}
 }
 
-void CopyToBodyQue (edict_t *ent)
+static void CopyToBodyQue (edict_t *ent)
 {
 	edict_t		*body;
 
@@ -1222,18 +1222,6 @@ void ClientBegin (edict_t *ent)
 
     memset( &ent->client->resp, 0, sizeof( ent->client->resp ) );
 
-    if( ent->client->level.flags & CLF_FIRST_TIME ) {
-        map_entry_t *map = G_FindMap( level.mapname );
-
-        // track map stats
-        if( map ) {
-            map->num_in++;
-        }
-        
-    	gi.bprintf (PRINT_HIGH, "%s connected\n", ent->client->pers.netname);
-        ent->client->level.flags &= ~CLF_FIRST_TIME;
-    }
-
 	ent->client->level.enter_framenum = level.framenum;
 
     if( ent->client->pers.flags & CPF_MVDSPEC ) {
@@ -1252,7 +1240,26 @@ void ClientBegin (edict_t *ent)
 
         G_WriteTime( remaining );
         gi.unicast( ent, qtrue );
-	}
+    }
+
+    if( ent->client->level.flags & CLF_FIRST_TIME ) {
+        map_entry_t *map = G_FindMap( level.mapname );
+
+        // track map stats
+        if( map ) {
+            map->num_in++;
+        }
+        
+    	gi.bprintf (PRINT_HIGH, "%s connected\n", ent->client->pers.netname);
+
+        // send login effect only to this client
+        gi.WriteByte (svc_muzzleflash);
+        gi.WriteShort (ent-g_edicts);
+        gi.WriteByte (MZ_LOGIN);
+        gi.unicast (ent, qfalse);
+
+        ent->client->level.flags &= ~CLF_FIRST_TIME;
+    }
 
 	// make sure all view stuff is valid
 	ClientEndServerFrame (ent);
