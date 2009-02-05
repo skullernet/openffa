@@ -756,26 +756,34 @@ static void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 }
 
 static void Cmd_Players_f( edict_t *ent ) {
-    edict_t *other;
     gclient_t *c;
-    int i, time, idle;
+    int i, time;
+    char score[16], idle[16];
 
     gi.cprintf( ent, PRINT_HIGH,
-        "id score ping time name            idle\n"
-        "-- ----- ---- ---- --------------- ----\n" );
+        "id score ping time name            idle %s\n"
+        "-- ----- ---- ---- --------------- ---- %s\n",
+        ( ent->client->pers.flags & CPF_ADMIN ) ? "address" : "",
+        ( ent->client->pers.flags & CPF_ADMIN ) ? "-------" : "" );
 
     for( i = 0; i < game.maxclients; i++ ) {
-        other = &g_edicts[ i + 1 ];
-		if( !( c = other->client ) ) {
-            continue;
-        }
+        c = &game.clients[i];
         if( c->pers.connected <= CONN_CONNECTED ) {
             continue;
         }
+        if( c->pers.connected == CONN_SPAWNED ) {
+            time = ( level.framenum - c->level.activity_framenum ) / HZ;
+            sprintf( score, "%d", c->resp.score );
+            sprintf( idle, "%d", time );
+        } else {
+            strcpy( score, "SPECT" );
+            strcpy( idle, "-" );
+        }
         time = ( level.framenum - c->level.enter_framenum ) / HZ;
-        idle = ( level.framenum - c->level.activity_framenum ) / HZ;
-        gi.cprintf( ent, PRINT_HIGH, "%2d %5d %4d %4d %-15s %4d\n",
-            i, c->resp.score, c->ping, time / 60, c->pers.netname, idle );
+        gi.cprintf( ent, PRINT_HIGH, "%2d %5s %4d %4d %-15s %4s %s\n",
+            i, score, c->ping, time / 60, c->pers.netname, idle,
+            ( ent->client->pers.flags & CPF_ADMIN ) ?
+            Info_ValueForKey( c->pers.userinfo, "ip" ) : "" );
     }
 }
 
