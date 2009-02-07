@@ -544,7 +544,6 @@ void G_SpawnEntities (const char *mapname, const char *entities, const char *spa
 	memset (g_edicts, 0, game.maxentities * sizeof (g_edicts[0]));
 
 	Q_strlcpy(level.mapname, mapname, sizeof(level.mapname));
-	Q_strlcpy(game.spawnpoint, spawnpoint, sizeof(game.spawnpoint));
 
     G_LoadScores();
 
@@ -552,7 +551,8 @@ void G_SpawnEntities (const char *mapname, const char *entities, const char *spa
 	for( i = 0; i < game.maxclients; i++ ) {
         ent = &g_edicts[i+1];
         client = &game.clients[i];
-		ent->client = client;
+        ent->client = client;
+        ent->inuse = qfalse;
 
         if( !client->pers.connected ) {
             continue;

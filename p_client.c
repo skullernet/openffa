@@ -551,7 +551,12 @@ void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
 		self->client->ps.pmove.pm_type = PM_DEAD;
 		ClientObituary (self, inflictor, attacker);
 		TossClientWeapon (self);
-		Cmd_Help_f (self);		// show scores
+
+        // show scores
+        if( !self->client->layout ) {
+            self->client->layout = LAYOUT_SCORES;
+    		DeathmatchScoreboardMessage (self, qfalse);
+        }
 
 		// clear inventory
 		// this is kind of ugly, but it's how we want to handle keys in coop
@@ -843,23 +848,15 @@ static void SelectSpawnPoint (edict_t *ent, vec3_t origin, vec3_t angles) {
 	// find a single player start spot
 	if (!spot) {
 		while ((spot = G_Find (spot, FOFS(classname), "info_player_start")) != NULL) {
-			if (!game.spawnpoint[0] && !spot->targetname)
-				break;
-
-			if (!game.spawnpoint[0] || !spot->targetname)
-				continue;
-
-			if (Q_stricmp(game.spawnpoint, spot->targetname) == 0)
+			if (!spot->targetname)
 				break;
 		}
 
 		if (!spot) {
-			if (!game.spawnpoint[0]) {
-                // there wasn't a spawnpoint without a target, so use any
-				spot = G_Find (spot, FOFS(classname), "info_player_start");
-			}
+            // there wasn't a spawnpoint without a target, so use any
+			spot = G_Find (spot, FOFS(classname), "info_player_start");
 			if (!spot) {
-				gi.dprintf ("Couldn't find spawn point %s\n", game.spawnpoint);
+				gi.dprintf ("Couldn't find spawn point!\n");
                 spot = world;
             }
 		}
@@ -1079,9 +1076,6 @@ void PutClientInServer (edict_t *ent)
 	client->inventory[ITEM_BLASTER] = 1;
 	client->weapon = INDEX_ITEM( ITEM_BLASTER );
 
-	client->health			= 100;
-	client->max_health		= 100;
-
 	client->max_bullets     = 200;
 	client->max_shells		= 100;
 	client->max_rockets     = 50;
@@ -1089,9 +1083,8 @@ void PutClientInServer (edict_t *ent)
 	client->max_cells		= 200;
 	client->max_slugs		= 50;
 
-	// copy some data from the client to the entity
-	ent->health = client->health;
-	ent->max_health = client->max_health;
+	ent->health             = 100;
+	ent->max_health         = 100;
 
 	// clear entity values
 	ent->groundentity = NULL;
@@ -1465,6 +1458,38 @@ static trace_t PM_trace( vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end ) {
 
 /*
 ==============
+G_TouchProjectiles
+
+An ugly hack that runs a trace against any FL_NOCLIP_PROJECTILE entities
+for clipping purposes against players. This assumes that the ent
+will be freed on touch or bad things will happen.
+==============
+*/
+static void G_TouchProjectiles (edict_t *ent, vec3_t start) {
+    edict_t *ignore;
+    trace_t tr;
+    int i;
+
+    ignore = ent;
+    for (i = 0; i < 10; i++) {
+        gi_trace (&tr, start, ent->mins, ent->maxs, ent->s.origin,
+            ignore, CONTENTS_MONSTER|CONTENTS_DEADMONSTER);
+        if (!tr.ent || tr.ent == world)
+            continue;
+        VectorCopy (tr.endpos, start);
+        ignore = tr.ent;
+
+        if (!(tr.ent->flags & FL_NOCLIP_PROJECTILE))
+            continue;
+
+        //gi.bprintf (PRINT_HIGH, "%s: ent %d touching ent %d\n",
+        //    __func__, ent->s.number, tr.ent->s.number);
+        tr.ent->touch (tr.ent, ent, NULL, NULL);
+    }
+}
+
+/*
+==============
 ClientThink
 
 This will be called once for each client frame, which will
@@ -1477,6 +1502,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 	edict_t	*other;
 	int		i, j;
 	pmove_t	pm;
+    vec3_t start;
 
 	level.current_entity = ent;
 	client = ent->client;
@@ -1518,6 +1544,8 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 
 		client->ps.pmove.gravity = sv_gravity->value;
 		pm.s = client->ps.pmove;
+
+        VectorCopy( ent->s.origin, start );
 
 		for (i=0 ; i<3 ; i++)
 		{
@@ -1578,21 +1606,26 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 
 		if (ent->movetype != MOVETYPE_NOCLIP) {
 		    gi.linkentity (ent);
-			G_TouchTriggers (ent);
-        }
 
-        // touch other objects
-        for (i=0 ; i<pm.numtouch ; i++)
-        {
-            other = pm.touchents[i];
-            for (j=0 ; j<i ; j++)
-                if (pm.touchents[j] == other)
-                    break;
-            if (j != i)
-                continue;	// duplicated
-            if (!other->touch)
-                continue;
-            other->touch (other, ent, NULL, NULL);
+            // touch trigger objects
+			G_TouchTriggers (ent);
+
+            // touch solid objects
+            for (i=0 ; i<pm.numtouch ; i++)
+            {
+                other = pm.touchents[i];
+                for (j=0 ; j<i ; j++)
+                    if (pm.touchents[j] == other)
+                        break;
+                if (j != i)
+                    continue;	// duplicated
+                if (!other->touch)
+                    continue;
+                other->touch (other, ent, NULL, NULL);
+            }
+
+            // touch non-solid projectiles
+			G_TouchProjectiles (ent, start);
         }
 	}
     

@@ -499,6 +499,7 @@ void	G_TouchTriggers (edict_t *ent)
 	}
 }
 
+#if 0
 /*
 ============
 G_TouchSolids
@@ -528,9 +529,7 @@ void	G_TouchSolids (edict_t *ent)
 			break;
 	}
 }
-
-
-
+#endif
 
 /*
 ==============================================================================

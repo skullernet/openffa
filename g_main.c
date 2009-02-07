@@ -131,8 +131,7 @@ void ClientEndServerFrames (void) {
 
         // if the scoreboard is up, update it
         if( c->layout == LAYOUT_SCORES && !( level.framenum & 31 ) ) {
-            DeathmatchScoreboardMessage( c->edict );
-            gi.unicast( c->edict, qfalse );
+            DeathmatchScoreboardMessage( c->edict, qfalse );
         }
 
         PMenu_Update( c->edict );
@@ -673,12 +672,10 @@ void G_RunFrame (void)
             delta /= 5 * HZ;
             if( level.numscores && ( delta & 1 ) ) {
                 HighScoresMessage();
-                gi.multicast( NULL, MULTICAST_ALL_R );
             } else {
                 for( i = 0, ent = &g_edicts[1]; i < game.maxclients; i++, ent++ ) {
                     if( ent->client->pers.connected > CONN_CONNECTED ) {
-                        DeathmatchScoreboardMessage( ent );
-                        gi.unicast( ent, qtrue );
+                        DeathmatchScoreboardMessage( ent, qtrue );
                     }
                 }
             }

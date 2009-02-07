@@ -95,6 +95,7 @@ typedef trace_t *(*trace_hacked_t)( trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, e
 #define	FL_TEAMSLAVE			0x00000400	// not the first on the team
 #define FL_NO_KNOCKBACK			0x00000800
 #define FL_POWER_ARMOR			0x00001000	// power armor (if any) is active
+#define FL_NOCLIP_PROJECTILE    0x00002000  // projectile hack
 #define FL_RESPAWN				0x80000000	// used for item respawning
 
 
@@ -339,9 +340,8 @@ typedef struct
 {
 	gclient_t	*clients;		// [maxclients]
 
-	// can't store spawnpoint in level, because
-	// it would get overwritten by the savegame restore
-	char		spawnpoint[512];	// needed for coop respawns
+    // scoreboard layout from previous level
+    char        oldscores[MAX_STRING_CHARS];
 
 	// store latched cvars here that we want to get at often
 	int			maxclients;
@@ -693,8 +693,6 @@ typedef struct
 //
 // g_cmds.c
 //
-void Cmd_Help_f (edict_t *ent);
-void Cmd_Score_f (edict_t *ent);
 void Cmd_Stats_f( edict_t *ent, qboolean check_other );
 edict_t *G_SetPlayer( edict_t *ent, int arg );
 void ValidateSelectedItem (edict_t *ent);
@@ -737,7 +735,7 @@ edict_t	*G_Spawn (void);
 void	G_FreeEdict (edict_t *e);
 
 void	G_TouchTriggers (edict_t *ent);
-void	G_TouchSolids (edict_t *ent);
+//void	G_TouchSolids (edict_t *ent);
 
 #define G_Malloc( x )   gi.TagMalloc( x, TAG_GAME )
 char	*G_CopyString (const char *in);
@@ -836,7 +834,7 @@ void G_PrivateString( edict_t *ent, int index, const char *string );
 int G_GetPlayerIdView( edict_t *ent );
 void G_SetStats (edict_t *ent);
 int G_CalcRanks( gclient_t **ranks ); 
-void DeathmatchScoreboardMessage (edict_t *client);
+void DeathmatchScoreboardMessage( edict_t *ent, qboolean reliable );
 void HighScoresMessage( void );
 
 //
@@ -948,6 +946,7 @@ typedef enum {
 typedef enum {
     LAYOUT_NONE,
     LAYOUT_SCORES,
+    LAYOUT_OLDSCORES,
     LAYOUT_MENU
 } layout_t;
 
@@ -1102,11 +1101,6 @@ struct gclient_s
 
 	edict_t		    *chase_target;		// player we are chasing
     chase_mode_t    chase_mode;
-
-	// values saved and restored from edicts when changing levels
-	int			health;
-	int			max_health;
-	int			savedFlags;
 
 	int			selected_item;
 	int			inventory[MAX_ITEMS];

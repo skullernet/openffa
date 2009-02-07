@@ -584,6 +584,8 @@ Cmd_Kill_f
 */
 static void Cmd_Kill_f (edict_t *ent)
 {
+    if (!PLAYER_SPAWNED (ent))
+        return;
 	if(level.framenum - ent->client->respawn_framenum < 5*HZ)
 		return;
 	ent->flags &= ~FL_GODMODE;
@@ -1294,6 +1296,40 @@ void Cmd_Menu_f( edict_t *ent ) {
     }
 }
 
+/*
+==================
+Cmd_Score_f
+
+Display the scoreboard
+==================
+*/
+static void Cmd_Score_f (edict_t *ent) {
+	if (ent->client->layout == LAYOUT_SCORES) {
+		ent->client->layout = 0;
+		return;
+	}
+
+	ent->client->layout = LAYOUT_SCORES;
+	DeathmatchScoreboardMessage (ent, qtrue);
+}
+
+static void Cmd_OldScore_f (edict_t *ent) {
+	if (ent->client->layout == LAYOUT_OLDSCORES) {
+		ent->client->layout = 0;
+		return;
+	}
+
+    if( !game.oldscores[0] ) {
+        gi.cprintf( ent, PRINT_HIGH, "There is no old scoreboard yet.\n" );
+        return;
+    }
+
+	ent->client->layout = LAYOUT_OLDSCORES;
+
+	gi.WriteByte (svc_layout);
+	gi.WriteString (game.oldscores);
+	gi.unicast (ent, qtrue);
+}
 
 /*
 =================
@@ -1343,10 +1379,11 @@ void ClientCommand (edict_t *ent)
 	if (level.intermission_framenum)
 		return;
 
-	if (Q_stricmp (cmd, "score") == 0)
+	if (Q_stricmp (cmd, "score") == 0 || Q_stricmp (cmd, "help") == 0)
 		Cmd_Score_f (ent);
-	else if (Q_stricmp (cmd, "help") == 0)
-		Cmd_Help_f (ent);
+    else if (Q_stricmp (cmd, "oldscore") == 0 || Q_stricmp (cmd, "oldscores") == 0 ||
+             Q_stricmp (cmd, "lastscore") == 0 || Q_stricmp (cmd, "lastscores") == 0)
+		Cmd_OldScore_f (ent);
 	else if (Q_stricmp (cmd, "use") == 0)
 		Cmd_Use_f (ent);
 	else if (Q_stricmp (cmd, "drop") == 0)
