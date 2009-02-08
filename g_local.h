@@ -463,6 +463,7 @@ typedef struct
         int     value;
         struct gclient_s    *victim;
         struct gclient_s    *initiator;
+        char    map[MAX_QPATH];
     } vote;
 
 	edict_t		*current_entity;	// entity running from G_RunFrame
@@ -611,6 +612,8 @@ extern  cvar_t	*g_vote_mask;
 extern  cvar_t	*g_vote_time;
 extern  cvar_t	*g_vote_treshold;
 extern  cvar_t	*g_vote_limit;
+extern  cvar_t  *g_vote_spectators;
+extern  cvar_t  *g_vote_announce;
 extern  cvar_t  *g_intermission_time;
 extern  cvar_t  *g_admin_password;
 extern  cvar_t	*g_item_ban;
@@ -618,6 +621,7 @@ extern  cvar_t	*g_maps_random;
 extern  cvar_t	*g_bugs;
 extern  cvar_t	*g_teleporter_nofreeze;
 extern  cvar_t  *g_spawn_mode;
+extern  cvar_t  *g_team_chat;
 extern	cvar_t	*dedicated;
 
 extern	cvar_t	*sv_gravity;

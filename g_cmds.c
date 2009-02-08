@@ -738,6 +738,11 @@ static void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
     }
     text[total] = 0;
 
+    if( team && (int)g_team_chat->value == 0 && PLAYER_SPAWNED( ent ) ) {
+		gi.cprintf(ent, PRINT_CHAT, "%s\n", text);
+        return;
+    }
+
 	if ((int)dedicated->value)
 		gi.cprintf(NULL, PRINT_CHAT, "%s\n", text);
 
@@ -748,7 +753,7 @@ static void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 			continue;
 		if (!other->client)
 			continue;
-		if (team) {
+		if (team && (int)g_team_chat->value < 2) {
             if( PLAYER_SPAWNED( ent ) != PLAYER_SPAWNED( other ) ) {
                 continue;
             }
@@ -1102,6 +1107,7 @@ static void Cmd_Settings_f( edict_t *ent ) {
         if( v & ITB_BFG ) {
             strcat( buffer, "bfg " );
         }
+        s = buffer;
     } else {
         s = "none";
     }
@@ -1438,9 +1444,9 @@ void ClientCommand (edict_t *ent)
 		Cmd_Id_f(ent);
 	else if (Q_stricmp(cmd, "vote") == 0 || Q_stricmp(cmd, "callvote") == 0)
 		Cmd_Vote_f(ent);
-	else if (Q_stricmp(cmd, "yes") == 0)
+	else if (Q_stricmp(cmd, "yes") == 0 && level.vote.proposal)
 		Cmd_CastVote_f(ent, qtrue);
-	else if (Q_stricmp(cmd, "no") == 0)
+	else if (Q_stricmp(cmd, "no") == 0 && level.vote.proposal)
 		Cmd_CastVote_f(ent, qfalse);
 	else if (Q_stricmp(cmd, "admin") == 0 || Q_stricmp(cmd, "referee") == 0)
 		Cmd_Admin_f(ent);

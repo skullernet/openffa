@@ -362,7 +362,7 @@ static void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker
                 if( !ent->inuse ) {
                     continue;
                 }
-                if( ent->client->pers.connected < CONN_CONNECTED ) {
+                if( ent->client->pers.connected <= CONN_CONNECTED ) {
                     continue;
                 }
                 name = self->client->pers.netname;
@@ -410,6 +410,8 @@ void G_BeginDamage( void ) {
     damaging = 1;
 }
 
+// called from T_Damage only when attacker and target are
+// different players, and inflictor is a real entity (not world)
 void G_AccountDamage( edict_t *targ, edict_t *inflictor, edict_t *attacker, int points ) {
     int weapon;
 
@@ -1054,6 +1056,7 @@ void PutClientInServer (edict_t *ent)
         VectorScale( client->ps.pmove.origin, 0.125f, spawn_origin );
         VectorCopy( client->ps.viewangles, spawn_angles );
     } else {
+        ent->health = 0;
     	SelectSpawnPoint (ent, spawn_origin, spawn_angles);
     }
 

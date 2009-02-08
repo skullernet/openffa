@@ -72,23 +72,17 @@ static void PMenu_Write(edict_t *ent) {
 	gi.WriteString (string);
 }
 
-
-// Note that the pmenu entries are duplicated
-// this is so that a static set of pmenu entries can be used
-// for multiple clients and changed without interference
-// note that arg will be freed when the menu is closed, it must be allocated memory
 void PMenu_Open( edict_t *ent, const pmenu_entry_t *entries ) {
 	pmenu_t *menu = &ent->client->menu;
 	const pmenu_entry_t *p;
 	int i;
 
-	if (!ent->client)
-		return;
-
-	for (i = 0; i < MAX_MENU_ENTRIES; i++ ) {
-        menu->entries[i].select = entries[i].select;
-        menu->entries[i].align = entries[i].align;
-		menu->entries[i].text = entries[i].text;
+    if( entries ) {
+        for (i = 0; i < MAX_MENU_ENTRIES; i++ ) {
+            menu->entries[i].select = entries[i].select;
+            menu->entries[i].align = entries[i].align;
+            menu->entries[i].text = entries[i].text;
+        }
     }
 
 	menu->cur = -1;

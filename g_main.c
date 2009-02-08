@@ -46,6 +46,8 @@ cvar_t  *g_vote_mask;
 cvar_t  *g_vote_time;
 cvar_t  *g_vote_treshold;
 cvar_t  *g_vote_limit;
+cvar_t  *g_vote_spectators;
+cvar_t  *g_vote_announce;
 cvar_t  *g_intermission_time;
 cvar_t  *g_admin_password;
 cvar_t  *g_maps_random;
@@ -54,6 +56,7 @@ cvar_t  *g_item_ban;
 cvar_t  *g_bugs;
 cvar_t  *g_teleporter_nofreeze;
 cvar_t  *g_spawn_mode;
+cvar_t  *g_team_chat;
 cvar_t  *dedicated;
 
 cvar_t  *sv_maxvelocity;
@@ -660,7 +663,7 @@ void G_RunFrame (void)
     } else if( level.intermission_framenum ) {
         delta = level.framenum - level.intermission_framenum;
         if( delta == 1*HZ ) {
-            if( rand_byte() & 1 ) {
+            if( rand_byte() > 127 ) {
                 G_StartSound( level.sounds.xian );
             } else {
                 G_StartSound( level.sounds.makron );
@@ -792,7 +795,9 @@ static void G_Init (void) {
     g_vote_mask = gi.cvar ("g_vote_mask", "0", 0);
     g_vote_time = gi.cvar ("g_vote_time", "120", 0);
     g_vote_treshold = gi.cvar ("g_vote_treshold", "50", 0);
-    g_vote_limit = gi.cvar ("g_vote_limit", "0", 0);
+    g_vote_limit = gi.cvar ("g_vote_limit", "3", 0);
+    g_vote_spectators = gi.cvar ("g_vote_spectators", "0", 0);
+    g_vote_announce = gi.cvar ("g_vote_announce", "1", 0);
     g_intermission_time = gi.cvar ("g_intermission_time", "7", 0);
     g_admin_password = gi.cvar ("g_admin_password", "", 0);
     g_maps_random = gi.cvar ("g_maps_random", "1", 0);
@@ -801,6 +806,7 @@ static void G_Init (void) {
     g_bugs = gi.cvar ("g_bugs", "0", 0);
     g_teleporter_nofreeze = gi.cvar ("g_teleporter_nofreeze", "0", 0);
     g_spawn_mode = gi.cvar ("g_spawn_mode", "1", 0);
+    g_team_chat = gi.cvar ("g_team_chat", "0", 0);
 
     run_pitch = gi.cvar ("run_pitch", "0.002", 0);
     run_roll = gi.cvar ("run_roll", "0.005", 0);
