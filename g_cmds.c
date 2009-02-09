@@ -110,7 +110,10 @@ void ValidateSelectedItem (edict_t *ent)
 //=================================================================================
 
 static qboolean CheckCheats( edict_t *ent ) {
-	if( !sv_cheats->value ) {
+    if( !PLAYER_SPAWNED( ent ) ) {
+        return qfalse;
+    }
+	if( (int)sv_cheats->value == 0 ) {
 		gi.cprintf( ent, PRINT_HIGH, "Cheats are disabled on this server.\n" );
 		return qfalse;
 	}
@@ -1127,9 +1130,9 @@ static void Cmd_Settings_f( edict_t *ent ) {
 
 	if( DF( SPAWN_FARTHEST ) ) {
         s = "farthest";
-    } else if( g_spawn_mode->value == 0 ) {
+    } else if( (int)g_spawn_mode->value == 0 ) {
         s = "avoid closest (bugged)";
-    } else if( g_spawn_mode->value == 1 ) {
+    } else if( (int)g_spawn_mode->value == 1 ) {
         s = "avoid closest";
     } else {
         s = "random";
@@ -1153,6 +1156,11 @@ static void Cmd_Admin_f( edict_t *ent ) {
     p = gi.argv( 1 );
     if( !g_admin_password->string[0] || strcmp( g_admin_password->string, p ) ) {
         gi.cprintf( ent, PRINT_HIGH, "Bad admin password.\n" );
+        if( (int)dedicated->value ) {
+            gi.dprintf( "%s[%s] failed to become an admin.\n",
+                ent->client->pers.netname, Info_ValueForKey(
+                    ent->client->pers.userinfo, "ip" ) );
+        }
         return;
     }
 
@@ -1170,11 +1178,12 @@ static void Cmd_Commands_f( edict_t *ent ) {
         "observe    Leave the game"
         "chase      Enter chasecam mode"
         "settings   Show match settings"
+        "oldscore   Show previous scoreboard"
         "vote       Propose new settings"
         "stats      Show accuracy stats"
         "players    Show players on server"
         "highscores Show the best results on map"
-        "id         Toggle player ID dispaly"
+        "id         Toggle player ID display"
         );
 }
 
@@ -1381,6 +1390,18 @@ void ClientCommand (edict_t *ent)
 		Cmd_Settings_f (ent);
         return;
     }
+	if (Q_stricmp(cmd, "admin") == 0 || Q_stricmp(cmd, "referee") == 0) {
+		Cmd_Admin_f(ent);
+        return;
+    }
+	if (Q_stricmp(cmd, "commands") == 0) {
+		Cmd_Commands_f(ent);
+        return;
+    }
+	if (Q_stricmp(cmd, "id") == 0) {
+		Cmd_Id_f(ent);
+        return;
+    }
 
 	if (level.intermission_framenum)
 		return;
@@ -1440,18 +1461,12 @@ void ClientCommand (edict_t *ent)
 		Cmd_Chase_f(ent);
 	else if (Q_stricmp(cmd, "join") == 0)
 		Cmd_Join_f(ent);
-	else if (Q_stricmp(cmd, "id") == 0)
-		Cmd_Id_f(ent);
 	else if (Q_stricmp(cmd, "vote") == 0 || Q_stricmp(cmd, "callvote") == 0)
 		Cmd_Vote_f(ent);
 	else if (Q_stricmp(cmd, "yes") == 0 && level.vote.proposal)
 		Cmd_CastVote_f(ent, qtrue);
 	else if (Q_stricmp(cmd, "no") == 0 && level.vote.proposal)
 		Cmd_CastVote_f(ent, qfalse);
-	else if (Q_stricmp(cmd, "admin") == 0 || Q_stricmp(cmd, "referee") == 0)
-		Cmd_Admin_f(ent);
-	else if (Q_stricmp(cmd, "commands") == 0)
-		Cmd_Commands_f(ent);
 	else if (Q_stricmp(cmd, "menu") == 0)
 		Cmd_Menu_f(ent);
 	else	// anything that doesn't match a command will be a chat

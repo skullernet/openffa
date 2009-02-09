@@ -823,10 +823,10 @@ static edict_t *SelectDeathmatchSpawnPoint (void) {
     }
 
     if( level.numspawns > 2 ) {
-        if( g_spawn_mode->value == 0 ) {
+        if( (int)g_spawn_mode->value == 0 ) {
             return SelectRandomDeathmatchSpawnPointAvoidingTwoClosestBugged();
         }
-        if( g_spawn_mode->value == 1 ) {
+        if( (int)g_spawn_mode->value == 1 ) {
             return SelectRandomDeathmatchSpawnPointAvoidingTwoClosest();
         }
     }

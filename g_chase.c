@@ -127,9 +127,9 @@ static void UpdateChaseCam( gclient_t *client ) {
     	client->ps.fov = client->pers.fov;
     }
 	client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
-	if( targ->deadflag ) {
+	/*if( targ->deadflag ) {
 		client->ps.pmove.pm_type = PM_DEAD;
-    } else {
+    } else*/ {
 		client->ps.pmove.pm_type = PM_FREEZE;
     }
 
