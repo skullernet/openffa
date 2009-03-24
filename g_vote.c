@@ -448,7 +448,10 @@ void Cmd_Vote_f( edict_t *ent ) {
 //
 // proposals
 //
-    if( (int)g_vote_spectators->value == 0 && !PLAYER_SPAWNED( ent ) ) {
+    if( !(int)g_vote_spectators->value &&
+        !PLAYER_SPAWNED( ent ) &&
+        !( ent->client->pers.flags & CPF_ADMIN ) )
+    {
         gi.cprintf( ent, PRINT_HIGH, "Spectators can't vote on this server.\n" );
         return;
     }
@@ -489,7 +492,30 @@ void Cmd_Vote_f( edict_t *ent ) {
     }
 
     if( argc < 3 ) {
-        gi.cprintf( ent, PRINT_HIGH, "Argument required for '%s'. Type '%s help' for usage.\n", v->name, gi.argv( 0 ) );
+        if( v->bit == VOTE_MAP ) {
+            map_entry_t *map;
+            char buffer[MAX_STRING_CHARS];
+            size_t total, len;
+
+            total = 0;
+            LIST_FOR_EACH( map_entry_t, map, &g_map_list, list ) {
+                if( map->flags & MAP_NOVOTE ) {
+                    continue;
+                }
+                len = strlen( map->name );
+                if( total + len + 2 >= sizeof( buffer ) ) {
+                    break;
+                }
+                memcpy( buffer + total, map->name, len );
+                buffer[total + len    ] = ',';
+                buffer[total + len + 1] = ' ';
+                total += len + 2;
+            }
+            buffer[total] = 0;
+            gi.cprintf( ent, PRINT_HIGH, "Available maplist: %s\n", buffer );
+        } else {
+            gi.cprintf( ent, PRINT_HIGH, "Argument required for '%s'. Type '%s help' for usage.\n", v->name, gi.argv( 0 ) );
+        }
         return;
     }
 

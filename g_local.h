@@ -649,6 +649,8 @@ extern	cvar_t	*flood_waves;
 extern	cvar_t	*flood_perwave;
 extern	cvar_t	*flood_wavedelay;
 
+extern  list_t  g_map_list;
+
 //extern  cvar_t  *sv_features;
 
 #define world	(&g_edicts[0])

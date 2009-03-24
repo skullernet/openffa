@@ -752,13 +752,7 @@ void G_SetStats (edict_t *ent)
     else
         ent->client->ps.stats[STAT_HELPICON] = 0;
 
-    if( ent->client->pers.connected == CONN_PREGAME ) {
-        ent->client->ps.stats[STAT_SPECTATOR] = CS_PREGAME;
-    } else if( ent->client->pers.connected == CONN_SPECTATOR ) {
-        ent->client->ps.stats[STAT_SPECTATOR] = CS_SPECMODE;
-    } else {
-        ent->client->ps.stats[STAT_SPECTATOR] = 0;
-    }
+    ent->client->ps.stats[STAT_SPECTATOR] = 0;
     ent->client->ps.stats[STAT_CHASE] = 0;
 
     if( level.intermission_framenum ) {
@@ -781,6 +775,11 @@ void G_SetStats (edict_t *ent)
             ent->client->ps.stats[STAT_FRAGS_STRING] = CS_OBSERVE;
             ent->client->ps.stats[STAT_DELTA_STRING] = 0;
             ent->client->ps.stats[STAT_RANK_STRING] = 0;
+            if( ent->client->pers.connected == CONN_SPECTATOR ) {
+                ent->client->ps.stats[STAT_SPECTATOR] = CS_SPECMODE;
+            } else {
+                ent->client->ps.stats[STAT_SPECTATOR] = CS_PREGAME;
+            }
         }
         if( ent->client->pers.flags & CPF_NOVIEWID ) {
             ent->client->ps.stats[STAT_VIEWID] = 0;

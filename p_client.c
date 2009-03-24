@@ -1416,8 +1416,6 @@ void ClientDisconnect (edict_t *ent)
 
     PMenu_Close( ent );
 
-    G_CheckVote();
-
     if( connected > CONN_CONNECTED ) {
         map_entry_t *map = G_FindMap( level.mapname );
 
@@ -1437,8 +1435,12 @@ void ClientDisconnect (edict_t *ent)
 	ent->classname = "disconnected";
     ent->svflags = SVF_NOCLIENT;
 
+    // FIXME: don't break skins on corpses, etc
 	//playernum = ent-g_edicts-1;
 	//gi.configstring (CS_PLAYERSKINS+playernum, "");
+
+    // check vote after this client has been completely disconnected
+    G_CheckVote();
 }
 
 

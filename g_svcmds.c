@@ -20,8 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "g_local.h"
 
-extern list_t g_map_list;
-
 static void Svcmd_Test_f( void ) {
 	gi.cprintf (NULL, PRINT_HIGH, "Svcmd_Test_f()\n");
 }
@@ -46,11 +44,13 @@ static void Svcmd_MapList_f( void ) {
         return;
     }
 
-    Com_Printf( "map             min max flg hits   in  out\n"
-                "--------------- --- --- --- ---- ---- ----\n" );
+    Com_Printf( "map             min max fl hits   in  out\n"
+                "--------------- --- --- -- ---- ---- ----\n" );
     LIST_FOR_EACH( map_entry_t, map, &g_map_list, list ) {
-        Com_Printf( "%-15.15s %3d %3d %3d %4d %4d %4d\n",
-            map->name, map->min_players, map->max_players, map->flags,
+        Com_Printf( "%-15.15s %3d %3d %c%c %4d %4d %4d\n",
+            map->name, map->min_players, map->max_players,
+            ( map->flags & MAP_NOAUTO ) ? ' ' : 'A',
+            ( map->flags & MAP_NOVOTE ) ? ' ' : 'V',
             map->num_hits, map->num_in, map->num_out );
     }
 }
