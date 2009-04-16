@@ -1173,17 +1173,17 @@ static void Cmd_Admin_f( edict_t *ent ) {
 
 static void Cmd_Commands_f( edict_t *ent ) {
     gi.cprintf( ent, PRINT_HIGH,
-        "menu       Show OpenFFA menu"
-        "join       Enter the game"
-        "observe    Leave the game"
-        "chase      Enter chasecam mode"
-        "settings   Show match settings"
-        "oldscore   Show previous scoreboard"
-        "vote       Propose new settings"
-        "stats      Show accuracy stats"
-        "players    Show players on server"
-        "highscores Show the best results on map"
-        "id         Toggle player ID display"
+        "menu       Show OpenFFA menu\n"
+        "join       Enter the game\n"
+        "observe    Leave the game\n"
+        "chase      Enter chasecam mode\n"
+        "settings   Show match settings\n"
+        "oldscore   Show previous scoreboard\n"
+        "vote       Propose new settings\n"
+        "stats      Show accuracy stats\n"
+        "players    Show players on server\n"
+        "highscores Show the best results on map\n"
+        "id         Toggle player ID display\n"
         );
 }
 

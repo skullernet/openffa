@@ -20,10 +20,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "g_local.h"
 
-game_locals_t    game;
-level_locals_t    level;
-game_import_t    gi;
-game_export_t    globals;
+game_locals_t   game;
+level_locals_t  level;
+game_import_t   gi;
+game_export_t   globals;
 spawn_temp_t    st;
 
 int meansOfDeath;
@@ -732,7 +732,7 @@ static void G_Shutdown (void) {
     gi.cvar_forceset( "g_features", "0" );
 
     List_Init( &g_map_list );
-    List_Init( &g_map_list );
+    List_Init( &g_map_queue );
 }
 
 
