@@ -503,6 +503,8 @@ static void SV_Physics_Noclip (edict_t *ent)
 // regular thinking
 	if (!SV_RunThink (ent))
 		return;
+    if (!ent->inuse)
+        return;
 	
 	VectorMA (ent->s.angles, FRAMETIME, ent->avelocity, ent->s.angles);
 	VectorMA (ent->s.origin, FRAMETIME, ent->velocity, ent->s.origin);
@@ -537,6 +539,8 @@ static void SV_Physics_Toss (edict_t *ent)
 
 // regular thinking
 	SV_RunThink (ent);
+    if (!ent->inuse)
+        return;
 
 	// if not a team captain, so movement will be handled elsewhere
 	if ( ent->flags & FL_TEAMSLAVE)
