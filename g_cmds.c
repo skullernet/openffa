@@ -616,7 +616,7 @@ static qboolean G_FloodProtect( edict_t *ent, flood_t *flood,
     }
 
     if( level.framenum < flood->locktill ) {
-        gi.cprintf( ent, PRINT_HIGH, "You can't %s for %d more seconds\n",
+        gi.cprintf( ent, PRINT_HIGH, "You can't %s for %d more seconds.\n",
             what, ( flood->locktill - level.framenum ) / HZ );
         return qtrue;
     }
@@ -696,25 +696,82 @@ static void Cmd_Wave_f (edict_t *ent)
 	}
 }
 
+#define MAX_CHAT   150
+
+typedef enum {
+    CHAT_MISC,
+    CHAT_ALL,
+    CHAT_TEAM
+} chat_t;
+
+static size_t build_chat( const char *name, chat_t chat, char *buffer ) {
+    size_t len, total;
+    int i, start = 1;
+    char *p;
+
+    switch( chat ) {
+    case CHAT_TEAM:
+        total = Q_scnprintf (buffer, MAX_CHAT, "(%s): ", name);
+        break;
+    case CHAT_MISC:
+        start = 0;
+        // fall through
+    default:
+        total = Q_scnprintf (buffer, MAX_CHAT, "%s: ", name);
+        break;
+    }
+
+    for (i = start; i < gi.argc(); i++) {
+        p = gi.argv (i);
+        len = strlen (p);
+        if (!len)
+            continue;
+        if (total + len + 1 >= MAX_CHAT)
+            break;
+        memcpy (buffer + total, p, len);
+        buffer[total + len] = ' ';
+        total += len + 1;
+    }
+    buffer[total] = 0;
+
+    return total;
+}
+
 /*
 ==================
 Cmd_Say_f
 ==================
 */
-static void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
+static void Cmd_Say_f (edict_t *ent, chat_t chat)
 {
 	int		i;
 	edict_t	*other;
-	char	text[150], *p;
+	char	text[MAX_CHAT];
 	gclient_t *cl = ent->client;
-    size_t len, total;
 
-	if (gi.argc () < 2 && !arg0)
+	if (gi.argc () < 2 && chat != CHAT_MISC)
 		return;
 
-    if( cl->level.flags & CLF_MUTED ) {
-		gi.cprintf(ent, PRINT_HIGH, "You have been muted by vote.\n" );
+    // don't flood protect team chat to self
+    if( chat == CHAT_TEAM && (int)g_team_chat->value == 0 && PLAYER_SPAWNED( ent ) ) {
+        build_chat( cl->pers.netname, chat, text );
+		gi.cprintf(ent, PRINT_CHAT, "%s\n", text);
         return;
+    }
+
+    // stop flood during the match
+    if( !( cl->pers.flags & CPF_ADMIN ) && !level.intermission_framenum ) {
+        if( cl->level.flags & CLF_MUTED ) {
+            gi.cprintf(ent, PRINT_HIGH, "You have been muted by vote.\n" );
+            return;
+        }
+        if( (int)g_mute_chat->value ) {
+            if( PLAYER_SPAWNED( ent ) || (int)g_mute_chat->value > 1 ) {
+                gi.cprintf(ent, PRINT_HIGH, "You can't talk during the match.\n" );
+                return;
+            }
+            chat = CHAT_TEAM;
+        }
     }
 
     if( G_FloodProtect( ent, &cl->chat_flood, "talk",
@@ -723,28 +780,7 @@ static void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
         return;
     }
 
-	if (team)
-		total = Q_scnprintf (text, sizeof(text), "(%s): ", cl->pers.netname);
-	else
-		total = Q_scnprintf (text, sizeof(text), "%s: ", cl->pers.netname);
-
-    for (i = arg0 ? 0 : 1; i < gi.argc(); i++) {
-        p = gi.argv (i);
-        len = strlen (p);
-        if (!len)
-            continue;
-        if (total + len + 1 >= sizeof (text))
-            break;
-        memcpy (text + total, p, len);
-        text[total + len] = ' ';
-        total += len + 1;
-    }
-    text[total] = 0;
-
-    if( team && (int)g_team_chat->value == 0 && PLAYER_SPAWNED( ent ) ) {
-		gi.cprintf(ent, PRINT_CHAT, "%s\n", text);
-        return;
-    }
+    build_chat( cl->pers.netname, chat, text );
 
 	if ((int)dedicated->value)
 		gi.cprintf(NULL, PRINT_CHAT, "%s\n", text);
@@ -756,10 +792,8 @@ static void Cmd_Say_f (edict_t *ent, qboolean team, qboolean arg0)
 			continue;
 		if (!other->client)
 			continue;
-		if (team && (int)g_team_chat->value < 2) {
-            if( PLAYER_SPAWNED( ent ) != PLAYER_SPAWNED( other ) ) {
-                continue;
-            }
+		if (chat == CHAT_TEAM && PLAYER_SPAWNED( ent ) != PLAYER_SPAWNED( other ) ) {
+            continue;
 		}
 		gi.cprintf(other, PRINT_CHAT, "%s\n", text);
 	}
@@ -1367,11 +1401,11 @@ void ClientCommand (edict_t *ent)
 	cmd = gi.argv(0);
 
 	if (Q_stricmp (cmd, "say") == 0) {
-		Cmd_Say_f (ent, qfalse, qfalse);
+		Cmd_Say_f (ent, CHAT_ALL);
 		return;
 	}
 	if (Q_stricmp (cmd, "say_team") == 0) {
-		Cmd_Say_f (ent, qtrue, qfalse);
+		Cmd_Say_f (ent, CHAT_TEAM);
 		return;
 	}
 	if (Q_stricmp (cmd, "players") == 0 || Q_stricmp (cmd, "playerlist") == 0) {
@@ -1470,6 +1504,6 @@ void ClientCommand (edict_t *ent)
 	else if (Q_stricmp(cmd, "menu") == 0)
 		Cmd_Menu_f(ent);
 	else	// anything that doesn't match a command will be a chat
-		Cmd_Say_f (ent, qfalse, qtrue);
+		Cmd_Say_f (ent, CHAT_MISC);
 }
 

@@ -57,6 +57,7 @@ cvar_t  *g_bugs;
 cvar_t  *g_teleporter_nofreeze;
 cvar_t  *g_spawn_mode;
 cvar_t  *g_team_chat;
+cvar_t  *g_mute_chat;
 cvar_t  *dedicated;
 
 cvar_t  *sv_maxvelocity;
@@ -86,7 +87,7 @@ cvar_t  *flood_perwave;
 cvar_t  *flood_wavedelay;
 
 LIST_DECL( g_map_list );
-static LIST_DECL( g_map_queue );
+LIST_DECL( g_map_queue );
 
 //cvar_t  *sv_features;
 
@@ -661,6 +662,10 @@ void G_RunFrame (void)
             G_ResetLevel(); // in case gamemap failed, reset the level
         }
     } else if( level.intermission_framenum ) {
+        int exit_delta = g_intermission_time->value*HZ;
+
+        clamp( exit_delta, 50, 1200 );
+
         delta = level.framenum - level.intermission_framenum;
         if( delta == 1*HZ ) {
             if( rand_byte() > 127 ) {
@@ -668,9 +673,8 @@ void G_RunFrame (void)
             } else {
                 G_StartSound( level.sounds.makron );
             }
-        } else if( delta == 1200*HZ ) {
-            // auto exit intermission after 20 minutes
-            G_ExitLevel();
+        } else if( delta == exit_delta ) {
+	    	G_ExitLevel();
         } else if( delta % ( 5 * HZ ) == 0 ) {
             delta /= 5 * HZ;
             if( level.numscores && ( delta & 1 ) ) {
@@ -798,7 +802,7 @@ static void G_Init (void) {
     g_vote_limit = gi.cvar ("g_vote_limit", "3", 0);
     g_vote_spectators = gi.cvar ("g_vote_spectators", "0", 0);
     g_vote_announce = gi.cvar ("g_vote_announce", "1", 0);
-    g_intermission_time = gi.cvar ("g_intermission_time", "7", 0);
+    g_intermission_time = gi.cvar ("g_intermission_time", "10", 0);
     g_admin_password = gi.cvar ("g_admin_password", "", 0);
     g_maps_random = gi.cvar ("g_maps_random", "1", 0);
     g_maps_file = gi.cvar ("g_maps_file", "", CVAR_LATCH);
@@ -807,6 +811,7 @@ static void G_Init (void) {
     g_teleporter_nofreeze = gi.cvar ("g_teleporter_nofreeze", "0", 0);
     g_spawn_mode = gi.cvar ("g_spawn_mode", "1", 0);
     g_team_chat = gi.cvar ("g_team_chat", "0", 0);
+    g_mute_chat = gi.cvar ("g_mute_chat", "0", 0);
 
     run_pitch = gi.cvar ("run_pitch", "0.002", 0);
     run_roll = gi.cvar ("run_roll", "0.005", 0);

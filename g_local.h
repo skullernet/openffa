@@ -378,7 +378,6 @@ typedef struct {
 
 //
 // this structure is cleared as each map is entered
-// it is read/written to the level.sav file for savegames
 //
 typedef struct
 {
@@ -622,6 +621,7 @@ extern  cvar_t	*g_bugs;
 extern  cvar_t	*g_teleporter_nofreeze;
 extern  cvar_t  *g_spawn_mode;
 extern  cvar_t  *g_team_chat;
+extern  cvar_t  *g_mute_chat;
 extern	cvar_t	*dedicated;
 
 extern	cvar_t	*sv_gravity;
@@ -650,6 +650,7 @@ extern	cvar_t	*flood_perwave;
 extern	cvar_t	*flood_wavedelay;
 
 extern  list_t  g_map_list;
+extern  list_t  g_map_queue;
 
 //extern  cvar_t  *sv_features;
 

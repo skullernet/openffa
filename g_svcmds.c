@@ -55,6 +55,26 @@ static void Svcmd_MapList_f( void ) {
     }
 }
 
+static void Svcmd_MapQueue_f( void ) {
+    map_entry_t *map;
+    int total;
+
+    if( LIST_EMPTY( &g_map_queue ) ) {
+        Com_Printf( "Map queue is empty\n" );
+        return;
+    }
+
+    total = G_CalcRanks( NULL );
+
+    Com_Printf( "map             min max\n"
+                "--------------- --- ---\n" );
+    LIST_FOR_EACH( map_entry_t, map, &g_map_queue, queue ) {
+        Com_Printf( "%-15.15s %3d %3d %s\n",
+            map->name, map->min_players, map->max_players,
+            ( total >= map->min_players && total <= map->max_players ) ? "*" : "" );
+    }
+}
+
 /*
 =================
 ServerCommand
@@ -81,6 +101,8 @@ void G_ServerCommand (void) {
 		Svcmd_NextMap_f ();
     else if (!strcmp (cmd, "maplist"))
 		Svcmd_MapList_f ();
+    else if (!strcmp (cmd, "mapqueue"))
+		Svcmd_MapQueue_f ();
 	else
 		Com_Printf( "Unknown server command \"%s\"\n", cmd);
 }
