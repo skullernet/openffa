@@ -753,7 +753,7 @@ static void G_Init (void) {
     cvar_t *cv;
     size_t len;
 
-    srand( time( NULL ) );
+    //srand( time( NULL ) );
 
     gi.dprintf ("==== InitGame ====\n");
 
@@ -773,8 +773,10 @@ static void G_Init (void) {
     // latched vars
     sv_cheats = gi.cvar ("cheats", "0", CVAR_SERVERINFO|CVAR_LATCH);
     sv_hostname = gi.cvar ("hostname", NULL, 0);
-    gi.cvar ("gamename", GAMEVERSION , CVAR_SERVERINFO | CVAR_LATCH);
-    gi.cvar ("gamedate", __DATE__ , CVAR_SERVERINFO | CVAR_LATCH);
+    gi.cvar ("gamename", GAMEVERSION, CVAR_SERVERINFO);
+    gi.cvar_set ("gamename", GAMEVERSION);
+    gi.cvar ("gamedate", __DATE__, CVAR_SERVERINFO);
+    gi.cvar_set ("gamedate", __DATE__);
 
     maxclients = gi.cvar ("maxclients", "4", CVAR_SERVERINFO | CVAR_LATCH);
 #if USE_MIDAIR
