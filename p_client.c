@@ -160,6 +160,7 @@ static void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker
     edict_t     *ent;
     char        buffer[MAX_NETNAME];
     int         i;
+    int         level;
 
     ff = meansOfDeath & MOD_FRIENDLY_FIRE;
     mod = meansOfDeath & ~MOD_FRIENDLY_FIRE;
@@ -267,11 +268,13 @@ static void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker
                 continue;
             }
             name = self->client->pers.netname;
+            level = PRINT_MEDIUM;
             if( G_IsSameView( ent, self ) ) {
                 Q_HighlightStr( buffer, name, MAX_NETNAME );
                 name = buffer;
+                level = PRINT_HIGH;
             }
-            gi.cprintf( ent, PRINT_MEDIUM, "%s %s.\n", name, message );
+            gi.cprintf( ent, level, "%s %s.\n", name, message );
         }
         if( dedicated->value ) {
             gi.dprintf( "%s %s.\n", self->client->pers.netname, message );
@@ -367,14 +370,17 @@ static void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker
                 }
                 name = self->client->pers.netname;
                 name2 = attacker->client->pers.netname;
+                level = PRINT_MEDIUM;
                 if( G_IsSameView( ent, attacker ) ) {
                     Q_HighlightStr( buffer, name, MAX_NETNAME );
                     name = buffer;
+                    level = PRINT_HIGH;
                 } else if( G_IsSameView( ent, self ) ) {
                     Q_HighlightStr( buffer, name2, MAX_NETNAME );
                     name2 = buffer;
+                    level = PRINT_HIGH;
                 }
-                gi.cprintf( ent, PRINT_MEDIUM,"%s %s %s%s\n",
+                gi.cprintf( ent, level, "%s %s %s%s\n",
                     name, message, name2, message2 );
             }
             if( dedicated->value ) {

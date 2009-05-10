@@ -250,6 +250,9 @@ static void G_RegisterScore( void ) {
 
     qsort( level.scores, level.numscores, sizeof( score_t ), ScoreCmp );
 
+    gi.dprintf( "Added highscore entry %d for %s\n",
+        s->score, s->name );
+
     G_SaveScores();
 }
 
@@ -304,6 +307,9 @@ void G_LoadScores( void ) {
     fclose( fp );
 
     qsort( level.scores, level.numscores, sizeof( score_t ), ScoreCmp );
+
+    gi.dprintf( "Loaded %d scores from '%s'\n",
+        level.numscores, path );
 }
 
 map_entry_t *G_FindMap( const char *name ) {

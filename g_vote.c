@@ -32,7 +32,8 @@ static int G_CalcVote( int *acc, int *rej ) {
             continue;
         }
         if( (int)g_vote_spectators->value == 0 &&
-            c->pers.connected != CONN_SPAWNED )
+            c->pers.connected != CONN_SPAWNED &&
+            ( c->pers.flags & CPF_ADMIN ) == 0 )
         {
             continue; // don't count spectators
         }
