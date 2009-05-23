@@ -538,6 +538,8 @@ typedef struct map_entry_s {
     char name[1];
 } map_entry_t;
 
+struct flood_s;
+
 extern	const gitem_t	g_itemlist[ITEM_TOTAL];
 
 extern	game_locals_t	game;
@@ -649,6 +651,10 @@ extern	cvar_t	*flood_waves;
 extern	cvar_t	*flood_perwave;
 extern	cvar_t	*flood_wavedelay;
 
+extern  cvar_t  *flood_infos;
+extern  cvar_t  *flood_perinfo;
+extern  cvar_t  *flood_infodelay;
+
 extern  list_t  g_map_list;
 extern  list_t  g_map_queue;
 
@@ -702,7 +708,10 @@ typedef struct
 //
 void Cmd_Stats_f( edict_t *ent, qboolean check_other );
 edict_t *G_SetPlayer( edict_t *ent, int arg );
+edict_t *G_SetVictim( edict_t *ent, int start );
 void ValidateSelectedItem (edict_t *ent);
+qboolean G_FloodProtect( edict_t *ent, struct flood_s *flood,
+    const char *what, int msgs, float persecond, float delay );
 
 //
 // g_items.c
@@ -856,6 +865,7 @@ void SaveClientData (void);
 void FetchClientEntData (edict_t *ent);
 void G_ExitLevel( void );
 void G_StartSound( int index ); 
+void G_StuffText( edict_t *ent, const char *text );
 void G_RunFrame( void );
 void G_LoadScores( void );
 map_entry_t *G_FindMap( const char *name );
@@ -965,28 +975,27 @@ typedef struct {
 } weapstat_t;
 
 #define FLOOD_MSGS  10
-typedef struct {
+typedef struct flood_s {
 	int	    locktill;		    // locked from talking
 	int		when[FLOOD_MSGS];	// when messages were said
 	int		whenhead;		    // head pointer for when said
 } flood_t;
 
-#define CPF_LOOPBACK    1
-#define CPF_MVDSPEC     2
-#define CPF_ADMIN       4
-#define CPF_NOVIEWID    8
-
 // client data that stays across multiple level loads
 typedef struct {
-	char		userinfo[MAX_INFO_STRING];
 	char		netname[MAX_NETNAME];
     char        skin[MAX_QPATH];
+    char        ip[MAX_QPATH];
 	int			hand;
     float       fov;
     gender_t    gender;
     int         uf;
 	conn_t	    connected;
-    int         flags;
+    qboolean    loopback: 1,
+                mvdspec: 1,
+                admin: 1,
+                noviewid: 1,
+                muted: 1;
 } client_persistant_t;
 
 // client data that stays across deathmatch respawns,
@@ -998,16 +1007,13 @@ typedef struct {
     int         damage_given, damage_recvd;
 } client_respawn_t;
 
-#define CLF_FIRST_TIME   1   // true when just connected
-#define CLF_JUMP_HELD    2
-#define CLF_MUTED        4
-
 // client data that stays across respawns, 
 // but cleared on level changes
 typedef struct {
 	int			enter_framenum;		// level.framenum the client entered the game
     int         activity_framenum;  // level.framenum last activity was seen
-    int         flags;
+    qboolean    first_time : 1,     // true when just connected
+                jump_held: 1;
 	vec3_t		cmd_angles;			// angles sent over in the last command
     char        strings[MAX_PRIVATE][MAX_NETNAME]; // private configstrings
     struct {
@@ -1015,6 +1021,7 @@ typedef struct {
         qboolean    accepted;
         int         count;
     } vote;
+    flood_t     chat_flood, wave_flood, info_flood;
 } client_level_t;
 
 // this structure is cleared on each PutClientInServer(),
@@ -1100,8 +1107,6 @@ struct gclient_s
 	int         weapon_sound;
 
 	int 		pickup_framenum;
-
-    flood_t     chat_flood, wave_flood;
 
 	int 		respawn_framenum;	// can respawn when time > this
     int         observer_framenum;

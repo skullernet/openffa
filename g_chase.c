@@ -38,9 +38,9 @@ static void SetChaseStats( gclient_t *client ) {
 	client->ps.stats[STAT_FRAGS] = 0;
 
     // check view id settings
-    if( client->pers.flags & CPF_NOVIEWID ) {
+    if( client->pers.noviewid ) {
         client->ps.stats[STAT_VIEWID] = 0;
-    } else if( targ->client->pers.flags & CPF_NOVIEWID ) {
+    } else if( targ->client->pers.noviewid ) {
         client->ps.stats[STAT_VIEWID] = G_GetPlayerIdView( targ );
     }
 }

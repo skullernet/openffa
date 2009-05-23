@@ -1226,11 +1226,8 @@ void ClientBegin (edict_t *ent)
 
 	ent->client->level.enter_framenum = level.framenum;
 
-    if( ent->client->pers.flags & CPF_MVDSPEC ) {
-    	ent->client->pers.connected = CONN_SPECTATOR;
-    } else {
-    	ent->client->pers.connected = CONN_PREGAME;
-    }
+    ent->client->pers.connected = ent->client->pers.mvdspec ?
+        CONN_SPECTATOR : CONN_PREGAME;
 
 	// locate ent at a spawn point
 	PutClientInServer (ent);
@@ -1244,7 +1241,7 @@ void ClientBegin (edict_t *ent)
         gi.unicast( ent, qtrue );
     }
 
-    if( ent->client->level.flags & CLF_FIRST_TIME ) {
+    if( ent->client->level.first_time ) {
         map_entry_t *map = G_FindMap( level.mapname );
 
         // track map stats
@@ -1260,11 +1257,21 @@ void ClientBegin (edict_t *ent)
         gi.WriteByte (MZ_LOGIN);
         gi.unicast (ent, qfalse);
 
-        ent->client->level.flags &= ~CLF_FIRST_TIME;
+        ent->client->level.first_time = qfalse;
     }
 
 	// make sure all view stuff is valid
 	ClientEndServerFrame (ent);
+}
+
+static qboolean forbid_name_change( edict_t *ent ) {
+    if( !ent->client->pers.skin[0] ) {
+        return qfalse; // allow the very first one
+    }
+
+    return G_FloodProtect( ent, &ent->client->level.info_flood,
+        "change your name or skin", (int)flood_infos->value,
+        flood_perinfo->value, flood_infodelay->value );
 }
 
 /*
@@ -1282,35 +1289,40 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
 	char	*s;
 	int		playernum;
     gclient_t *client = ent->client;
-
-	// save off the userinfo in case we want to check something later
-	Q_strlcpy( client->pers.userinfo, userinfo, MAX_INFO_STRING );
+    char    name[MAX_NETNAME], skin[MAX_QPATH];
 
 	// check for malformed or illegal info strings
-	if (!Info_Validate(client->pers.userinfo)) {
-		strcpy (client->pers.userinfo, "\\name\\badinfo\\skin\\male/grunt");
+	if (!Info_Validate(userinfo)) {
+		strcpy (userinfo, "\\name\\badinfo\\skin\\male/grunt");
 	}
 
 	// set name
-	s = Info_ValueForKey (client->pers.userinfo, "name");
-	Q_strlcpy( client->pers.netname, s, MAX_NETNAME );
+	s = Info_ValueForKey (userinfo, "name");
+    Q_strlcpy( name, s, sizeof( name ) );
 
 	// combine name and skin into a configstring
-	s = Info_ValueForKey (client->pers.userinfo, "skin");
-	Q_snprintf( client->pers.skin, MAX_QPATH, "%s\\%s",
-        client->pers.netname, s );
+	s = Info_ValueForKey (userinfo, "skin");
+	Q_concat( skin, sizeof( skin ), name, "\\", s, NULL );
 
-    if( !( client->pers.flags & CPF_MVDSPEC ) ) {
-    	playernum = ( ent - g_edicts ) - 1;
-	    gi.configstring( CS_PLAYERSKINS + playernum, client->pers.skin );
-	    gi.configstring( CS_PLAYERNAMES + playernum, client->pers.netname );
+    if( !client->pers.mvdspec && strcmp( skin, client->pers.skin ) ) {
+        if( forbid_name_change( ent ) ) {
+            Info_SetValueForKey( userinfo, "name", client->pers.netname );
+            //Info_SetValueForKey( userinfo, "skin", client->pers.skin );
+            G_StuffText( ent, va( "set name \"%s\"\n", client->pers.netname ) );
+        } else {
+            playernum = ( ent - g_edicts ) - 1;
+            gi.configstring( CS_PLAYERSKINS + playernum, skin );
+            gi.configstring( CS_PLAYERNAMES + playernum, name );
+            strcpy( client->pers.skin, skin );
+            strcpy( client->pers.netname, name );
+        }
     }
 
 	// set fov
 	if( DF( FIXED_FOV ) ) {
 		client->pers.fov = 90;
 	} else {
-		client->pers.fov = atoi(Info_ValueForKey(client->pers.userinfo, "fov"));
+		client->pers.fov = atoi(Info_ValueForKey(userinfo, "fov"));
 		if (client->pers.fov < 1)
 			client->pers.fov = 90;
 		else if (client->pers.fov > 160)
@@ -1320,13 +1332,11 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
 	client->ps.fov = client->pers.fov;
 
 	// handedness
-	s = Info_ValueForKey (client->pers.userinfo, "hand");
-	if (*s) {
-		client->pers.hand = atoi(s);
-	}
+	s = Info_ValueForKey (userinfo, "hand");
+	client->pers.hand = *s ? atoi(s) : 0;
 
     // gender
-	s = Info_ValueForKey (client->pers.userinfo, "gender");
+	s = Info_ValueForKey (userinfo, "gender");
 	if (s[0] == 'f' || s[0] == 'F') {
         client->pers.gender = GENDER_FEMALE;
     } else if (s[0] == 'm' || s[0] == 'M') {
@@ -1336,7 +1346,7 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
     }
 
     // flags
-	s = Info_ValueForKey (client->pers.userinfo, "uf");
+	s = Info_ValueForKey (userinfo, "uf");
     client->pers.uf = *s ? atoi(s) : UF_LOCALFOV;
 }
 
@@ -1366,18 +1376,21 @@ qboolean ClientConnect (edict_t *ent, char *userinfo) {
 	memset( ent->client, 0, sizeof( gclient_t ) );
     ent->client->edict = ent;
 	ent->client->pers.connected = CONN_CONNECTED;
-    ent->client->level.flags |= CLF_FIRST_TIME;
+    ent->client->level.first_time = qtrue;
 
     s = Info_ValueForKey (userinfo, "ip");
     if( !strcmp( s, "loopback" ) ) {
-        ent->client->pers.flags |= CPF_LOOPBACK;
+        ent->client->pers.loopback = qtrue;
     }
+
+    // save ip
+    Q_strlcpy( ent->client->pers.ip, s, sizeof( ent->client->pers.ip ) );
 
     if( game.serverFeatures & GMF_MVDSPEC ) {
         s = Info_ValueForKey (userinfo, "mvdspec");
         if( *s ) {
-            ent->client->pers.flags |= CPF_MVDSPEC;
-            ent->client->level.flags &= ~CLF_FIRST_TIME;
+            ent->client->pers.mvdspec = qtrue;
+            ent->client->level.first_time = qfalse;
         }
     }
 
@@ -1667,8 +1680,8 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 
 	if (client->pers.connected == CONN_SPECTATOR) {
 		if (abs(ucmd->upmove) >= 10) {
-			if (!(client->level.flags & CLF_JUMP_HELD)) {
-				client->level.flags |= CLF_JUMP_HELD;
+			if (!client->level.jump_held) {
+				client->level.jump_held = qtrue;
 				if (client->chase_target) {
                     if( ucmd->upmove > 0 ) {
     					ChaseNext(ent);
@@ -1679,7 +1692,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
                 }
 			}
 		} else {
-			client->level.flags &= ~CLF_JUMP_HELD;
+			client->level.jump_held = qfalse;
         }
 	}
 

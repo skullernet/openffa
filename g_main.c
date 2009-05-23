@@ -86,6 +86,10 @@ cvar_t  *flood_waves;
 cvar_t  *flood_perwave;
 cvar_t  *flood_wavedelay;
 
+cvar_t  *flood_infos;
+cvar_t  *flood_perinfo;
+cvar_t  *flood_infodelay;
+
 LIST_DECL( g_map_list );
 LIST_DECL( g_map_queue );
 
@@ -200,7 +204,8 @@ static void G_SaveScores( void ) {
 
     for( i = 0; i < level.numscores; i++ ) {
         s = &level.scores[i];
-        fprintf( fp, "\"%s\" %d %lu\n", s->name, s->score, s->time );
+        fprintf( fp, "\"%s\" %d %lu\n",
+            s->name, s->score, ( unsigned long )s->time );
     }
 
     fclose( fp );
@@ -511,6 +516,12 @@ void EndDMLevel ( void ) {
 
 void G_StartSound( int index ) {
     gi.sound( world, CHAN_RELIABLE, index, 1, ATTN_NONE, 0 );
+}
+
+void G_StuffText( edict_t *ent, const char *text ) {
+    gi.WriteByte( svc_stufftext );
+    gi.WriteString( text );
+    gi.unicast( ent, qtrue );
 }
 
 static void G_SetTimeVar( int remaining ) {
@@ -835,7 +846,12 @@ static void G_Init (void) {
     // wave flood control
     flood_waves = gi.cvar ("flood_waves", "4", 0);
     flood_perwave = gi.cvar ("flood_perwave", "30", 0);
-    flood_wavedelay = gi.cvar ("flood_wavedelay", "120", 0);
+    flood_wavedelay = gi.cvar ("flood_wavedelay", "60", 0);
+
+    // userinfo flood control
+    flood_infos = gi.cvar ("flood_infos", "4", 0);
+    flood_perinfo = gi.cvar ("flood_perinfo", "30", 0);
+    flood_infodelay = gi.cvar ("flood_infodelay", "60", 0);
 
     // force deathmatch
     //gi.cvar_set( "coop", "0" ); //atu

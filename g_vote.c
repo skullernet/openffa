@@ -28,12 +28,11 @@ static int G_CalcVote( int *acc, int *rej ) {
         if( c->pers.connected <= CONN_CONNECTED ) {
             continue;
         }
-        if( c->pers.flags & CPF_MVDSPEC ) {
+        if( c->pers.mvdspec ) {
             continue;
         }
         if( (int)g_vote_spectators->value == 0 &&
-            c->pers.connected != CONN_SPAWNED &&
-            ( c->pers.flags & CPF_ADMIN ) == 0 )
+            !c->pers.admin && c->pers.connected != CONN_SPAWNED )
         {
             continue; // don't count spectators
         }
@@ -43,7 +42,7 @@ static int G_CalcVote( int *acc, int *rej ) {
             continue; // not voted yet
         }
 
-        if( c->pers.flags & CPF_ADMIN ) {
+        if( c->pers.admin ) {
             // admin vote decides immediately
             votes[c->level.vote.accepted    ] = game.maxclients;
             votes[c->level.vote.accepted ^ 1] = 0;
@@ -111,7 +110,7 @@ qboolean G_CheckVote( void ) {
             break;
         case VOTE_MUTE:
             gi.bprintf( PRINT_HIGH, "Vote passed. Muting %s...\n", level.vote.victim->pers.netname );
-            level.vote.victim->level.flags |= CLF_MUTED;
+            level.vote.victim->pers.muted = qtrue;
             break;
         case VOTE_MAP:
             gi.bprintf( PRINT_HIGH, "Vote passed. Next map is %s.\n", level.vote.map );
@@ -297,22 +296,8 @@ static qboolean vote_items( edict_t *ent ) {
 }
 
 static qboolean vote_victim( edict_t *ent ) {
-    edict_t *other = G_SetPlayer( ent, 2 );
+    edict_t *other = G_SetVictim( ent, 1 );
     if( !other ) {
-        return qfalse;
-    }
-
-    if( other == ent ) {
-        gi.cprintf( ent, PRINT_HIGH, "You can't %s yourself.\n", gi.argv( 1 ) );
-        return qfalse;
-    }
-
-    if( other->client->pers.flags & (CPF_LOOPBACK|CPF_MVDSPEC) ) {
-        gi.cprintf( ent, PRINT_HIGH, "You can't %s local client.\n", gi.argv( 1 ) );
-        return qfalse;
-    }
-    if( other->client->pers.flags & CPF_ADMIN ) {
-        gi.cprintf( ent, PRINT_HIGH, "You can't %s an admin.\n", gi.argv( 1 ) );
         return qfalse;
     }
 
@@ -450,8 +435,7 @@ void Cmd_Vote_f( edict_t *ent ) {
 // proposals
 //
     if( !(int)g_vote_spectators->value &&
-        !PLAYER_SPAWNED( ent ) &&
-        !( ent->client->pers.flags & CPF_ADMIN ) )
+        !PLAYER_SPAWNED( ent ) && !ent->client->pers.admin )
     {
         gi.cprintf( ent, PRINT_HIGH, "Spectators can't vote on this server.\n" );
         return;
@@ -511,6 +495,9 @@ void Cmd_Vote_f( edict_t *ent ) {
                 buffer[total + len    ] = ',';
                 buffer[total + len + 1] = ' ';
                 total += len + 2;
+            }
+            if( total > 2 ) {
+                total -= 2;
             }
             buffer[total] = 0;
             gi.cprintf( ent, PRINT_HIGH, "Available maplist: %s\n", buffer );

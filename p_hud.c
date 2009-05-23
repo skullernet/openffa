@@ -147,7 +147,7 @@ static size_t BuildDeathmatchScoreboard( char *buffer, gclient_t *client ) {
         if( c->pers.connected != CONN_PREGAME && c->pers.connected != CONN_SPECTATOR ) {
             continue;
         }
-        if( c->pers.flags & CPF_MVDSPEC ) {
+        if( c->pers.mvdspec ) {
             continue;
         }
 
@@ -322,9 +322,7 @@ void MoveClientToIntermission (edict_t *ent)
     DeathmatchScoreboardMessage (ent, qtrue);
 
     if( ent->client->pers.uf & UF_AUTOSCREENSHOT ) {
-        gi.WriteByte( svc_stufftext );
-        gi.WriteString( "wait; screenshot\n" );
-        gi.unicast (ent, qtrue);
+        G_StuffText( ent, "wait; screenshot\n" );
     }
 }
 
@@ -781,7 +779,7 @@ void G_SetStats (edict_t *ent)
                 ent->client->ps.stats[STAT_SPECTATOR] = CS_PREGAME;
             }
         }
-        if( ent->client->pers.flags & CPF_NOVIEWID ) {
+        if( ent->client->pers.noviewid ) {
             ent->client->ps.stats[STAT_VIEWID] = 0;
         } else {
             ent->client->ps.stats[STAT_VIEWID] = G_GetPlayerIdView( ent );

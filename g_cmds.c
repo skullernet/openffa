@@ -606,18 +606,22 @@ static void Cmd_PutAway_f (edict_t *ent) {
 	ent->client->layout = 0;
 }
 
-static qboolean G_FloodProtect( edict_t *ent, flood_t *flood,
+qboolean G_FloodProtect( edict_t *ent, flood_t *flood,
     const char *what, int msgs, float persecond, float delay )
 {
-    int i;
+    int i, sec;
 
 	if( msgs < 1 ) {
         return qfalse;
     }
 
     if( level.framenum < flood->locktill ) {
-        gi.cprintf( ent, PRINT_HIGH, "You can't %s for %d more seconds.\n",
-            what, ( flood->locktill - level.framenum ) / HZ );
+        sec = ( flood->locktill - level.framenum ) / HZ;
+        if( sec < 1 ) {
+            sec = 1;
+        }
+        gi.cprintf( ent, PRINT_HIGH, "You can't %s for %d more second%s.\n",
+            what, sec, sec == 1 ? "" : "s" );
         return qtrue;
     }
 
@@ -655,7 +659,7 @@ static void Cmd_Wave_f (edict_t *ent)
 	if (ent->client->anim_priority > ANIM_WAVE)
 		return;
 
-    if( G_FloodProtect( ent, &ent->client->wave_flood, "use waves",
+    if( G_FloodProtect( ent, &ent->client->level.wave_flood, "use waves",
         (int)flood_waves->value, flood_perwave->value, flood_wavedelay->value ) )
     {
         return;
@@ -704,22 +708,13 @@ typedef enum {
     CHAT_TEAM
 } chat_t;
 
-static size_t build_chat( const char *name, chat_t chat, char *buffer ) {
+static size_t build_chat( const char *name, chat_t chat, int start, char *buffer ) {
     size_t len, total;
-    int i, start = 1;
+    int i;
     char *p;
 
-    switch( chat ) {
-    case CHAT_TEAM:
-        total = Q_scnprintf (buffer, MAX_CHAT, "(%s): ", name);
-        break;
-    case CHAT_MISC:
-        start = 0;
-        // fall through
-    default:
-        total = Q_scnprintf (buffer, MAX_CHAT, "%s: ", name);
-        break;
-    }
+    total = Q_scnprintf( buffer, MAX_CHAT,
+        ( chat == CHAT_TEAM ) ? "(%s): " : "%s: ", name );
 
     for (i = start; i < gi.argc(); i++) {
         p = gi.argv (i);
@@ -744,25 +739,26 @@ Cmd_Say_f
 */
 static void Cmd_Say_f (edict_t *ent, chat_t chat)
 {
-	int		i;
+	int		i, start;
 	edict_t	*other;
 	char	text[MAX_CHAT];
 	gclient_t *cl = ent->client;
 
-	if (gi.argc () < 2 && chat != CHAT_MISC)
+    start = ( chat == CHAT_MISC ) ? 0 : 1;
+	if (gi.argc () <= start)
 		return;
 
     // don't flood protect team chat to self
     if( chat == CHAT_TEAM && (int)g_team_chat->value == 0 && PLAYER_SPAWNED( ent ) ) {
-        build_chat( cl->pers.netname, chat, text );
+        build_chat( cl->pers.netname, chat, start, text );
 		gi.cprintf(ent, PRINT_CHAT, "%s\n", text);
         return;
     }
 
     // stop flood during the match
-    if( !( cl->pers.flags & CPF_ADMIN ) && !level.intermission_framenum ) {
-        if( cl->level.flags & CLF_MUTED ) {
-            gi.cprintf(ent, PRINT_HIGH, "You have been muted by vote.\n" );
+    if( !cl->pers.admin && !level.intermission_framenum ) {
+        if( cl->pers.muted ) {
+            gi.cprintf(ent, PRINT_HIGH, "You have been muted.\n" );
             return;
         }
         if( (int)g_mute_chat->value ) {
@@ -774,13 +770,13 @@ static void Cmd_Say_f (edict_t *ent, chat_t chat)
         }
     }
 
-    if( G_FloodProtect( ent, &cl->chat_flood, "talk",
+    if( G_FloodProtect( ent, &cl->level.chat_flood, "talk",
         (int)flood_msgs->value, flood_persecond->value, flood_waitdelay->value ) )
     {
         return;
     }
 
-    build_chat( cl->pers.netname, chat, text );
+    build_chat( cl->pers.netname, chat, start, text );
 
 	if ((int)dedicated->value)
 		gi.cprintf(NULL, PRINT_CHAT, "%s\n", text);
@@ -807,8 +803,8 @@ static void Cmd_Players_f( edict_t *ent ) {
     gi.cprintf( ent, PRINT_HIGH,
         "id score ping time name            idle %s\n"
         "-- ----- ---- ---- --------------- ---- %s\n",
-        ( ent->client->pers.flags & CPF_ADMIN ) ? "address" : "",
-        ( ent->client->pers.flags & CPF_ADMIN ) ? "-------" : "" );
+        ent->client->pers.admin ? "address" : "",
+        ent->client->pers.admin ? "-------" : "" );
 
     for( i = 0; i < game.maxclients; i++ ) {
         c = &game.clients[i];
@@ -826,8 +822,7 @@ static void Cmd_Players_f( edict_t *ent ) {
         time = ( level.framenum - c->level.enter_framenum ) / HZ;
         gi.cprintf( ent, PRINT_HIGH, "%2d %5s %4d %4d %-15s %4s %s\n",
             i, score, c->ping, time / 60, c->pers.netname, idle,
-            ( ent->client->pers.flags & CPF_ADMIN ) ?
-            Info_ValueForKey( c->pers.userinfo, "ip" ) : "" );
+            ent->client->pers.admin ? c->pers.ip : "" );
     }
 }
 
@@ -910,6 +905,30 @@ edict_t *G_SetPlayer( edict_t *ent, int arg ) {
 
     return match;
 }
+
+edict_t *G_SetVictim( edict_t *ent, int start ) {
+    edict_t *other = G_SetPlayer( ent, start + 1 );
+    if( !other ) {
+        return NULL;
+    }
+
+    if( other == ent ) {
+        gi.cprintf( ent, PRINT_HIGH, "You can't %s yourself.\n", gi.argv( start ) );
+        return NULL;
+    }
+
+    if( other->client->pers.loopback || other->client->pers.mvdspec ) {
+        gi.cprintf( ent, PRINT_HIGH, "You can't %s local client.\n", gi.argv( start ) );
+        return NULL;
+    }
+    if( other->client->pers.admin ) {
+        gi.cprintf( ent, PRINT_HIGH, "You can't %s an admin.\n", gi.argv( start ) );
+        return NULL;
+    }
+
+    return other;
+}
+
 
 static qboolean G_SpecRateLimited( edict_t *ent ) {
     if( level.framenum - ent->client->observer_framenum < 5*HZ ) {
@@ -1103,11 +1122,11 @@ void Cmd_Stats_f( edict_t *ent, qboolean check_other ) {
 }
 
 static void Cmd_Id_f( edict_t *ent ) {
-    ent->client->pers.flags ^= CPF_NOVIEWID;
+    ent->client->pers.noviewid ^= 1;
 
     gi.cprintf( ent, PRINT_HIGH,
         "Player identification display is now %sabled.\n",
-        ( ent->client->pers.flags & CPF_NOVIEWID ) ? "dis" : "en" );
+        ent->client->pers.noviewid ? "dis" : "en" );
 }
 
 static void Cmd_Settings_f( edict_t *ent ) {
@@ -1177,10 +1196,10 @@ static void Cmd_Settings_f( edict_t *ent ) {
 static void Cmd_Admin_f( edict_t *ent ) {
     char *p;
 
-    if( ent->client->pers.flags & CPF_ADMIN ) {
+    if( ent->client->pers.admin ) {
         gi.bprintf( PRINT_HIGH, "%s is no longer an admin.\n",
             ent->client->pers.netname );
-        ent->client->pers.flags &= ~CPF_ADMIN;
+        ent->client->pers.admin = qfalse;
         return;
     }
     if( gi.argc() < 2 ) {
@@ -1192,17 +1211,52 @@ static void Cmd_Admin_f( edict_t *ent ) {
         gi.cprintf( ent, PRINT_HIGH, "Bad admin password.\n" );
         if( (int)dedicated->value ) {
             gi.dprintf( "%s[%s] failed to become an admin.\n",
-                ent->client->pers.netname, Info_ValueForKey(
-                    ent->client->pers.userinfo, "ip" ) );
+                ent->client->pers.netname, ent->client->pers.ip );
         }
         return;
     }
 
-    ent->client->pers.flags |= CPF_ADMIN;
+    ent->client->pers.admin = qtrue;
     gi.bprintf( PRINT_HIGH, "%s became an admin.\n",
         ent->client->pers.netname );
 
     G_CheckVote();
+}
+
+static void Cmd_Mute_f( edict_t *ent, qboolean muted ) {
+    edict_t *other;
+
+    if( gi.argc() < 2 ) {
+        gi.cprintf( ent, PRINT_HIGH, "Usage: %s <playerID>\n", gi.argv( 0 ) );
+        return;
+    }
+    
+    other = G_SetVictim( ent, 0 );
+    if( !other ) {
+        return;
+    }
+
+    if( other->client->pers.muted == muted ) {
+        gi.cprintf( ent, PRINT_HIGH, "%s is already %smuted\n",
+            other->client->pers.netname, muted ? "" : "un" );
+        return;
+    }
+
+    other->client->pers.muted = muted;
+    gi.bprintf( PRINT_HIGH, "%s has been %smuted.\n",
+        other->client->pers.netname, muted ? "" : "un" );
+}
+
+static void Cmd_MuteAll_f( edict_t *ent, qboolean muted ) {
+    if( !!(int)g_mute_chat->value == muted ) {
+        gi.cprintf( ent, PRINT_HIGH, "Players are already %smuted\n",
+            muted ? "" : "un" );
+        return;
+    }
+
+    gi.cvar_set( "g_mute_chat", muted ? "1" : "0" );
+    gi.bprintf( PRINT_HIGH, "Players may %s talk during the match.\n",
+        muted ? "no longer" : "now" );
 }
 
 static void Cmd_Commands_f( edict_t *ent ) {
@@ -1399,6 +1453,25 @@ void ClientCommand (edict_t *ent)
     //ent->client->level.activity_framenum = level.framenum;
 
 	cmd = gi.argv(0);
+
+    if( ent->client->pers.admin ) {
+        if (Q_stricmp (cmd, "mute") == 0) {
+            Cmd_Mute_f (ent, qtrue);
+            return;
+        }
+        if (Q_stricmp (cmd, "unmute") == 0) {
+            Cmd_Mute_f (ent, qfalse);
+            return;
+        }
+        if (Q_stricmp (cmd, "muteall") == 0) {
+            Cmd_MuteAll_f (ent, qtrue);
+            return;
+        }
+        if (Q_stricmp (cmd, "unmuteall") == 0) {
+            Cmd_MuteAll_f (ent, qfalse);
+            return;
+        }
+    }
 
 	if (Q_stricmp (cmd, "say") == 0) {
 		Cmd_Say_f (ent, CHAT_ALL);
