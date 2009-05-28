@@ -1,0 +1,39 @@
+CC:=i586-mingw32msvc-gcc
+WINDRES:=i586-mingw32msvc-windres
+STRIP:=i586-mingw32msvc-strip
+
+VERSION:=$(shell cat REVISION)
+REVISION:=$(shell cat REVISION | tr -d -c [:digit:])
+DEFINES:=-DVERSION=\"r$(VERSION)\" -DREVISION=$(REVISION)
+
+CFLAGS:=-pipe -ffloat-store -O2 -g $(DEFINES) -Wall -Wstrict-prototypes
+#LDFLAGS:=
+RESFLAGS:=-DVERSION=\\\"r$(VERSION)\\\" -DREVISION=$(REVISION)
+
+SRCFILES=q_shared.c \
+	g_chase.c   g_func.c   g_misc.c   g_svcmds.c   g_utils.c   p_hud.c \
+	g_cmds.c    g_items.c  g_phys.c   g_target.c   g_weapon.c  p_view.c \
+	g_combat.c  g_main.c   g_spawn.c  g_trigger.c  p_client.c  p_weapon.c \
+	p_menu.c    g_vote.c
+
+RESFILES=openffa.rc
+
+OBJFILES=$(SRCFILES:%.c=%.o) $(RESFILES:%.rc=%.o) openffa.def
+
+%.o: %.rc
+	$(WINDRES) $(RESFLAGS) -o $@ $<
+
+TARGET=gamex86.dll
+
+default: $(TARGET)
+
+strip: $(TARGET)
+	$(STRIP) $^
+
+clean:
+	rm -f *.o $(TARGET)
+
+.PHONY: clean
+
+$(TARGET): $(OBJFILES)
+	$(CC) -shared -o $@ $^ $(LDFLAGS)
