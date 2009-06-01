@@ -691,7 +691,7 @@ void G_RunFrame (void)
                 G_StartSound( level.sounds.makron );
             }
         } else if( delta == exit_delta ) {
-	    	G_ExitLevel();
+            G_ExitLevel();
         } else if( delta % ( 5 * HZ ) == 0 ) {
             delta /= 5 * HZ;
             if( level.numscores && ( delta & 1 ) ) {

@@ -68,9 +68,9 @@ qboolean G_CheckVote( void ) {
     int treshold = g_vote_treshold->value;
     int acc, rej;
 
-	if( !level.vote.proposal ) {
-		return qfalse;
-	}
+    if( !level.vote.proposal ) {
+        return qfalse;
+    }
 
     // is vote initiator gone?
     if( !level.vote.initiator->pers.connected ) {

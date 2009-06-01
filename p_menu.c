@@ -20,42 +20,42 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "g_local.h"
 
 static void PMenu_Write(edict_t *ent) {
-	char string[MAX_STRING_CHARS];
-	char entry[MAX_STRING_CHARS];
-	int i;
-	size_t total, len;
-	pmenu_entry_t *p;
-	int x;
-	pmenu_t *menu = &ent->client->menu;
-	const char *t;
+    char string[MAX_STRING_CHARS];
+    char entry[MAX_STRING_CHARS];
+    int i;
+    size_t total, len;
+    pmenu_entry_t *p;
+    int x;
+    pmenu_t *menu = &ent->client->menu;
+    const char *t;
     qboolean alt;
 
-	strcpy( string, "xv 32 yv 8 picn inventory " );
+    strcpy( string, "xv 32 yv 8 picn inventory " );
     total = strlen( string );
 
-	for (i = 0, p = menu->entries; i < MAX_MENU_ENTRIES; i++, p++) {
-		if (!p->text || !p->text[0])
-			continue; // blank line
-		t = p->text;
-		if (*t == '*') {
+    for (i = 0, p = menu->entries; i < MAX_MENU_ENTRIES; i++, p++) {
+        if (!p->text || !p->text[0])
+            continue; // blank line
+        t = p->text;
+        if (*t == '*') {
             alt = qtrue;
-			t++;
-		} else {
+            t++;
+        } else {
             alt = qfalse;
         }
-		if (p->align == PMENU_ALIGN_CENTER)
-			x = 196/2 - strlen(t)*4 + 64;
-		else if (p->align == PMENU_ALIGN_RIGHT)
-			x = 64 + (196 - strlen(t)*8);
-		else
-			x = 64;
+        if (p->align == PMENU_ALIGN_CENTER)
+            x = 196/2 - strlen(t)*4 + 64;
+        else if (p->align == PMENU_ALIGN_RIGHT)
+            x = 64 + (196 - strlen(t)*8);
+        else
+            x = 64;
 
         if( menu->cur == i ) {
             x -= 8;
             alt ^= 1;
         }
 
-		len = Q_snprintf( entry, sizeof( entry ), "yv %d xv %d string%s \"%s%s\" ",
+        len = Q_snprintf( entry, sizeof( entry ), "yv %d xv %d string%s \"%s%s\" ",
             32 + i * 8, x, alt ? "2" : "", menu->cur == i ? "\x0d" : "", t );
         if( len >= sizeof( entry ) ) {
             continue;
@@ -64,18 +64,18 @@ static void PMenu_Write(edict_t *ent) {
             break;
         memcpy( string + total, entry, len );
         total += len;
-	}
+    }
 
     string[total] = 0;
 
-	gi.WriteByte (svc_layout);
-	gi.WriteString (string);
+    gi.WriteByte (svc_layout);
+    gi.WriteString (string);
 }
 
 void PMenu_Open( edict_t *ent, const pmenu_entry_t *entries ) {
-	pmenu_t *menu = &ent->client->menu;
-	const pmenu_entry_t *p;
-	int i;
+    pmenu_t *menu = &ent->client->menu;
+    const pmenu_entry_t *p;
+    int i;
 
     if( entries ) {
         for (i = 0; i < MAX_MENU_ENTRIES; i++ ) {
@@ -85,10 +85,10 @@ void PMenu_Open( edict_t *ent, const pmenu_entry_t *entries ) {
         }
     }
 
-	menu->cur = -1;
+    menu->cur = -1;
     for (i = 0, p = menu->entries; i < MAX_MENU_ENTRIES; i++, p++) {
         if (p->select) {
-		    menu->cur = i;
+            menu->cur = i;
             break;
         }
     }
@@ -99,24 +99,24 @@ void PMenu_Open( edict_t *ent, const pmenu_entry_t *entries ) {
 }
 
 void PMenu_Close( edict_t *ent ) {
-	if (ent->client->layout != LAYOUT_MENU) {
-		return;
-	}
-	memset( &ent->client->menu, 0, sizeof( ent->client->menu ) );
+    if (ent->client->layout != LAYOUT_MENU) {
+        return;
+    }
+    memset( &ent->client->menu, 0, sizeof( ent->client->menu ) );
     ent->client->menu_dirty = qfalse;
     ent->client->layout = LAYOUT_NONE;
 }
 
 void PMenu_Update( edict_t *ent ) {
-	if (ent->client->layout != LAYOUT_MENU) {
-		return;
-	}
+    if (ent->client->layout != LAYOUT_MENU) {
+        return;
+    }
 
     if( !ent->client->menu_dirty ) {
         return;
     }
 
-	//if (level.framenum - ent->client->menu_framenum < 1*HZ ) {
+    //if (level.framenum - ent->client->menu_framenum < 1*HZ ) {
         //return;
     //}
 
@@ -128,82 +128,82 @@ void PMenu_Update( edict_t *ent ) {
 }
 
 void PMenu_Next( edict_t *ent ) {
-	pmenu_t *menu = &ent->client->menu;
-	pmenu_entry_t *p;
-	int i;
+    pmenu_t *menu = &ent->client->menu;
+    pmenu_entry_t *p;
+    int i;
 
-	if (ent->client->layout != LAYOUT_MENU) {
-		return;
-	}
+    if (ent->client->layout != LAYOUT_MENU) {
+        return;
+    }
 
-	if (menu->cur < 0)
-		return; // no selectable entries
+    if (menu->cur < 0)
+        return; // no selectable entries
     if (menu->cur >= MAX_MENU_ENTRIES)
         menu->cur = 0;
 
-	i = menu->cur;
-	p = menu->entries + menu->cur;
-	do {
-		i++, p++;
-		if (i == MAX_MENU_ENTRIES)
-			i = 0, p = menu->entries;
-		if (p->select)
-			break;
-	} while (i != menu->cur);
+    i = menu->cur;
+    p = menu->entries + menu->cur;
+    do {
+        i++, p++;
+        if (i == MAX_MENU_ENTRIES)
+            i = 0, p = menu->entries;
+        if (p->select)
+            break;
+    } while (i != menu->cur);
 
-	menu->cur = i;
+    menu->cur = i;
 
-	ent->client->menu_dirty = qtrue;
+    ent->client->menu_dirty = qtrue;
 }
 
 void PMenu_Prev( edict_t *ent ) {
-	pmenu_t *menu = &ent->client->menu;
-	pmenu_entry_t *p;
-	int i;
+    pmenu_t *menu = &ent->client->menu;
+    pmenu_entry_t *p;
+    int i;
 
-	if (ent->client->layout != LAYOUT_MENU) {
-		return;
-	}
+    if (ent->client->layout != LAYOUT_MENU) {
+        return;
+    }
 
-	if (menu->cur < 0)
-		return; // no selectable entries
+    if (menu->cur < 0)
+        return; // no selectable entries
     if (menu->cur >= MAX_MENU_ENTRIES)
         menu->cur = 0;
 
-	i = menu->cur;
-	p = menu->entries + menu->cur;
-	do {
-		if (i == 0) {
-			i = MAX_MENU_ENTRIES - 1;
-			p = menu->entries + i;
-		} else {
-			i--, p--;
+    i = menu->cur;
+    p = menu->entries + menu->cur;
+    do {
+        if (i == 0) {
+            i = MAX_MENU_ENTRIES - 1;
+            p = menu->entries + i;
+        } else {
+            i--, p--;
         }
-		if (p->select)
-			break;
-	} while (i != menu->cur);
+        if (p->select)
+            break;
+    } while (i != menu->cur);
 
-	menu->cur = i;
+    menu->cur = i;
 
-	ent->client->menu_dirty = qtrue;
+    ent->client->menu_dirty = qtrue;
 }
 
 void PMenu_Select( edict_t *ent ) {
-	pmenu_t *menu = &ent->client->menu;
-	pmenu_entry_t *p;
+    pmenu_t *menu = &ent->client->menu;
+    pmenu_entry_t *p;
 
-	if (ent->client->layout != LAYOUT_MENU) {
-		return;
-	}
+    if (ent->client->layout != LAYOUT_MENU) {
+        return;
+    }
 
-	if (menu->cur < 0)
-		return; // no selectable entries
+    if (menu->cur < 0)
+        return; // no selectable entries
     if (menu->cur >= MAX_MENU_ENTRIES)
         menu->cur = 0;
 
-	p = menu->entries + menu->cur;
+    p = menu->entries + menu->cur;
 
-	if (p->select)
-		p->select(ent);
+    if (p->select)
+        p->select(ent);
 }
 

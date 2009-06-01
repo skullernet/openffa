@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "g_local.h"
 
 static void Svcmd_Test_f( void ) {
-	gi.cprintf (NULL, PRINT_HIGH, "Svcmd_Test_f()\n");
+    gi.cprintf (NULL, PRINT_HIGH, "Svcmd_Test_f()\n");
 }
 
 static void Svcmd_Reset_f( void ) {
@@ -85,25 +85,25 @@ of the parameters
 =================
 */
 void G_ServerCommand (void) {
-	char	*cmd;
+    char    *cmd;
 
     if( gi.argc() < 2 ) {
         Com_Printf( "Usage: sv <command> [arguments ...]\n" );
         return;
     }
 
-	cmd = gi.argv(1);
-	if (!strcmp (cmd, "test"))
-		Svcmd_Test_f ();
+    cmd = gi.argv(1);
+    if (!strcmp (cmd, "test"))
+        Svcmd_Test_f ();
     else if (!strcmp (cmd, "reset"))
-		Svcmd_Reset_f ();
+        Svcmd_Reset_f ();
     else if (!strcmp (cmd, "nextmap"))
-		Svcmd_NextMap_f ();
+        Svcmd_NextMap_f ();
     else if (!strcmp (cmd, "maplist"))
-		Svcmd_MapList_f ();
+        Svcmd_MapList_f ();
     else if (!strcmp (cmd, "mapqueue"))
-		Svcmd_MapQueue_f ();
-	else
-		Com_Printf( "Unknown server command \"%s\"\n", cmd);
+        Svcmd_MapQueue_f ();
+    else
+        Com_Printf( "Unknown server command \"%s\"\n", cmd);
 }
 
