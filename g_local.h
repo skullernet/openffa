@@ -670,37 +670,6 @@ extern  list_t  g_map_queue;
 #define	DROPPED_PLAYER_ITEM		0x00020000
 #define ITEM_TARGETS_USED		0x00040000
 
-//
-// fields are needed for spawning from the entity string
-// and saving / loading games
-//
-#define FFL_SPAWNTEMP		1
-#define FFL_NOSPAWN			2
-
-typedef enum {
-	F_INT, 
-	F_FLOAT,
-	F_LSTRING,			// string on disk, pointer in memory, TAG_LEVEL
-	F_GSTRING,			// string on disk, pointer in memory, TAG_GAME
-	F_VECTOR,
-	F_ANGLEHACK,
-	F_EDICT,			// index on disk, pointer in memory
-	F_ITEM,				// index on disk, pointer in memory
-	F_CLIENT,			// index on disk, pointer in memory
-	F_FUNCTION,
-	F_MMOVE,
-	F_IGNORE
-} fieldtype_t;
-
-typedef struct
-{
-	char	*name;
-	int		ofs;
-	fieldtype_t	type;
-	int		flags;
-} field_t;
-
-
 
 //
 // g_cmds.c

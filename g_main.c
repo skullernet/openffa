@@ -859,6 +859,7 @@ static void G_Init (void) {
 
     // initialize all entities for this game
     game.maxentities = maxentities->value;
+    clamp( game.maxentities, (int)maxclients->value + 1, MAX_EDICTS );
     g_edicts = G_Malloc (game.maxentities * sizeof(g_edicts[0]));
     globals.edicts = g_edicts;
     globals.max_edicts = game.maxentities;

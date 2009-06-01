@@ -20,11 +20,30 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "g_local.h"
 
-typedef struct
-{
+typedef struct {
 	char	*name;
 	void	(*spawn)(edict_t *ent);
 } spawn_t;
+
+//
+// fields are needed for spawning from the entity string
+// and saving / loading games
+//
+typedef enum {
+	F_INT, 
+	F_FLOAT,
+	F_LSTRING,			// string on disk, pointer in memory, TAG_LEVEL
+	F_GSTRING,			// string on disk, pointer in memory, TAG_GAME
+	F_VECTOR,
+	F_ANGLEHACK,
+	F_IGNORE
+} fieldtype_t;
+
+typedef struct {
+	char	*name;
+	size_t	ofs;
+	fieldtype_t	type;
+} field_t;
 
 
 void SP_item_health (edict_t *self);
@@ -228,29 +247,29 @@ static const field_t g_fields[] = {
 	{"angles", FOFS(s.angles), F_VECTOR},
 	{"angle", FOFS(s.angles), F_ANGLEHACK},
 
-	// temp spawn vars -- only valid when the spawn function is called
-	{"lip", STOFS(lip), F_INT, FFL_SPAWNTEMP},
-	{"distance", STOFS(distance), F_INT, FFL_SPAWNTEMP},
-	{"height", STOFS(height), F_INT, FFL_SPAWNTEMP},
-	{"noise", STOFS(noise), F_LSTRING, FFL_SPAWNTEMP},
-	{"pausetime", STOFS(pausetime), F_FLOAT, FFL_SPAWNTEMP},
-	{"item", STOFS(item), F_LSTRING, FFL_SPAWNTEMP},
+    {NULL}
+};
 
-//need for item field in edict struct, FFL_SPAWNTEMP item will be skipped on saves
-	{"item", FOFS(item), F_ITEM},
+// temp spawn vars -- only valid when the spawn function is called
+static const field_t g_temps[] = {
+	{"lip", STOFS(lip), F_INT},
+	{"distance", STOFS(distance), F_INT},
+	{"height", STOFS(height), F_INT},
+	{"noise", STOFS(noise), F_LSTRING},
+	{"pausetime", STOFS(pausetime), F_FLOAT},
+	{"item", STOFS(item), F_LSTRING},
 
-	{"gravity", STOFS(gravity), F_LSTRING, FFL_SPAWNTEMP},
-	{"sky", STOFS(sky), F_LSTRING, FFL_SPAWNTEMP},
-	{"skyrotate", STOFS(skyrotate), F_FLOAT, FFL_SPAWNTEMP},
-	{"skyaxis", STOFS(skyaxis), F_VECTOR, FFL_SPAWNTEMP},
-	{"minyaw", STOFS(minyaw), F_FLOAT, FFL_SPAWNTEMP},
-	{"maxyaw", STOFS(maxyaw), F_FLOAT, FFL_SPAWNTEMP},
-	{"minpitch", STOFS(minpitch), F_FLOAT, FFL_SPAWNTEMP},
-	{"maxpitch", STOFS(maxpitch), F_FLOAT, FFL_SPAWNTEMP},
-	{"nextmap", STOFS(nextmap), F_LSTRING, FFL_SPAWNTEMP},
+	{"gravity", STOFS(gravity), F_LSTRING},
+	{"sky", STOFS(sky), F_LSTRING},
+	{"skyrotate", STOFS(skyrotate), F_FLOAT},
+	{"skyaxis", STOFS(skyaxis), F_VECTOR},
+	{"minyaw", STOFS(minyaw), F_FLOAT},
+	{"maxyaw", STOFS(maxyaw), F_FLOAT},
+	{"minpitch", STOFS(minpitch), F_FLOAT},
+	{"maxpitch", STOFS(maxpitch), F_FLOAT},
+	{"nextmap", STOFS(nextmap), F_LSTRING},
 
-	{0, 0, 0, 0}
-
+	{NULL}
 };
 
 /*
@@ -266,7 +285,7 @@ void ED_CallSpawn (edict_t *ent) {
 	int		i;
 
 	if (!ent->classname) {
-		gi.dprintf ("ED_CallSpawn: NULL classname\n");
+		gi.dprintf ("%s: NULL classname\n", __func__);
 		return;
 	}
 
@@ -297,7 +316,7 @@ void ED_CallSpawn (edict_t *ent) {
 ED_NewString
 =============
 */
-static char *ED_NewString (char *string) {
+static char *ED_NewString (const char *string) {
 	char	*newb, *new_p;
 	int		i,l;
 	
@@ -333,21 +352,15 @@ Takes a key/value pair and sets the binary values
 in an edict
 ===============
 */
-static void ED_ParseField (char *key, char *value, edict_t *ent) {
+static qboolean ED_ParseField (const field_t *fields, const char *key, const char *value, byte *b) {
 	const field_t	*f;
-	byte	*b;
 	float	v;
 	vec3_t	vec;
 
-	for (f=g_fields ; f->name ; f++)
+	for (f=fields ; f->name ; f++)
 	{
-		if (!(f->flags & FFL_NOSPAWN) && !Q_stricmp(f->name, key))
+		if (!Q_stricmp(f->name, key))
 		{	// found it
-			if (f->flags & FFL_SPAWNTEMP)
-				b = (byte *)&st;
-			else
-				b = (byte *)ent;
-
 			switch (f->type)
 			{
 			case F_LSTRING:
@@ -379,10 +392,10 @@ static void ED_ParseField (char *key, char *value, edict_t *ent) {
             default:
                 break;
 			}
-			return;
+			return qtrue;
 		}
 	}
-	gi.dprintf ("%s is not a field\n", key);
+    return qfalse;
 }
 
 /*
@@ -395,8 +408,7 @@ ed should be a properly initialized empty edict.
 */
 static void ED_ParseEdict (const char **data, edict_t *ent) {
 	qboolean	init;
-	char		keyname[256];
-	char		*com_token;
+	char		*key, *value;
 
 	init = qfalse;
 	memset (&st, 0, sizeof(st));
@@ -405,30 +417,32 @@ static void ED_ParseEdict (const char **data, edict_t *ent) {
 	while (1)
 	{	
 	// parse key
-		com_token = COM_Parse (data);
-		if (com_token[0] == '}')
+		key = COM_Parse (data);
+		if (key[0] == '}')
 			break;
 		if (!*data)
-			gi.error ("ED_ParseEntity: EOF without closing brace");
+			gi.error ("%s: EOF without closing brace", __func__);
 
-		Q_strlcpy (keyname, com_token, sizeof(keyname));
-		
 	// parse value	
-		com_token = COM_Parse (data);
+		value = COM_Parse (data);
 		if (!*data)
-			gi.error ("ED_ParseEntity: EOF without closing brace");
+			gi.error ("%s: EOF without closing brace", __func__);
 
-		if (com_token[0] == '}')
-			gi.error ("ED_ParseEntity: closing brace without data");
+		if (value[0] == '}')
+			gi.error ("%s: closing brace without data", __func__);
 
 		init = qtrue;	
 
 	// keynames with a leading underscore are used for utility comments,
 	// and are immediately discarded by quake
-		if (keyname[0] == '_')
+		if (value[0] == '_')
 			continue;
 
-		ED_ParseField (keyname, com_token, ent);
+		if( !ED_ParseField( g_fields, key, value, ( byte * )ent) ) {
+		    if( !ED_ParseField( g_temps, key, value, ( byte * )&st) ) {
+	            gi.dprintf ("%s: %s is not a field\n", __func__, key);
+            }
+        }
 	}
 
 	if (!init)
