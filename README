@@ -1,0 +1,154 @@
+OpenFFA
+=======
+
+OpenFFA is a simple deathmatch mod for Quake 2, an open source replacement
+for ‘RegularDM’ mode of OSP Tourney. Currently in development, it features
+familiar scoreboard and HUD, voting system, configurable map rotation support,
+high scores logging, ‘proper’ in-eyes chasecam support. Besides that, OpenFFA fixes
+some gameplay bugs and annoyances original Quake 2 game library has.
+
+Client commands
+---------------
+
+OpenFFA supports a number of custom client commands, some of them are given below.
+
+* menu — Show OpenFFA menu
+* join — Enter the game
+* observe — Leave the game
+* chase — Enter chasecam mode
+* settings — Show match settings
+* oldscore — Show previous scoreboard
+* vote — Propose new settings
+* stats — Show accuracy stats
+* players — Show players on server
+* highscores — Show the best results on map
+* id — Toggle player ID display
+
+Download game library
+---------------------
+
+If you wish to try OpenFFA on your server, you can start by downloading
+a [nightly][1] build for your system. Binary builds for Win32 (x86) and GNU/Linux
+(i386 and amd64) are provided, along with source snapshots.
+
+[1]: http://skuller.ath.cx/openffa/nightly/
+
+SVN access
+----------
+
+Anonymous read-only access to OpenFFA SVN repository is available.
+Use the following commands to checkout a fresh working copy and prepare it
+for building:
+
+    $ svn co svn://skuller.ath.cx/openffa/trunk openffa
+    $ svnversion openffa > openffa/REVISION
+
+You can also browse OpenFFA source code [online][2].
+
+[2]: http://skuller.ath.cx:8008/openffa/dir?d=trunk
+
+Bug tracker
+-----------
+
+For reporting bugs and proposing enhancements to OpenFFA, please use
+the [bug tracker][3]. No registration (a trivial process though) is required.
+
+[3]: http://skuller.ath.cx:8008/openffa/
+
+Server configuration
+--------------------
+
+Some custom OpenFFA cvars are described below.
+
+- `set g_idle_time 0` (integer)  
+Time, in seconds, after which inactive players are automatically put into
+spectator mode. Default value of zero disables this feature.
+
+- `set g_maps_random 1` (boolean)  
+Specifies whether map list is traversed in random on sequental order.
+
+- `set g_maps_file ""` (string)  
+Specifies name of the file to load map list from. Should not include any
+extenstion part or slashes.
+
+- `set g_bugs 0` (integer)  
+Specifies whether some known Quake 2 gameplay bugs are enabled or not.
+   - 0 - all bugs are fixed
+   - 1 - ‘serious’ bugs are fixed
+   - 2 - original Quake 2 behaviour
+
+- `set g_teleporter_nofreeze 0` (boolean)  
+Enables ‘nofreeze’ teleporter behaviour.
+
+- `set g_spawn_mode 1` (integer)  
+Specifies deathmatch spawn point selection mode.
+   - 0 - select random spawn point, avoiding two closest (bugged version)
+   - 1 - select random spawn point, avoiding two closest (fixed version)
+   - 2 - select random spawn point
+
+- `set g_item_ban 0` (bitmask)  
+Allows one to remove certain items from the map.
+   - 1 - quad damage
+   - 2 - invulnerability
+   - 4 - BFG10K
+
+- `set g_vote_mask 0` (bitmask)  
+Specifies what proposals are available for voting.
+   - 1 - change time limit
+   - 2 - change frag limit
+   - 4 - change item bans
+   - 8 - kick a player
+   - 16 - mute a player
+   - 32 - change current map
+
+- `set g_vote_time 120` (integer)  
+Time, in seconds, after which undecided vote times out.
+
+- `set g_vote_treshold 50` (integer)  
+Vote passes or fails when percentage of players who voted
+either ‘yes’ or ‘no’ becomes greater than this value.
+
+- `set g_vote_limit 3` (integer)  
+Maximum number of votes each player can initiate.
+Value of zero disables this limit.
+
+- `set g_vote_spectators 0` (boolean)  
+Specifies whether spectators are allowed to vote or not.
+
+- `set g_vote_announce 1` (boolean)  
+Specifies whether each player vote is globally announced or not.
+
+- `set g_intermission_time 10` (float)  
+Time, in seconds, for the final scoreboard and high scores to be visible
+before automatically changing to the next map.
+
+- `set g_admin_password ""` (string)  
+If not empty, clients can type `admin <password>` command to
+become server admins. Right now this gives them a decider voice in votes
+and the ability to see IP addresses in the output if ‘playerlist’ command.
+
+- `set g_team_chat 0` (boolean)  
+Specifies if ‘say_team’ messages from players are visible to others.
+This setting does not affect ‘say_team’ messages from spectators.
+   - 0 - visible only to players themselves
+   - 1 - visible to every player in game
+
+- `set g_mute_chat 0` (integer)  
+Allows one to globally disallow chat during the match (chat is still allowed
+during the intermission).
+   - 0 - chat is enabled for everyone
+   - 1 - player chat is disabled, spectators are forced to use ‘say_team’
+   - 2 - chat is disabled for everyone
+
+- `set g_protection_time 0` (float)  
+Time, in seconds, for newly respawned players to be invincible.
+
+Map list format
+---------------
+
+Map list is loaded at server startup from  `./openffa/mapcfg/${g_maps_file}.txt`.
+Each line of the map list file should have the following format:
+`<mapname> [min_players] [max_players] [flags]`. Minimum and maximum player
+counts are optional, as well as flags. Flags can be either 1 or 2, which makes
+the map entry not automatically selectable and not votable, respectively.
+
