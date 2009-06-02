@@ -1186,6 +1186,11 @@ void PutClientInServer (edict_t *ent)
     // force the current weapon up
     client->newweapon = client->weapon;
     ChangeWeapon (ent);
+
+    if( g_protection_time->value > 0 ) {
+        client->invincible_framenum = level.framenum +
+            g_protection_time->value * HZ;
+    }
 }
 
 void G_WriteTime( int remaining ) {

@@ -32,7 +32,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "g_public.h"
 
 // features this game supports
-#define G_FEATURES  (GMF_CLIENTNUM|GMF_MVDSPEC|GMF_WANT_ALL_DISCONNECTS)
+#define G_FEATURES  (GMF_PROPERINUSE|GMF_CLIENTNUM|GMF_MVDSPEC|GMF_WANT_ALL_DISCONNECTS)
 
 // the "gameversion" client command will print this plus compile date
 #define GAMEVERSION "OpenFFA"
@@ -623,6 +623,7 @@ extern  cvar_t  *g_teleporter_nofreeze;
 extern  cvar_t  *g_spawn_mode;
 extern  cvar_t  *g_team_chat;
 extern  cvar_t  *g_mute_chat;
+extern  cvar_t  *g_protection_time;
 extern  cvar_t  *dedicated;
 
 extern  cvar_t  *sv_gravity;

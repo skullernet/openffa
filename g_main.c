@@ -58,6 +58,7 @@ cvar_t  *g_teleporter_nofreeze;
 cvar_t  *g_spawn_mode;
 cvar_t  *g_team_chat;
 cvar_t  *g_mute_chat;
+cvar_t  *g_protection_time;
 cvar_t  *dedicated;
 
 cvar_t  *sv_maxvelocity;
@@ -831,6 +832,7 @@ static void G_Init (void) {
     g_spawn_mode = gi.cvar ("g_spawn_mode", "1", 0);
     g_team_chat = gi.cvar ("g_team_chat", "0", 0);
     g_mute_chat = gi.cvar ("g_mute_chat", "0", 0);
+    g_protection_time = gi.cvar ("g_protection_time", "0", 0);
 
     run_pitch = gi.cvar ("run_pitch", "0.002", 0);
     run_roll = gi.cvar ("run_roll", "0.005", 0);
