@@ -435,7 +435,7 @@ static void ED_ParseEdict (const char **data, edict_t *ent) {
 
     // keynames with a leading underscore are used for utility comments,
     // and are immediately discarded by quake
-        if (value[0] == '_')
+        if (key[0] == '_')
             continue;
 
         if( !ED_ParseField( g_fields, key, value, ( byte * )ent) ) {
