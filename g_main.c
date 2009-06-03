@@ -127,6 +127,7 @@ static void ClientEndServerFrames (void) {
             }
             IntermissionEndServerFrame( c->edict );
         }
+        return;
     }
 
     // calc the player views now that all pushing
