@@ -71,6 +71,12 @@ Specifies whether map list is traversed in random on sequental order.
 Specifies name of the file to load map list from. Should not include any
 extenstion part or slashes.
 
+- `set g_defaults_file ""` (string)  
+If this variable is not empty and there are some settings modified by voting,
+server will execute the specified config file after 5 minutes pass without
+any active players. Config file should reset all votable variables
+to their default values.
+
 - `set g_bugs 0` (integer)  
 Specifies whether some known Quake 2 gameplay bugs are enabled or not.
    - 0 - all bugs are fixed
@@ -100,8 +106,11 @@ Specifies what proposals are available for voting.
    - 8 - kick a player
    - 16 - mute a player
    - 32 - change current map
+   - 64 - toggle weapon stay
+   - 128 - toggle respawn protection (between 0 and 1.5 sec)
+   - 256 - change teleporter mode
 
-- `set g_vote_time 120` (integer)  
+- `set g_vote_time 60` (integer)  
 Time, in seconds, after which undecided vote times out.
 
 - `set g_vote_treshold 50` (integer)  
@@ -112,11 +121,11 @@ either ‘yes’ or ‘no’ becomes greater than this value.
 Maximum number of votes each player can initiate.
 Value of zero disables this limit.
 
-- `set g_vote_spectators 0` (boolean)  
-Specifies whether spectators are allowed to vote or not.
-
-- `set g_vote_announce 1` (boolean)  
-Specifies whether each player vote is globally announced or not.
+- `set g_vote_flags 3` (bitmask)  
+Specifies misc voting parameters.
+    - 1 - each player's decision is printed to console as they vote
+    - 2 - current vote status is visible in the left corner of the screen
+    - 4 - spectators are also allowed to vote
 
 - `set g_intermission_time 10` (float)  
 Time, in seconds, for the final scoreboard and high scores to be visible

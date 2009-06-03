@@ -1140,7 +1140,7 @@ static void Cmd_Settings_f( edict_t *ent ) {
     } else {
         s = "none";
     }
-    gi.cprintf( ent, PRINT_HIGH, "Timelimit:       %s\n", s );
+    gi.cprintf( ent, PRINT_HIGH, "Timelimit:          %s\n", s );
 
     v = (int)fraglimit->value;
     if( v > 0 ) {
@@ -1149,7 +1149,7 @@ static void Cmd_Settings_f( edict_t *ent ) {
     } else {
         s = "none";
     }
-    gi.cprintf( ent, PRINT_HIGH, "Fraglimit:       %s\n", s );
+    gi.cprintf( ent, PRINT_HIGH, "Fraglimit:          %s\n", s );
 
     v = (int)g_item_ban->value;
     if( v & (ITB_QUAD|ITB_INVUL|ITB_BFG) ) {
@@ -1167,10 +1167,25 @@ static void Cmd_Settings_f( edict_t *ent ) {
     } else {
         s = "none";
     }
-    gi.cprintf( ent, PRINT_HIGH, "Removed items:   %s\n", s );
+    gi.cprintf( ent, PRINT_HIGH, "Removed items:      %s\n", s );
+
+    gi.cprintf( ent, PRINT_HIGH, "Weapons stay:       %s\n",
+        DF( WEAPONS_STAY ) ? "on" : "off" );
+
+    if( g_protection_time->value > 0 ) {
+        if( g_protection_time->value == 1 ) {
+            sprintf( buffer, "1 second" );
+        } else {
+            sprintf( buffer, "%.1f seconds", g_protection_time->value );
+        }
+        s = buffer;
+    } else {
+        s = "off";
+    }
+    gi.cprintf( ent, PRINT_HIGH, "Respawn protection: %s\n", s );
 
     s = (int)g_teleporter_nofreeze->value ? "no freeze" : "normal";
-    gi.cprintf( ent, PRINT_HIGH, "Teleporter mode: %s\n", s );
+    gi.cprintf( ent, PRINT_HIGH, "Teleporter mode:    %s\n", s );
 
     if( (int)g_bugs->value < 1 ) {
         s = "all bugs fixed";
@@ -1179,7 +1194,7 @@ static void Cmd_Settings_f( edict_t *ent ) {
     } else {
         s = "default Q2 behaviour";
     }
-    gi.cprintf( ent, PRINT_HIGH, "Gameplay bugs:   %s\n", s );
+    gi.cprintf( ent, PRINT_HIGH, "Gameplay bugs:      %s\n", s );
 
     if( DF( SPAWN_FARTHEST ) ) {
         s = "farthest";
@@ -1190,7 +1205,7 @@ static void Cmd_Settings_f( edict_t *ent ) {
     } else {
         s = "random";
     }
-    gi.cprintf( ent, PRINT_HIGH, "Respawn mode:    %s\n", s );
+    gi.cprintf( ent, PRINT_HIGH, "Respawn mode:       %s\n", s );
 }
 
 static void Cmd_Admin_f( edict_t *ent ) {

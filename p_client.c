@@ -1019,6 +1019,8 @@ void spectator_respawn (edict_t *ent)
     ent->client->respawn_framenum = level.framenum;
     ent->client->observer_framenum = level.framenum;
     ent->client->level.activity_framenum = level.framenum;
+
+    G_CheckVote();
 }
 
 //==============================================================
@@ -1542,6 +1544,9 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 
     if( abs( ucmd->forwardmove ) >= 10 || abs( ucmd->upmove ) >= 10 || abs( ucmd->sidemove ) >= 10 ) {
         client->level.activity_framenum = level.framenum;
+        if( level.framenum > level.activity_framenum ) {
+            level.activity_framenum = level.framenum;
+        }
     }
 
     if (level.intermission_framenum)

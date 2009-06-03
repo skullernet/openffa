@@ -46,12 +46,12 @@ cvar_t  *g_vote_mask;
 cvar_t  *g_vote_time;
 cvar_t  *g_vote_treshold;
 cvar_t  *g_vote_limit;
-cvar_t  *g_vote_spectators;
-cvar_t  *g_vote_announce;
+cvar_t  *g_vote_flags;
 cvar_t  *g_intermission_time;
 cvar_t  *g_admin_password;
 cvar_t  *g_maps_random;
 cvar_t  *g_maps_file;
+cvar_t  *g_defaults_file;
 cvar_t  *g_item_ban;
 cvar_t  *g_bugs;
 cvar_t  *g_teleporter_nofreeze;
@@ -110,9 +110,11 @@ void RunEntity (edict_t *ent);
 /*
 =================
 ClientEndServerFrames
+
+Return number of connected cliets
 =================
 */
-void ClientEndServerFrames (void) {
+static void ClientEndServerFrames (void) {
     int         i;
     gclient_t   *c;
 
@@ -125,7 +127,6 @@ void ClientEndServerFrames (void) {
             }
             IntermissionEndServerFrame( c->edict );
         }
-        return;
     }
 
     // calc the player views now that all pushing
@@ -553,7 +554,7 @@ static void CheckDMRules( void ) {
             return;
         }
         if( timelimit->modified || ( level.framenum % HZ ) == 0 ) {
-            int delta = level.framenum - level.match_framenum;
+            int delta = level.framenum /*- level.match_framenum*/;
             int remaining = timelimit->value*60 - delta / HZ;
 
             G_WriteTime( remaining );
@@ -612,6 +613,20 @@ static void CheckDMRules( void ) {
     fraglimit->modified = qfalse;
 }
 
+static void G_ResetSettings( void ) {
+    char command[256];
+
+    gi.dprintf( "Restoring default game settings...\n" );
+
+    if( g_defaults_file->string[0] ) {
+        Q_snprintf (command, sizeof(command), "exec \"%s\"\n", g_defaults_file->string);
+        gi.AddCommandString (command);
+    }
+
+    game.settings_modified = 0;
+}
+
+
 /*
 =============
 ExitLevel
@@ -623,6 +638,11 @@ void G_ExitLevel (void) {
     if( level.intermission_exit ) {
         return; // already exited
     }
+
+    // reset settings if no one was active on the previous map
+    //if( game.settings_modified && !level.activity_framenum ) {
+    //    G_ResetSettings();
+    //}
 
     if( !strcmp( level.nextmap, level.mapname ) ) {
         G_ResetLevel();
@@ -654,6 +674,7 @@ void G_RunFrame (void)
     // treat each object in turn
     // even the world gets a chance to think
     //
+    level.activity_framenum = 0;
     for( i = 0, ent = g_edicts; i < globals.num_edicts; i++, ent++ ) {
         if( !ent->inuse )
             continue;
@@ -733,14 +754,18 @@ void G_RunFrame (void)
         }
 
         // check vote timeout
-        if( level.vote.proposal && level.framenum > level.vote.framenum ) {
-            gi.bprintf( PRINT_HIGH, "Vote timed out.\n" );
-            level.vote.proposal = 0;
+        if( level.vote.proposal ) {
+            G_UpdateVote();
         }
     }
 
     // build the playerstate_t structures for all players
     ClientEndServerFrames ();
+
+    // reset settings if no one was active for the last 5 minutes
+    if( game.settings_modified && level.framenum - level.activity_framenum > 0.5 * 60 * HZ ) {
+        G_ResetSettings();
+    }
 }
 
 
@@ -757,6 +782,12 @@ static void G_Shutdown (void) {
     List_Init( &g_map_queue );
 }
 
+static void check_cvar( cvar_t *cv ) {
+    if( strchr( cv->string, '/' ) || strstr( cv->string, ".." ) ) {
+        gi.dprintf( "'%s' should be a single filename, not a path.\n", cv->name );
+        gi.cvar_forceset( cv->name, "" );
+    }
+}
 
 /*
 ============
@@ -817,15 +848,15 @@ static void G_Init (void) {
     g_select_empty = gi.cvar ("g_select_empty", "0", CVAR_ARCHIVE);
     g_idle_time = gi.cvar ("g_idle_time", "0", 0);
     g_vote_mask = gi.cvar ("g_vote_mask", "0", 0);
-    g_vote_time = gi.cvar ("g_vote_time", "120", 0);
+    g_vote_time = gi.cvar ("g_vote_time", "60", 0);
     g_vote_treshold = gi.cvar ("g_vote_treshold", "50", 0);
     g_vote_limit = gi.cvar ("g_vote_limit", "3", 0);
-    g_vote_spectators = gi.cvar ("g_vote_spectators", "0", 0);
-    g_vote_announce = gi.cvar ("g_vote_announce", "1", 0);
+    g_vote_flags = gi.cvar ("g_vote_flags", "3", 0);
     g_intermission_time = gi.cvar ("g_intermission_time", "10", 0);
     g_admin_password = gi.cvar ("g_admin_password", "", 0);
     g_maps_random = gi.cvar ("g_maps_random", "1", 0);
     g_maps_file = gi.cvar ("g_maps_file", "", CVAR_LATCH);
+    g_defaults_file = gi.cvar ("g_defaults_file", "", CVAR_LATCH);
     g_item_ban = gi.cvar ("g_item_ban", "0", 0);
     g_bugs = gi.cvar ("g_bugs", "0", 0);
     g_teleporter_nofreeze = gi.cvar ("g_teleporter_nofreeze", "0", 0);
@@ -893,13 +924,12 @@ static void G_Init (void) {
         game.dir[0] = 0;
     }
 
-    if( strchr( g_maps_file->string, '/' ) || strstr( g_maps_file->string, ".." ) ) {
-        gi.dprintf( "'g_maps_file' should be a single filename, not a path.\n" );
-        gi.cvar_forceset( "g_maps_file", "" );
-    }
+    check_cvar( g_maps_file );
     if( g_maps_file->string[0] ) {
         G_LoadMapList();
     }
+
+    check_cvar( g_defaults_file );
 
     // obtain server features
     cv = gi.cvar( "sv_features", NULL, 0 );

@@ -808,6 +808,16 @@ static const char dm_statusbar[] =
   "xv -36 "
   "stat_string 24 "
 "endif "
+
+// vote proposal
+"if 25 "
+  "xl 10 "
+  "yb -188 "
+  "stat_string 25 "
+  "yb -180 "
+  "stat_string 26 "
+"endif "
+
 ;
 
 /*QUAKED worldspawn (0 0 0) ?

@@ -786,5 +786,12 @@ void G_SetStats (edict_t *ent)
         }
     }
 
+    if( level.vote.proposal && ( (int)g_vote_flags->value & 2 ) ) {
+        ent->client->ps.stats[STAT_VOTE_PROPOSAL] = CS_VOTE_PROPOSAL;
+        ent->client->ps.stats[STAT_VOTE_COUNT] = CS_VOTE_COUNT;
+    } else {
+        ent->client->ps.stats[STAT_VOTE_PROPOSAL] = 0;
+        ent->client->ps.stats[STAT_VOTE_COUNT] = 0;
+    }
 }
 

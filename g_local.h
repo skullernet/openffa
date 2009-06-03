@@ -350,6 +350,8 @@ typedef struct
     int         serverflags;
     int         serverFeatures;
 
+    int         settings_modified;
+
     char        dir[MAX_OSPATH]; // where variable data is stored
 } game_locals_t;
 
@@ -359,6 +361,9 @@ typedef struct
 #define VOTE_KICK       8
 #define VOTE_MUTE       16
 #define VOTE_MAP        32
+#define VOTE_WEAPONSTAY 64
+#define VOTE_PROTECTION 128
+#define VOTE_TELEMODE   256
 
 #define MAX_SPAWNS      32
 
@@ -390,6 +395,7 @@ typedef struct
     edict_t     *spawns[MAX_SPAWNS];
     int         numspawns;
 
+#if 0
     //int           status;
     int         warmup_framenum;        // time the warmup was started
     int         countdown_framenum;     // time the countdown was started
@@ -397,6 +403,8 @@ typedef struct
     int         pause_framenum;         // time the pause was started
 
 //    int         frames_remaining;       // timelimit
+#endif
+    int         activity_framenum;      // time the last client has been active
 
     // intermission state
     int         intermission_framenum;      // time the intermission was started
@@ -608,12 +616,13 @@ extern  cvar_t  *fraglimit;
 extern  cvar_t  *timelimit;
 extern  cvar_t  *g_select_empty;
 extern  cvar_t  *g_idle_time;
+
 extern  cvar_t  *g_vote_mask;
 extern  cvar_t  *g_vote_time;
 extern  cvar_t  *g_vote_treshold;
 extern  cvar_t  *g_vote_limit;
-extern  cvar_t  *g_vote_spectators;
-extern  cvar_t  *g_vote_announce;
+extern  cvar_t  *g_vote_flags;
+
 extern  cvar_t  *g_intermission_time;
 extern  cvar_t  *g_admin_password;
 extern  cvar_t  *g_item_ban;
@@ -859,6 +868,8 @@ void G_ResetLevel( void );
 #define CS_TIME             ( CS_GENERAL + 2 )
 #define CS_SPECMODE         ( CS_GENERAL + 3 )
 #define CS_PREGAME          ( CS_GENERAL + 4 )
+#define CS_VOTE_PROPOSAL    ( CS_GENERAL + 5 )
+#define CS_VOTE_COUNT       ( CS_GENERAL + 6 )
 #define CS_PLAYERNAMES      ( CS_GENERAL + 10 )
 
 #define STAT_FRAGS_STRING           18
@@ -868,6 +879,8 @@ void G_ResetLevel( void );
 #define STAT_TIMER2_ICON            22
 #define STAT_TIMER2                 23
 #define STAT_VIEWID                 24
+#define STAT_VOTE_PROPOSAL          25
+#define STAT_VOTE_COUNT             26
 
 // client_t->anim_priority
 #define ANIM_BASIC      0       // stand / run
@@ -1267,6 +1280,7 @@ void UpdateChaseTargets( chase_mode_t mode, edict_t *targ );
 //
 // g_vote.c
 //
+void G_UpdateVote( void );
 qboolean G_CheckVote( void ); 
 void Cmd_Vote_f( edict_t *ent );
 void Cmd_CastVote_f( edict_t *ent, qboolean accepted );

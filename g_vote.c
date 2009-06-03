@@ -20,10 +20,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "g_local.h"
 
-static int G_CalcVote( int *acc, int *rej ) {
+static int G_CalcVote( int *votes ) {
     gclient_t *c;
-    int total = 0, votes[2] = { 0, 0 };
+    int total = 0;
 
+    votes[0] = votes[1] = 0;
     for( c = game.clients; c < game.clients + game.maxclients; c++ ) {
         if( c->pers.connected <= CONN_CONNECTED ) {
             continue;
@@ -31,7 +32,7 @@ static int G_CalcVote( int *acc, int *rej ) {
         if( c->pers.mvdspec ) {
             continue;
         }
-        if( (int)g_vote_spectators->value == 0 &&
+        if( !( (int)g_vote_flags->value & 4 ) &&
             !c->pers.admin && c->pers.connected != CONN_SPAWNED )
         {
             continue; // don't count spectators
@@ -53,19 +54,58 @@ static int G_CalcVote( int *acc, int *rej ) {
         votes[c->level.vote.accepted]++;
     }
 
-    if( !total ) {
-        *acc = *rej = 0;
-        return 0;
-    }
+    return total;
+}
 
-    *rej = votes[0] * 100 / total;
-    *acc = votes[1] * 100 / total;
+static int _G_CalcVote( int *votes ) {
+    int treshold = (int)g_vote_treshold->value;
+    int total;
+
+    total = G_CalcVote( votes );
+    total = ceil( total * treshold * 0.01f );
 
     return total;
 }
 
+void G_UpdateVote( void ) {
+    char buffer[MAX_QPATH];
+    int votes[2], total;
+    int remaining;
+
+    if( !level.vote.proposal ) {
+        return;
+    }
+
+    // check timeout
+    if( level.framenum >= level.vote.framenum ) {
+        gi.bprintf( PRINT_HIGH, "Vote timed out.\n" );
+        level.vote.proposal = 0;
+        return;
+    }
+
+    // update vote count every second
+    if( !( (int)g_vote_flags->value & 2 ) ) {
+        return;
+    }
+
+    remaining = level.vote.framenum - level.framenum;
+    if( remaining % 10 ) {
+        return;
+    }
+
+    total = _G_CalcVote( votes );
+    Q_snprintf( buffer, sizeof( buffer ), "Yes: %d (%d) No: %d [%02d sec]",
+        votes[1], total, votes[0], remaining / HZ );
+
+    gi.WriteByte( svc_configstring );
+    gi.WriteShort( CS_VOTE_COUNT );
+    gi.WriteString( buffer );
+    gi.multicast( NULL, MULTICAST_ALL );
+}
+
 qboolean G_CheckVote( void ) {
-    int treshold = g_vote_treshold->value;
+    int treshold = (int)g_vote_treshold->value;
+    int votes[2], total;
     int acc, rej;
 
     if( !level.vote.proposal ) {
@@ -85,24 +125,31 @@ qboolean G_CheckVote( void ) {
     }
 
     // are there any players?
-    if( !G_CalcVote( &acc, &rej ) ) {
+    total = G_CalcVote( votes );
+    if( !total ) {
         gi.bprintf( PRINT_HIGH, "Vote aborted due to the absence of players.\n" );
         goto finish;
     }
+
+    rej = votes[0] * 100 / total;
+    acc = votes[1] * 100 / total;
 
     if( acc > treshold ) {
         switch( level.vote.proposal ) {
         case VOTE_TIMELIMIT:
             gi.bprintf( PRINT_HIGH, "Vote passed. Timelimit set to %d.\n", level.vote.value );
-            gi.AddCommandString( va( "set timelimit %d\n", level.vote.value ) );
+            gi.cvar_set( "timelimit", va( "%d", level.vote.value ) );
+            game.settings_modified++;
             break;
         case VOTE_FRAGLIMIT:
             gi.bprintf( PRINT_HIGH, "Vote passed. Fraglimit set to %d.\n", level.vote.value );
-            gi.AddCommandString( va( "set fraglimit %d\n", level.vote.value ) );
+            gi.cvar_set( "fraglimit", va( "%d", level.vote.value ) );
+            game.settings_modified++;
             break;
         case VOTE_ITEMS:
             gi.bprintf( PRINT_HIGH, "Vote passed. New item config set.\n" );
-            gi.AddCommandString( va( "set g_item_ban %d\n", level.vote.value ) );
+            gi.cvar_set( "g_item_ban", va( "%d", level.vote.value ) );
+            game.settings_modified++;
             break;
         case VOTE_KICK:
             gi.bprintf( PRINT_HIGH, "Vote passed. Kicking %s...\n", level.vote.victim->pers.netname );
@@ -117,6 +164,27 @@ qboolean G_CheckVote( void ) {
             strcpy( level.nextmap, level.vote.map );
             BeginIntermission();
             break;
+        case VOTE_WEAPONSTAY:
+            gi.bprintf( PRINT_HIGH, "Vote passed. Weapon stay set to %sABLED.\n",
+                level.vote.value ? "EN" : "DIS" );
+            gi.cvar_set( "dmflags", va( "%d", level.vote.value ?
+                    ( (int)dmflags->value | DF_WEAPONS_STAY ) :
+                    ( (int)dmflags->value & ~DF_WEAPONS_STAY ) ) );
+            game.settings_modified++;
+            break;
+        case VOTE_PROTECTION:
+            gi.bprintf( PRINT_HIGH, "Vote passed. Respawn protection set to %sABLED.\n",
+                level.vote.value ? "EN" : "DIS" );
+            gi.cvar_set( "g_protection_time", va( "%f", level.vote.value ? 1.5f : 0 ) );
+            game.settings_modified++;
+            break;
+        case VOTE_TELEMODE:
+            gi.bprintf( PRINT_HIGH, "Vote passed. Teleported mode set to %s.\n",
+                level.vote.value ? "NOFREEZE" : "NORMAL" );
+            gi.cvar_set( "g_teleporter_nofreeze", va( "%d", level.vote.value ) );
+            game.settings_modified++;
+            break;
+
         default:
             break;
         }
@@ -182,6 +250,18 @@ static void G_BuildProposal( char *buffer ) {
     case VOTE_MAP:
         sprintf( buffer, "change map to %s", level.vote.map );
         break;
+    case VOTE_WEAPONSTAY:
+        sprintf( buffer, "change weapon stay to %sABLED",
+            level.vote.value ? "EN" : "DIS" );
+        break;
+    case VOTE_PROTECTION:
+        sprintf( buffer, "change respawn protection to %sABLED",
+            level.vote.value ? "EN" : "DIS" );
+        break;
+    case VOTE_TELEMODE:
+        sprintf( buffer, "change teleporter mode to %s",
+            level.vote.value ? "NOFREEZE" : "NORMAL" );
+        break;
     default:
         strcpy( buffer, "unknown" );
         break;
@@ -189,7 +269,7 @@ static void G_BuildProposal( char *buffer ) {
 }
 
 void Cmd_CastVote_f( edict_t *ent, qboolean accepted ) {
-    if( (int)g_vote_spectators->value == 0 && !PLAYER_SPAWNED( ent ) ) {
+    if( !( (int)g_vote_flags->value & 4 ) && !PLAYER_SPAWNED( ent ) ) {
         gi.cprintf( ent, PRINT_HIGH, "Spectators can't vote on this server.\n" );
         return;
     }
@@ -205,7 +285,7 @@ void Cmd_CastVote_f( edict_t *ent, qboolean accepted ) {
     ent->client->level.vote.index = level.vote.index;
     ent->client->level.vote.accepted = accepted;
 
-    if( (int)g_vote_announce->value ) {
+    if( ( (int)g_vote_flags->value & 1 ) ) {
         gi.bprintf( PRINT_HIGH, "%s voted %s.\n", 
             ent->client->pers.netname, accepted ? "YES" : "NO" );
     }
@@ -213,8 +293,8 @@ void Cmd_CastVote_f( edict_t *ent, qboolean accepted ) {
     if( G_CheckVote() ) {
         return;
     }
-    
-    if( (int)g_vote_announce->value == 0 ) {
+
+    if( !( (int)g_vote_flags->value & 1 ) ) {
         gi.cprintf( ent, PRINT_HIGH, "Vote cast.\n" );
     }
 }
@@ -329,6 +409,58 @@ static qboolean vote_map( edict_t *ent ) {
     return qtrue;
 }
 
+static qboolean vote_toggle( edict_t *ent, const char *name, qboolean current ) {
+    char *s = gi.argv( 2 );
+    qboolean v;
+
+    if( !strcmp( s, "0" ) || !Q_stricmp( s, "off" ) || !Q_stricmp( s, "no" ) ) {
+        v =  qfalse;
+    } else if( !strcmp( s, "1" ) || !Q_stricmp( s, "on" ) || !Q_stricmp( s, "yes" ) ) {
+        v = qtrue;
+    } else {
+        gi.cprintf( ent, PRINT_HIGH, "Please specify one of 0/1/off/on/no/yes.\n" );
+        return qfalse;
+    }
+
+    if( current == v ) {
+        gi.cprintf( ent, PRINT_HIGH, "%s is already %sABLED.\n", name, v ? "EN" : "DIS" );
+        return qfalse;
+    }
+
+    level.vote.value = v;
+    return qtrue;
+}
+
+static qboolean vote_weaponstay( edict_t *ent ) {
+    return vote_toggle( ent, "Weapon stay", DF( WEAPONS_STAY ) );
+}
+
+static qboolean vote_protection( edict_t *ent ) {
+    return vote_toggle( ent, "Respawn protection", ( g_protection_time->value > 0 ) );
+}
+
+static qboolean vote_telemode( edict_t *ent ) {
+    char *s = gi.argv( 2 );
+    qboolean v;
+
+    if( !Q_stricmp( s, "normal" ) || !Q_stricmp( s, "freeze" ) || !Q_stricmp( s, "q2" ) ) {
+        v =  qfalse;
+    } else if( !Q_stricmp( s, "nofreeze" ) || !Q_stricmp( s, "q3" ) ) {
+        v = qtrue;
+    } else {
+        gi.cprintf( ent, PRINT_HIGH, "Please specify one of normal/nofreeze/q2/q3.\n" );
+        return qfalse;
+    }
+
+    if( !!(int)g_teleporter_nofreeze->value == v ) {
+        gi.cprintf( ent, PRINT_HIGH, "Teleporter mode is already set to %s.\n", v ? "NOFREEZE" : "NORMAL" );
+        return qfalse;
+    }
+
+    level.vote.value = v;
+    return qtrue;
+}
+
 typedef struct {
     const char *name;
     int bit;
@@ -344,6 +476,9 @@ static const vote_proposal_t vote_proposals[] = {
     { "kick",       VOTE_KICK,      vote_victim     },
     { "mute",       VOTE_MUTE,      vote_victim     },
     { "map",        VOTE_MAP,       vote_map        },
+    { "weaponstay", VOTE_WEAPONSTAY,vote_weaponstay },
+    { "protection", VOTE_PROTECTION,vote_protection },
+    { "telemode",   VOTE_TELEMODE,  vote_telemode   },
     { NULL }
 };
 
@@ -352,9 +487,8 @@ void Cmd_Vote_f( edict_t *ent ) {
     const vote_proposal_t *v;
     int mask = g_vote_mask->value;
     int limit = g_vote_limit->value;
-    int treshold = g_vote_treshold->value;
     int argc = gi.argc();
-    int acc, rej;
+    int votes[2], total;
     char *s;
 
     if( !mask ) {
@@ -368,15 +502,13 @@ void Cmd_Vote_f( edict_t *ent ) {
             return;
         }
         G_BuildProposal( buffer );
-        G_CalcVote( &acc, &rej );
+        total = _G_CalcVote( votes );
         gi.cprintf( ent, PRINT_HIGH,
-            "Proposal   %s\n"
-            "Accepted   %d%%\n"
-            "Rejected   %d%%\n"
-            "Treshold   %d%%\n"
-            "Timeout    %d sec remaining\n"
-            "Initiator  %s\n",
-            buffer, acc, rej, treshold,
+            "Proposal:   %s\n"
+            "Yes/No:     %d/%d [%d]\n"
+            "Timeout:    %d sec\n"
+            "Initiator:  %s\n",
+            buffer, votes[1], votes[0], total,
             ( level.vote.framenum - level.framenum ) / HZ,
             level.vote.initiator->pers.netname );
         return;
@@ -415,10 +547,21 @@ void Cmd_Vote_f( edict_t *ent ) {
             gi.cprintf( ent, PRINT_HIGH,
                 " map <name>                 Change current map\n" );
         }
+        if( mask & VOTE_WEAPONSTAY ) {
+            gi.cprintf( ent, PRINT_HIGH,
+                " weaponstay <0/1>           Toggle weapon stay\n" );
+        }
+        if( mask & VOTE_PROTECTION ) {
+            gi.cprintf( ent, PRINT_HIGH,
+                " protection <0/1>           Toggle respawn protection\n" );
+        }
+        if( mask & VOTE_TELEMODE ) {
+            gi.cprintf( ent, PRINT_HIGH,
+                " telemode <normal/nofreeze> Change teleporter mode\n" );
+        }
         gi.cprintf( ent, PRINT_HIGH,
             "Available commands:\n"
-                " yes                        Accept current vote\n"
-                " no                         Deny current vote\n"
+                " yes/no                     Accept/deny current vote\n"
                 " help                       Show this help\n" );
         return;
     }
@@ -434,7 +577,7 @@ void Cmd_Vote_f( edict_t *ent ) {
 //
 // proposals
 //
-    if( !(int)g_vote_spectators->value &&
+    if( !( (int)g_vote_flags->value & 4 ) &&
         !PLAYER_SPAWNED( ent ) && !ent->client->pers.admin )
     {
         gi.cprintf( ent, PRINT_HIGH, "Spectators can't vote on this server.\n" );
@@ -525,8 +668,15 @@ void Cmd_Vote_f( edict_t *ent ) {
     // decide vote immediately
     if( !G_CheckVote() ) {
         G_BuildProposal( buffer );
-        gi.bprintf( PRINT_HIGH, "Proposal: %s\n"
-            "Type 'yes' in the console to accept or 'no' to deny.\n", buffer );
+    
+        if( ( (int)g_vote_flags->value & 2 ) ) {
+            gi.configstring( CS_VOTE_PROPOSAL, va( "Vote: %s", buffer ) );
+            G_UpdateVote();
+        } else {
+            gi.bprintf( PRINT_HIGH, "Proposal: %s\n", buffer );
+        }
+
+        gi.bprintf( PRINT_MEDIUM, "Type 'yes' in the console to accept or 'no' to deny.\n" );
     }
 }
 
