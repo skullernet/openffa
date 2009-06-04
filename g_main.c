@@ -675,7 +675,6 @@ void G_RunFrame (void)
     // treat each object in turn
     // even the world gets a chance to think
     //
-    level.activity_framenum = 0;
     for( i = 0, ent = g_edicts; i < globals.num_edicts; i++, ent++ ) {
         if( !ent->inuse )
             continue;
@@ -764,7 +763,7 @@ void G_RunFrame (void)
     ClientEndServerFrames ();
 
     // reset settings if no one was active for the last 5 minutes
-    if( game.settings_modified && level.framenum - level.activity_framenum > 0.5 * 60 * HZ ) {
+    if( game.settings_modified && level.framenum - level.activity_framenum > 5 * 60 * HZ ) {
         G_ResetSettings();
     }
 }

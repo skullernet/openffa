@@ -59,10 +59,9 @@ static int G_CalcVote( int *votes ) {
 
 static int _G_CalcVote( int *votes ) {
     int treshold = (int)g_vote_treshold->value;
-    int total;
+    int total = G_CalcVote( votes );
 
-    total = G_CalcVote( votes );
-    total = ceil( total * treshold * 0.01f );
+    total = total * treshold / 100 + 1;
 
     return total;
 }
