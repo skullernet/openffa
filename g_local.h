@@ -95,6 +95,7 @@ typedef trace_t *(*trace_hacked_t)( trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, e
 #define FL_NO_KNOCKBACK         0x00000800
 #define FL_POWER_ARMOR          0x00001000  // power armor (if any) is active
 #define FL_NOCLIP_PROJECTILE    0x00002000  // projectile hack
+#define FL_HIDDEN               0x40000000  // used for banned items
 #define FL_RESPAWN              0x80000000  // used for item respawning
 
 
@@ -355,6 +356,7 @@ typedef struct
     char        dir[MAX_OSPATH]; // where variable data is stored
 } game_locals_t;
 
+// vote proposals
 #define VOTE_TIMELIMIT  1 
 #define VOTE_FRAGLIMIT  2
 #define VOTE_ITEMS      4
@@ -365,11 +367,20 @@ typedef struct
 #define VOTE_PROTECTION 128
 #define VOTE_TELEMODE   256
 
+// vote flags
+#define VF_ANNOUNCE 1
+#define VF_SHOW     2
+#define VF_SPECS    4
+#define VF_CHANGE   8
+
+#define VF(x)   (((int)g_vote_flags->value&VF_##x)!=0)
+
 #define MAX_SPAWNS      32
 
 #define ITB_QUAD    1
 #define ITB_INVUL   2
 #define ITB_BFG     4
+#define ITB_PS      8
 
 #define MAX_SCORES  10
 
@@ -1280,6 +1291,7 @@ void UpdateChaseTargets( chase_mode_t mode, edict_t *targ );
 //
 // g_vote.c
 //
+void G_FinishVote( void );
 void G_UpdateVote( void );
 qboolean G_CheckVote( void ); 
 void Cmd_Vote_f( edict_t *ent );

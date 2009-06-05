@@ -1158,10 +1158,13 @@ static void Cmd_Settings_f( edict_t *ent ) {
             strcat( buffer, "quad " );
         }
         if( v & ITB_INVUL ) {
-            strcat( buffer, "invu " );
+            strcat( buffer, "invul " );
         }
         if( v & ITB_BFG ) {
             strcat( buffer, "bfg " );
+        }
+        if( v & ITB_PS ) {
+            strcat( buffer, "ps " );
         }
         s = buffer;
     } else {

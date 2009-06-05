@@ -84,7 +84,7 @@ Specifies whether some known Quake 2 gameplay bugs are enabled or not.
    - 2 - original Quake 2 behaviour
 
 - `set g_teleporter_nofreeze 0` (boolean)  
-Enables ‘nofreeze’ teleporter behaviour.
+Enables ‘no freeze’ (aka ‘q3’) teleporter behaviour.
 
 - `set g_spawn_mode 1` (integer)  
 Specifies deathmatch spawn point selection mode.
@@ -97,6 +97,7 @@ Allows one to remove certain items from the map.
    - 1 - quad damage
    - 2 - invulnerability
    - 4 - BFG10K
+   - 8 - power armor (screen and shield items)
 
 - `set g_vote_mask 0` (bitmask)  
 Specifies what proposals are available for voting.
@@ -121,11 +122,12 @@ either ‘yes’ or ‘no’ becomes greater than this value.
 Maximum number of votes each player can initiate.
 Value of zero disables this limit.
 
-- `set g_vote_flags 3` (bitmask)  
+- `set g_vote_flags 11` (bitmask)  
 Specifies misc voting parameters.
-    - 1 - each player's decision is printed to console as they vote
+    - 1 - each player's decision is globally announced as they vote
     - 2 - current vote status is visible in the left corner of the screen
     - 4 - spectators are also allowed to vote
+    - 8 - players are allowed to change their votes
 
 - `set g_intermission_time 10` (float)  
 Time, in seconds, for the final scoreboard and high scores to be visible

@@ -599,7 +599,7 @@ void G_SpawnEntities (const char *mapname, const char *entities, const char *spa
 
     G_ParseString();
     G_FindTeams();
-    G_UpdateItemBans();
+    //G_UpdateItemBans();
 
     // find spawnpoints
     ent = NULL;
@@ -618,6 +618,8 @@ void G_ResetLevel( void ) {
     int i;
 
     gi.FreeTags( TAG_LEVEL );
+    
+    G_FinishVote();
 
     // clear level
     level.framenum = 0;
@@ -642,7 +644,7 @@ void G_ResetLevel( void ) {
     // respawn all edicts
     G_ParseString();
     G_FindTeams();
-    G_UpdateItemBans();
+    //G_UpdateItemBans();
 
     // respawn all clients
     for( i = 0; i < game.maxclients; i++ ) {

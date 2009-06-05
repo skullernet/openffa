@@ -335,7 +335,8 @@ void BeginIntermission (void)
         return;        // already activated
 
     level.intermission_framenum = level.framenum;
-    level.vote.proposal = 0;
+
+    G_FinishVote();
 
     BuildDeathmatchScoreboard (game.oldscores, NULL);
 
@@ -786,7 +787,7 @@ void G_SetStats (edict_t *ent)
         }
     }
 
-    if( level.vote.proposal && ( (int)g_vote_flags->value & 2 ) ) {
+    if( level.vote.proposal && VF( SHOW ) ) {
         ent->client->ps.stats[STAT_VOTE_PROPOSAL] = CS_VOTE_PROPOSAL;
         ent->client->ps.stats[STAT_VOTE_COUNT] = CS_VOTE_COUNT;
     } else {

@@ -46,6 +46,8 @@ static const gitem_armor_t bodyarmor_info   = {100, 200, .80, .60, ARMOR_BODY};
 void Use_Quad (edict_t *ent, gitem_t *item);
 static int  quad_drop_timeout_hack;
 
+static qboolean ItemBanned( edict_t *ent );
+
 //======================================================================
 
 /*
@@ -96,23 +98,37 @@ gitem_t *FindItem (char *pickup_name)
 
 //======================================================================
 
+static edict_t *PickMate( edict_t *ent ) {
+    edict_t *edicts[256], *e;
+    int count;
+
+    for( count = 0, e = ent->teammaster; e; e = e->chain ) {
+        if( ItemBanned( e ) ) {
+            continue;
+        }
+        edicts[count++] = e;
+        if( count == 256 ) {
+            break;
+        }
+    }
+    if( !count ) {
+        return ent;
+    }
+
+    e = edicts[rand_byte() % count];
+    return e;
+}
+
 static void DoRespawn (edict_t *ent)
 {
-    if (ent->team)
-    {
-        edict_t *master;
-        int count;
-        int choice;
+    if( ent->team ) {
+        ent = PickMate( ent );
+    }
 
-        master = ent->teammaster;
-
-        for (count = 0, ent = master; ent; ent = ent->chain, count++)
-            ;
-
-        choice = rand() % count;
-
-        for (count = 0, ent = master; count < choice; ent = ent->chain, count++)
-            ;
+    if( ItemBanned( ent ) ) {
+        // mark it as hidden to restore later
+        ent->flags |= FL_HIDDEN;
+        return;
     }
 
     ent->svflags &= ~SVF_NOCLIENT;
@@ -133,18 +149,11 @@ void SetRespawn (edict_t *ent, float delay)
     gi.linkentity (ent);
 }
 
-
-void HideItem (edict_t *ent)
-{
-    ent->flags |= FL_RESPAWN;
-    ent->svflags |= SVF_NOCLIENT;
-    ent->solid = SOLID_NOT;
-    if( ent->think == DoRespawn ) {
-        ent->nextthink = 0;
-    }
-    gi.linkentity (ent);
+static void SetUnhide( edict_t *ent ) {
+    ent->flags &= ~FL_HIDDEN;
+    ent->nextthink = level.framenum + 2*HZ;
+    ent->think = DoRespawn;
 }
-
 
 //======================================================================
 
@@ -880,8 +889,7 @@ void droptofloor (edict_t *ent)
 
     VectorCopy (tr.endpos, ent->s.origin);
 
-    if (ent->team)
-    {
+    if (ent->team) {
         ent->flags &= ~FL_TEAMSLAVE;
         ent->chain = ent->teamchain;
         ent->teamchain = NULL;
@@ -892,6 +900,11 @@ void droptofloor (edict_t *ent)
         {
             NEXT_FRAME( ent, DoRespawn );
         }
+    } else if( ItemBanned( ent ) ) {
+        // hide this item
+        ent->flags |= FL_HIDDEN;
+        ent->svflags |= SVF_NOCLIENT;
+        ent->solid = SOLID_NOT;
     }
 
     if (ent->spawnflags & ITEM_NO_TOUCH)
@@ -1042,9 +1055,28 @@ void SpawnItem (edict_t *ent, gitem_t *item)
         gi.modelindex (ent->model);
 }
 
+static qboolean ItemBanned( edict_t *ent ) {
+    int itb = (int)g_item_ban->value;
+
+    if( ent->item ) {
+        if( ent->item->use == Use_Quad ) {
+            return !!( itb & ITB_QUAD );
+        }
+        if( ent->item->use == Use_Invulnerability ) {
+            return !!( itb & ITB_INVUL );
+        }
+        if( ent->item->weapmodel == WEAP_BFG ) {
+            return !!( itb & ITB_BFG );
+        }
+        if( ent->item->use == Use_PowerArmor ) {
+            return !!( itb & ITB_PS );
+        }
+    }
+
+    return qfalse;
+}
 
 void G_UpdateItemBans( void ) {
-    int itb = g_item_ban->value;
     int i;
     edict_t *ent;
 
@@ -1056,27 +1088,16 @@ void G_UpdateItemBans( void ) {
         if( ( ent->spawnflags & (DROPPED_ITEM|DROPPED_PLAYER_ITEM) ) ) {
             continue;
         }
-        if( ent->item->use == Use_Quad ) {
-            if( itb & ITB_QUAD ) {
-                HideItem( ent );
-            } else if( ent->svflags & SVF_NOCLIENT ) {
+        if( ItemBanned( ent ) ) {
+            if( !( ent->flags & FL_HIDDEN ) && !( ent->svflags & SVF_NOCLIENT ) ) {
+                // give teammates a chance to respawn
                 SetRespawn( ent, 2 );
             }
-        } else if( ent->item->use == Use_Invulnerability ) {
-            if( itb & ITB_INVUL ) {
-                HideItem( ent );
-            } else if( ent->svflags & SVF_NOCLIENT ) {
-                SetRespawn( ent, 2 );
-            }
-        } else if( ent->item->weapmodel == WEAP_BFG ) {
-            if( itb & ITB_BFG ) {
-                HideItem( ent );
-            } else if( ent->svflags & SVF_NOCLIENT ) {
-                SetRespawn( ent, 2 );
-            }
+        } else if( ent->flags & FL_HIDDEN ) {
+            SetUnhide( ent );
         }
     }
-    
+ 
     g_item_ban->modified = qfalse;
 }
 

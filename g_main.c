@@ -547,6 +547,16 @@ static void CheckDMRules( void ) {
         G_UpdateItemBans();
     }
 
+    if( g_vote_treshold->modified ) {
+        G_CheckVote();
+        g_vote_treshold->modified = qfalse;
+    }
+
+    if( g_vote_flags->modified ) {
+        G_CheckVote();
+        g_vote_flags->modified = qfalse;
+    }
+
     if( timelimit->value > 0 ) {
         if( level.time >= timelimit->value*60 ) {
             gi.bprintf( PRINT_HIGH, "Timelimit hit.\n" );
@@ -617,7 +627,7 @@ static void CheckDMRules( void ) {
 static void G_ResetSettings( void ) {
     char command[256];
 
-    gi.dprintf( "Restoring default game settings...\n" );
+    gi.bprintf( PRINT_HIGH, "No active players, restoring default game settings\n" );
 
     if( g_defaults_file->string[0] ) {
         Q_snprintf (command, sizeof(command), "exec \"%s\"\n", g_defaults_file->string);
@@ -851,7 +861,7 @@ static void G_Init (void) {
     g_vote_time = gi.cvar ("g_vote_time", "60", 0);
     g_vote_treshold = gi.cvar ("g_vote_treshold", "50", 0);
     g_vote_limit = gi.cvar ("g_vote_limit", "3", 0);
-    g_vote_flags = gi.cvar ("g_vote_flags", "3", 0);
+    g_vote_flags = gi.cvar ("g_vote_flags", "11", 0);
     g_intermission_time = gi.cvar ("g_intermission_time", "10", 0);
     g_admin_password = gi.cvar ("g_admin_password", "", 0);
     g_maps_random = gi.cvar ("g_maps_random", "1", 0);
