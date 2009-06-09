@@ -95,6 +95,14 @@ void G_ServerCommand (void) {
     cmd = gi.argv(1);
     if (!strcmp (cmd, "test"))
         Svcmd_Test_f ();
+    else if (!strcmp (cmd, "addip"))
+        G_AddIP_f( NULL );
+    else if (!strcmp (cmd, "removeip"))
+        G_RemoveIP_f( NULL );
+    else if (!strcmp (cmd, "listip"))
+        G_ListIP_f( NULL );
+    else if (!strcmp (cmd, "writeip"))
+        G_WriteIP_f();
     else if (!strcmp (cmd, "reset"))
         Svcmd_Reset_f ();
     else if (!strcmp (cmd, "nextmap"))

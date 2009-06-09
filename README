@@ -134,9 +134,10 @@ Time, in seconds, for the final scoreboard and high scores to be visible
 before automatically changing to the next map.
 
 - `set g_admin_password ""` (string)  
-If not empty, clients can type `admin <password>` command to
-become server admins. Right now this gives them a decider voice in votes
-and the ability to see IP addresses in the output if ‘playerlist’ command.
+If not empty, clients can execute `admin <password>` command to
+become server admins. Right now this gives them a decider voice in votes,
+ability to see IP addresses in the output of ‘playerlist’ command and grants
+access to a number of privileged commands (listed in `acommands` command output).
 
 - `set g_team_chat 0` (boolean)  
 Specifies if ‘say_team’ messages from players are visible to others.

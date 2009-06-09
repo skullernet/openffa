@@ -1277,6 +1277,37 @@ static void Cmd_MuteAll_f( edict_t *ent, qboolean muted ) {
         muted ? "no longer" : "now" );
 }
 
+static void Cmd_Kick_f( edict_t *ent, qboolean ban ) {
+    edict_t *other;
+
+    if( gi.argc() < 2 ) {
+        gi.cprintf( ent, PRINT_HIGH, "Usage: %s <playerID>\n", gi.argv( 0 ) );
+        return;
+    }
+    
+    other = G_SetVictim( ent, 0 );
+    if( !other ) {
+        return;
+    }
+
+    gi.AddCommandString( va( "kick %d\n", ( int )( other->client - game.clients ) ) );
+
+    if( ban ) {
+        G_BanEdict( other, ent );
+    }
+}
+
+static void Cmd_AdminCommands_f( edict_t *ent ) {
+    gi.cprintf( ent, PRINT_HIGH,
+        "(un)mute    Allow/disallow specific player to talk\n"
+        "(un)muteall Allow/disallow everyone to talk\n"
+        "(un)ban     Add/remove temporary bans\n"
+        "bans        List bans\n"
+        "kick        Kick a player\n"
+        "kickban     Kick a player and ban him for 1 hour\n"
+        );
+}
+
 static void Cmd_Commands_f( edict_t *ent ) {
     gi.cprintf( ent, PRINT_HIGH,
         "menu       Show OpenFFA menu\n"
@@ -1487,6 +1518,30 @@ void ClientCommand (edict_t *ent)
         }
         if (Q_stricmp (cmd, "unmuteall") == 0) {
             Cmd_MuteAll_f (ent, qfalse);
+            return;
+        }
+        if (Q_stricmp (cmd, "ban") == 0) {
+            G_AddIP_f( ent );
+            return;
+        }
+        if (Q_stricmp (cmd, "unban") == 0) {
+            G_RemoveIP_f( ent );
+            return;
+        }
+        if (Q_stricmp (cmd, "bans") == 0) {
+            G_ListIP_f( ent );
+            return;
+        }
+        if (Q_stricmp (cmd, "kick") == 0 || Q_stricmp (cmd, "boot") == 0) {
+            Cmd_Kick_f( ent, qfalse );
+            return;
+        }
+        if (Q_stricmp (cmd, "kickban") == 0) {
+            Cmd_Kick_f( ent, qtrue );
+            return;
+        }
+        if (Q_stricmp(cmd, "acommands") == 0) {
+            Cmd_AdminCommands_f(ent);
             return;
         }
     }

@@ -978,7 +978,7 @@ typedef struct flood_s {
 typedef struct {
     char        netname[MAX_NETNAME];
     char        skin[MAX_QPATH];
-    char        ip[MAX_QPATH];
+    char        ip[32];
     int         hand;
     float       fov;
     gender_t    gender;
@@ -1296,4 +1296,21 @@ void G_UpdateVote( void );
 qboolean G_CheckVote( void ); 
 void Cmd_Vote_f( edict_t *ent );
 void Cmd_CastVote_f( edict_t *ent, qboolean accepted );
+
+//
+// g_bans.c
+//
+
+typedef enum {
+    IPA_NONE,
+    IPA_BAN,
+    IPA_MUTE
+} ipaction_t;
+
+ipaction_t G_CheckFilters( char *s );
+void G_AddIP_f( edict_t *ent );
+void G_BanEdict( edict_t *victim, edict_t *initiator );
+void G_RemoveIP_f( edict_t *ent );
+void G_ListIP_f( edict_t *ent );
+void G_WriteIP_f( void );
 

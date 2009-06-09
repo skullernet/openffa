@@ -1372,8 +1372,16 @@ loadgames will.
 */
 qboolean ClientConnect (edict_t *ent, char *userinfo) {
     char *s;
+    ipaction_t action;
 
     if( !Info_Validate( userinfo ) ) {
+        return qfalse;
+    }
+
+    s = Info_ValueForKey (userinfo, "ip");
+    action = G_CheckFilters( s );
+    if( action == IPA_BAN ) {
+        strcpy( userinfo, "\\rejmsg\\You are banned from this server." );
         return qfalse;
     }
 
@@ -1384,11 +1392,8 @@ qboolean ClientConnect (edict_t *ent, char *userinfo) {
     ent->client->edict = ent;
     ent->client->pers.connected = CONN_CONNECTED;
     ent->client->level.first_time = qtrue;
-
-    s = Info_ValueForKey (userinfo, "ip");
-    if( !strcmp( s, "loopback" ) ) {
-        ent->client->pers.loopback = qtrue;
-    }
+    ent->client->pers.loopback = !strcmp( s, "loopback" );
+    ent->client->pers.muted = action == IPA_MUTE;
 
     // save ip
     Q_strlcpy( ent->client->pers.ip, s, sizeof( ent->client->pers.ip ) );
@@ -1424,7 +1429,7 @@ void ClientDisconnect (edict_t *ent)
     ent->client->pers.connected = CONN_DISCONNECTED;
     ent->client->ps.stats[STAT_FRAGS] = 0;
 
-    if( connected == CONN_SPAWNED ) {
+    if( connected == CONN_SPAWNED && !level.intermission_framenum ) {
         // send effect
         gi.WriteByte (svc_muzzleflash);
         gi.WriteShort (ent-g_edicts);
