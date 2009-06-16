@@ -258,8 +258,8 @@ static void G_RegisterScore( void ) {
 
     qsort( level.scores, level.numscores, sizeof( score_t ), ScoreCmp );
 
-    gi.dprintf( "Added highscore entry %d for %s\n",
-        s->score, s->name );
+    gi.dprintf( "Added highscore entry for %s with %d FPH\n",
+        c->pers.netname, score );
 
     G_SaveScores();
 }
@@ -360,7 +360,7 @@ static qboolean G_RebuildMapQueue( void ) {
     gi.dprintf( "Map queue: %d entries\n", count );
 
     // randomize it
-    if( g_maps_random->value > 0 ) {
+    if( (int)g_maps_random->value > 0 ) {
         qsort( pool, count, sizeof( map_entry_t * ), random_cmp );
     }
 
@@ -377,7 +377,9 @@ static map_entry_t *G_FindSuitableMap( void ) {
 
     LIST_FOR_EACH( map_entry_t, map, &g_map_queue, queue ) {
         if( total >= map->min_players && total <= map->max_players ) {
-            return map;
+            if( (int)g_maps_random->value < 2 || strcmp( map->name, level.mapname ) ) {
+                return map;
+            }
         }
     }
     return NULL;
@@ -655,7 +657,7 @@ void G_ExitLevel (void) {
     //    G_ResetSettings();
     //}
 
-    if( !strcmp( level.nextmap, level.mapname ) ) {
+    if( !level.nextmap || !strcmp( level.nextmap, level.mapname ) ) {
         G_ResetLevel();
         return;
     }
@@ -864,7 +866,7 @@ static void G_Init (void) {
     g_vote_flags = gi.cvar ("g_vote_flags", "11", 0);
     g_intermission_time = gi.cvar ("g_intermission_time", "10", 0);
     g_admin_password = gi.cvar ("g_admin_password", "", 0);
-    g_maps_random = gi.cvar ("g_maps_random", "1", 0);
+    g_maps_random = gi.cvar ("g_maps_random", "2", 0);
     g_maps_file = gi.cvar ("g_maps_file", "", CVAR_LATCH);
     g_defaults_file = gi.cvar ("g_defaults_file", "", CVAR_LATCH);
     g_item_ban = gi.cvar ("g_item_ban", "0", 0);

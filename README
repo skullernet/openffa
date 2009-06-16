@@ -1,7 +1,7 @@
 OpenFFA
 =======
 
-OpenFFA is a simple deathmatch mod for Quake 2, an open source replacement
+OpenFFA is a simple free-for-all deathmatch mod for Quake 2, an open source replacement
 for ‘RegularDM’ mode of OSP Tourney. Currently in development, it features
 familiar scoreboard and HUD, voting system, configurable map rotation support,
 high scores logging, ‘proper’ in-eyes chasecam support. Besides that, OpenFFA fixes
@@ -64,8 +64,11 @@ Some custom OpenFFA cvars are described below.
 Time, in seconds, after which inactive players are automatically put into
 spectator mode. Default value of zero disables this feature.
 
-- `set g_maps_random 1` (boolean)  
+- `set g_maps_random 2` (boolean)  
 Specifies whether map list is traversed in random on sequental order.
+   - 0 - sequental order
+   - 1 - random order
+   - 2 - random order, never allows the same map to be picked twice in a row
 
 - `set g_maps_file ""` (string)  
 Specifies name of the file to load map list from. Should not include any
