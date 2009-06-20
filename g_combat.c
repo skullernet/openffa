@@ -456,7 +456,7 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
         return;
 
     // add to client weapon statistics
-    if( attacker->client && targ->client && targ != attacker && inflictor != world ) {
+    if( attacker->client && targ->client && !targ->deadflag && inflictor != world ) {
         G_AccountDamage( targ, inflictor, attacker, take );
     }
 

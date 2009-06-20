@@ -276,10 +276,11 @@ static void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker
             }
             gi.cprintf( ent, level, "%s %s.\n", name, message );
         }
-        if( dedicated->value ) {
+        if( (int)dedicated->value ) {
             gi.dprintf( "%s %s.\n", self->client->pers.netname, message );
         }
         self->client->resp.score--;
+        self->client->resp.mod_stats[mod].suicides++;
         self->enemy = NULL;
         G_ScoreChanged( self );
         G_UpdateRanks();
@@ -383,7 +384,7 @@ static void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker
                 gi.cprintf( ent, level, "%s %s %s%s\n",
                     name, message, name2, message2 );
             }
-            if( dedicated->value ) {
+            if( (int)dedicated->value ) {
                 gi.dprintf( "%s %s %s%s\n", self->client->pers.netname,
                     message, attacker->client->pers.netname, message2 );
             }
@@ -393,9 +394,11 @@ static void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker
             } else {
                 weapon = ModToWeapon( mod );
                 attacker->client->resp.score++;
-                attacker->client->resp.stats[weapon].frags++;
+                attacker->client->resp.mod_stats[mod].kills++;
+                attacker->client->resp.weap_stats[weapon].kills++;
                 self->client->resp.deaths++;
-                self->client->resp.stats[weapon].deaths++;
+                self->client->resp.mod_stats[mod].deaths++;
+                self->client->resp.weap_stats[weapon].deaths++;
             }
             G_ScoreChanged( attacker );
             G_UpdateRanks();
@@ -405,6 +408,7 @@ static void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker
 
     gi.bprintf (PRINT_MEDIUM,"%s died.\n", self->client->pers.netname);
     self->client->resp.score--;
+    self->client->resp.mod_stats[mod].suicides++;
 
     G_ScoreChanged( self );
     G_UpdateRanks();
@@ -416,8 +420,8 @@ void G_BeginDamage( void ) {
     damaging = 1;
 }
 
-// called from T_Damage only when attacker and target are
-// different players, and inflictor is a real entity (not world)
+// called from T_Damage only when target is a living player
+// and inflictor is a real entity (not world)
 void G_AccountDamage( edict_t *targ, edict_t *inflictor, edict_t *attacker, int points ) {
     int weapon;
 
@@ -425,13 +429,21 @@ void G_AccountDamage( edict_t *targ, edict_t *inflictor, edict_t *attacker, int 
         return;
     }
 
+    weapon = ModToWeapon( meansOfDeath & ~MOD_FRIENDLY_FIRE );
+    if( !weapon ) {
+        return; // only care about weapons
+    }
+
     targ->client->resp.damage_recvd += points;
+    if( targ == attacker ) {
+        return; // no credit for shooting yourself
+    }
+
     attacker->client->resp.damage_given += points;
 
-    // don't count multiple damage as multiple hits
-    if( damaging == 1 ) {
-        weapon = ModToWeapon( meansOfDeath & ~MOD_FRIENDLY_FIRE );
-        attacker->client->resp.stats[weapon].hits++;
+    // don't count multiple damage as multiple hits (but railgun still counts)
+    if( damaging == 1 || weapon == WEAP_RAILGUN ) {
+        attacker->client->resp.weap_stats[weapon].hits++;
     }
 
     damaging++;
@@ -1006,6 +1018,8 @@ void spectator_respawn (edict_t *ent)
 
         TossClientWeapon (ent);
 
+        G_LogClient( ent );
+
         // send effect on removed player
         gi.WriteByte (svc_temp_entity);
         gi.WriteByte (TE_BLOOD);
@@ -1249,14 +1263,10 @@ void ClientBegin (edict_t *ent)
     }
 
     if( ent->client->level.first_time ) {
-        map_entry_t *map = G_FindMap( level.mapname );
+        gi.bprintf (PRINT_HIGH, "%s connected\n", ent->client->pers.netname);
 
         // track map stats
-        if( map ) {
-            map->num_in++;
-        }
-        
-        gi.bprintf (PRINT_HIGH, "%s connected\n", ent->client->pers.netname);
+        level.players_in++;
 
         // send login effect only to this client
         gi.WriteByte (svc_muzzleflash);
@@ -1430,6 +1440,8 @@ void ClientDisconnect (edict_t *ent)
     ent->client->ps.stats[STAT_FRAGS] = 0;
 
     if( connected == CONN_SPAWNED && !level.intermission_framenum ) {
+        G_LogClient( ent );
+
         // send effect
         gi.WriteByte (svc_muzzleflash);
         gi.WriteShort (ent-g_edicts);
@@ -1448,12 +1460,8 @@ void ClientDisconnect (edict_t *ent)
     PMenu_Close( ent );
 
     if( connected > CONN_CONNECTED ) {
-        map_entry_t *map = G_FindMap( level.mapname );
-
         // track map stats
-        if( map ) {
-            map->num_out++;
-        }
+        level.players_out++;
     }
 
     gi.unlinkentity (ent);

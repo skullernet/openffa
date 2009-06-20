@@ -500,7 +500,7 @@ static void weapon_grenade_fire (edict_t *ent, qboolean held)
     if( !DF( INFINITE_AMMO ) )
         ent->client->inventory[ent->client->ammo_index]--;
 
-    ent->client->resp.stats[WEAP_GRENADES].atts++;
+    ent->client->resp.weap_stats[WEAP_GRENADES].atts++;
 
     ent->client->grenade_framenum = level.framenum + 1*HZ;
 
@@ -673,7 +673,7 @@ static void weapon_grenadelauncher_fire (edict_t *ent)
     if (!DF( INFINITE_AMMO ) )
         ent->client->inventory[ent->client->ammo_index]--;
 
-    ent->client->resp.stats[WEAP_GRENADELAUNCHER].atts++;
+    ent->client->resp.weap_stats[WEAP_GRENADELAUNCHER].atts++;
 }
 
 void Weapon_GrenadeLauncher (edict_t *ent)
@@ -733,7 +733,7 @@ static void weapon_rocketlauncher_fire (edict_t *ent)
     if (!DF( INFINITE_AMMO ) )
         ent->client->inventory[ent->client->ammo_index]--;
 
-    ent->client->resp.stats[WEAP_ROCKETLAUNCHER].atts++;
+    ent->client->resp.weap_stats[WEAP_ROCKETLAUNCHER].atts++;
 }
 
 void Weapon_RocketLauncher (edict_t *ent)
@@ -788,7 +788,7 @@ static void blaster_fire (edict_t *ent, vec3_t g_offset, int damage, qboolean hy
 static void weapon_blaster_fire (edict_t *ent)
 {
     blaster_fire (ent, vec3_origin, 15, qfalse, EF_BLASTER);
-    ent->client->resp.stats[WEAP_BLASTER].atts++;
+    ent->client->resp.weap_stats[WEAP_BLASTER].atts++;
     ent->client->ps.gunframe++;
 }
 
@@ -834,7 +834,7 @@ static void weapon_hyperblaster_fire (edict_t *ent)
             if (!DF( INFINITE_AMMO ) )
                 ent->client->inventory[ent->client->ammo_index]--;
 
-            ent->client->resp.stats[WEAP_HYPERBLASTER].atts++;
+            ent->client->resp.weap_stats[WEAP_HYPERBLASTER].atts++;
 
             ent->client->anim_priority = ANIM_ATTACK;
             if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
@@ -942,7 +942,7 @@ static void weapon_machinegun_fire (edict_t *ent)
     if (!DF( INFINITE_AMMO ) )
         ent->client->inventory[ent->client->ammo_index]--;
 
-    ent->client->resp.stats[WEAP_MACHINEGUN].atts++;
+    ent->client->resp.weap_stats[WEAP_MACHINEGUN].atts++;
 
     ent->client->anim_priority = ANIM_ATTACK;
     if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
@@ -1077,7 +1077,7 @@ static void weapon_chaingun_fire (edict_t *ent)
     if (!DF(INFINITE_AMMO) )
         ent->client->inventory[ent->client->ammo_index] -= shots;
 
-    ent->client->resp.stats[WEAP_CHAINGUN].atts++;
+    ent->client->resp.weap_stats[WEAP_CHAINGUN].atts++;
 }
 
 
@@ -1145,7 +1145,7 @@ static void weapon_shotgun_fire (edict_t *ent)
     if (!DF( INFINITE_AMMO ) )
         ent->client->inventory[ent->client->ammo_index]--;
 
-    ent->client->resp.stats[WEAP_SHOTGUN].atts++;
+    ent->client->resp.weap_stats[WEAP_SHOTGUN].atts++;
 }
 
 void Weapon_Shotgun (edict_t *ent)
@@ -1206,7 +1206,7 @@ static void weapon_supershotgun_fire (edict_t *ent)
     if (!DF(INFINITE_AMMO) )
         ent->client->inventory[ent->client->ammo_index] -= 2;
 
-    ent->client->resp.stats[WEAP_SUPERSHOTGUN].atts++;
+    ent->client->resp.weap_stats[WEAP_SUPERSHOTGUN].atts++;
 }
 
 void Weapon_SuperShotgun (edict_t *ent)
@@ -1265,7 +1265,7 @@ static void weapon_railgun_fire (edict_t *ent)
     if (!DF( INFINITE_AMMO ) )
         ent->client->inventory[ent->client->ammo_index]--;
 
-    ent->client->resp.stats[WEAP_RAILGUN].atts++;
+    ent->client->resp.weap_stats[WEAP_RAILGUN].atts++;
 }
 
 

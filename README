@@ -64,7 +64,7 @@ Some custom OpenFFA cvars are described below.
 Time, in seconds, after which inactive players are automatically put into
 spectator mode. Default value of zero disables this feature.
 
-- `set g_maps_random 2` (boolean)  
+- `set g_maps_random 2` (integer)  
 Specifies whether map list is traversed in random on sequental order.
    - 0 - sequental order
    - 1 - random order

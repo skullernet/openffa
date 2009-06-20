@@ -59,6 +59,7 @@ cvar_t  *g_spawn_mode;
 cvar_t  *g_team_chat;
 cvar_t  *g_mute_chat;
 cvar_t  *g_protection_time;
+cvar_t  *g_log_stats;
 cvar_t  *dedicated;
 
 cvar_t  *sv_maxvelocity;
@@ -493,6 +494,61 @@ static void G_LoadMapList( void ) {
         nummaps, path );
 }
 
+void G_LogClient( edict_t *ent ) {
+    gclient_t *c = ent->client;
+    modstat_t *ms;
+    weapstat_t *ws;
+    int i;
+
+    if( !(int)g_log_stats->value ) {
+        return;
+    }
+
+    gi.dprintf( "\\C\\ %lu \"%s\" %d %d %d | ",
+        ( unsigned long )time( NULL ), c->pers.netname,
+        ( level.framenum - c->level.enter_framenum ) / HZ,
+        c->resp.score, c->resp.deaths );
+
+    for( i = 0; i < MOD_TOTAL; i++ ) {
+        ms = &c->resp.mod_stats[i];
+        if( !ms->kills && !ms->deaths && !ms->suicides ) {
+            continue;
+        }
+        gi.dprintf( "%d %d %d %d ",
+            i, ms->kills, ms->deaths, ms->suicides );
+    }
+
+    gi.dprintf( "| " );
+    for( i = 0; i < WEAP_TOTAL; i++ ) {
+        ws = &c->resp.weap_stats[i];
+        if( !ws->atts && !ws->hits ) {
+            continue;
+        }
+        gi.dprintf( "%d %d %d ",
+            i, ws->atts, ws->hits );
+    }
+
+    gi.dprintf( "\n" );
+}
+
+void G_LogMap( void ) {
+    map_entry_t *map = G_FindMap( level.mapname );
+
+    if( map ) {
+        map->num_in += level.players_in;
+        map->num_out += level.players_out;
+    }
+
+    if( !(int)g_log_stats->value ) {
+        return;
+    }
+
+    gi.dprintf( "\\M\\ %lu %s %d %d\n",
+        ( unsigned long )time( NULL ), level.mapname,
+        level.players_in, level.players_out );
+}
+
+
 /*
 =================
 EndDMLevel
@@ -502,6 +558,8 @@ The timelimit or fraglimit has been exceeded
 */
 void EndDMLevel ( void ) {
     G_RegisterScore();
+
+    G_LogMap();
 
     BeginIntermission();
 
@@ -876,6 +934,7 @@ static void G_Init (void) {
     g_team_chat = gi.cvar ("g_team_chat", "0", 0);
     g_mute_chat = gi.cvar ("g_mute_chat", "0", 0);
     g_protection_time = gi.cvar ("g_protection_time", "0", 0);
+    g_log_stats = gi.cvar ("g_log_stats", "0", 0);
 
     run_pitch = gi.cvar ("run_pitch", "0.002", 0);
     run_roll = gi.cvar ("run_roll", "0.005", 0);

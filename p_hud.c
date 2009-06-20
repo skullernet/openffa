@@ -279,6 +279,10 @@ void MoveClientToIntermission (edict_t *ent)
 {
     PMenu_Close( ent );
 
+    if( PLAYER_SPAWNED( ent ) ) {
+        G_LogClient( ent );
+    }
+
     ent->client->layout = LAYOUT_SCORES;
     VectorCopy (level.intermission_origin, ent->s.origin);
     ent->client->ps.pmove.origin[0] = level.intermission_origin[0]*8;

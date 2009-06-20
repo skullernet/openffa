@@ -630,6 +630,8 @@ qboolean G_FloodProtect( edict_t *ent, flood_t *flood,
         flood->locktill = level.framenum + delay*HZ;
         gi.cprintf( ent, PRINT_CHAT,
             "Flood protection: You can't %s for %d seconds.\n", what, (int)delay );
+        gi.dprintf( "%s can't %s for %d seconds\n",
+            ent->client->pers.netname, what, (int)delay );
         return qtrue;
     }
 
@@ -1069,7 +1071,7 @@ void Cmd_Stats_f( edict_t *ent, qboolean check_other ) {
     }
 
     for( i = WEAP_SHOTGUN; i < WEAP_BFG; i++ ) {
-        s = &other->client->resp.stats[i];
+        s = &other->client->resp.weap_stats[i];
         if( s->atts || s->deaths ) {
             break;
         }
@@ -1087,15 +1089,15 @@ void Cmd_Stats_f( edict_t *ent, qboolean check_other ) {
         other->client->pers.netname );
 
     for( i = WEAP_SHOTGUN; i < WEAP_BFG; i++ ) {
-        s = &other->client->resp.stats[i];
+        s = &other->client->resp.weap_stats[i];
         if( !s->atts && !s->deaths ) {
             continue;
         }
         if( s->atts ) {
             sprintf( acc, "%3i%%", s->hits * 100 / s->atts );
             sprintf( hits, "%4d/%-4d", s->hits, s->atts );
-            if( s->frags ) {
-                sprintf( frgs, "%4d", s->frags );
+            if( s->kills ) {
+                sprintf( frgs, "%4d", s->kills );
             } else {
                 strcpy( frgs, "    " );
             }

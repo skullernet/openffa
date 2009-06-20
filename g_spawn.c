@@ -629,6 +629,7 @@ void G_ResetLevel( void ) {
     level.vote.proposal = 0;
     level.nextmap[0] = 0;
     level.record = 0;
+    level.players_in = level.players_out = 0;
 
     // free all edicts
     for( i = game.maxclients + 1; i < globals.num_edicts; i++ ) {

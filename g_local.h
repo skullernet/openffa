@@ -427,6 +427,9 @@ typedef struct
     int         numscores;
     time_t      record;        // not zero if scores updated
 
+    int         players_in;
+    int         players_out;
+
     struct {
         int     health;
         int     powershield;
@@ -601,6 +604,7 @@ extern  spawn_temp_t    st;
 #define MOD_TRIGGER_HURT    31
 #define MOD_HIT             32
 #define MOD_TARGET_BLASTER  33
+#define MOD_TOTAL           34
 #define MOD_FRIENDLY_FIRE   0x8000000
 
 extern  int meansOfDeath;
@@ -858,6 +862,8 @@ void G_StuffText( edict_t *ent, const char *text );
 void G_RunFrame( void );
 void G_LoadScores( void );
 map_entry_t *G_FindMap( const char *name );
+void G_LogClient( edict_t *ent );
+void G_LogMap( void );
 
 //
 // g_spawn.c
@@ -961,9 +967,15 @@ typedef enum {
 } layout_t;
 
 typedef struct {
+    int kills;
+    int deaths;
+    int suicides;
+} modstat_t;
+
+typedef struct {
     int hits;
     int atts;
-    int frags;
+    int kills;
     int deaths;
 } weapstat_t;
 
@@ -996,7 +1008,8 @@ typedef struct {
 typedef struct {
     int         score;              // frags, etc
     int         deaths;
-    weapstat_t  stats[WEAP_TOTAL];
+    weapstat_t  weap_stats[WEAP_TOTAL];
+    modstat_t   mod_stats[MOD_TOTAL];
     int         damage_given, damage_recvd;
 } client_respawn_t;
 
