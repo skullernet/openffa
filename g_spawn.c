@@ -552,6 +552,11 @@ void G_SpawnEntities (const char *mapname, const char *entities, const char *spa
     client_persistant_t pers;
     char        *token;
 
+#if USE_SQLITE
+    G_OpenDatabase();
+    G_LogClients();
+#endif
+
     gi.FreeTags (TAG_LEVEL);
 
     memset (&level, 0, sizeof(level));
@@ -560,11 +565,6 @@ void G_SpawnEntities (const char *mapname, const char *entities, const char *spa
     Q_strlcpy(level.mapname, mapname, sizeof(level.mapname));
 
     G_LoadScores();
-
-#if USE_SQLITE
-    G_OpenDatabase();
-    G_LogClients();
-#endif
 
     // set client fields on player ents
     for( i = 0; i < game.maxclients; i++ ) {
