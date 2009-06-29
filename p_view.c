@@ -731,12 +731,12 @@ static void P_SetEffects (edict_t *ent) {
 
     if (ent->client->powerarmor_framenum > level.framenum)
     {
-        pa_type = PowerArmorType (ent);
-        if (pa_type == POWER_ARMOR_SCREEN)
+        pa_type = PowerArmorIndex (ent);
+        if (pa_type == ITEM_POWER_SCREEN)
         {
             ent->s.effects |= EF_POWERSCREEN;
         }
-        else if (pa_type == POWER_ARMOR_SHIELD)
+        else if (pa_type == ITEM_POWER_SHIELD)
         {
             ent->s.effects |= EF_COLOR_SHELL;
             ent->s.renderfx |= RF_SHELL_GREEN;

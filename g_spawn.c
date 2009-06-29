@@ -561,6 +561,11 @@ void G_SpawnEntities (const char *mapname, const char *entities, const char *spa
 
     G_LoadScores();
 
+#if USE_SQLITE
+    G_OpenDatabase();
+    G_LogClients();
+#endif
+
     // set client fields on player ents
     for( i = 0; i < game.maxclients; i++ ) {
         ent = &g_edicts[i+1];
@@ -618,6 +623,10 @@ void G_ResetLevel( void ) {
     int i;
 
     gi.FreeTags( TAG_LEVEL );
+
+#if USE_SQLITE
+    G_LogClients();
+#endif
     
     G_FinishVote();
 
@@ -653,7 +662,6 @@ void G_ResetLevel( void ) {
         if( !client->pers.connected ) {
             continue;
         }
-        client->level.enter_framenum = 0;
         memset( &client->resp, 0, sizeof( client->resp ) );
         memset( &client->level.vote, 0, sizeof( client->level.vote ) );
         if( client->pers.connected == CONN_SPAWNED ) {

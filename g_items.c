@@ -162,11 +162,6 @@ qboolean Pickup_Powerup (edict_t *ent, edict_t *other)
     int     quantity;
 
     quantity = other->client->inventory[ITEM_INDEX(ent->item)];
-//  if ((skill->value == 1 && quantity >= 2) || (skill->value >= 2 && quantity >= 1))
-//      return qfalse;
-
-//  if ((coop->value) && (ent->item->flags & IT_STAY_COOP) && (quantity > 0))
-//      return qfalse;
 
     other->client->inventory[ITEM_INDEX(ent->item)]++;
 
@@ -497,6 +492,7 @@ void MegaHealth_think (edict_t *self)
         return;
     }
 
+    self->owner->flags &= ~FL_MEGAHEALTH;
     if (!(self->spawnflags & DROPPED_ITEM))
         SetRespawn (self, 20);
     else
@@ -525,6 +521,7 @@ qboolean Pickup_Health (edict_t *ent, edict_t *other)
         ent->flags |= FL_RESPAWN;
         ent->svflags |= SVF_NOCLIENT;
         ent->solid = SOLID_NOT;
+        other->flags |= FL_MEGAHEALTH;
     }
     else
     {
@@ -633,21 +630,21 @@ qboolean Pickup_Armor (edict_t *ent, edict_t *other)
 
 //======================================================================
 
-int PowerArmorType (edict_t *ent)
+int PowerArmorIndex (edict_t *ent)
 {
     if (!ent->client)
-        return POWER_ARMOR_NONE;
+        return 0;
 
     if (!(ent->flags & FL_POWER_ARMOR))
-        return POWER_ARMOR_NONE;
+        return 0;
 
     if (ent->client->inventory[ITEM_POWER_SHIELD] > 0)
-        return POWER_ARMOR_SHIELD;
+        return ITEM_POWER_SHIELD;
 
     if (ent->client->inventory[ITEM_POWER_SCREEN] > 0)
-        return POWER_ARMOR_SCREEN;
+        return ITEM_POWER_SCREEN;
 
-    return POWER_ARMOR_NONE;
+    return 0;
 }
 
 void Use_PowerArmor (edict_t *ent, gitem_t *item)
@@ -695,6 +692,42 @@ void Drop_PowerArmor (edict_t *ent, gitem_t *item)
 
 //======================================================================
 
+// stolen from OpenTDM
+static void AccountItemPickup (edict_t *ent, edict_t *other) {
+    gclient_t *c;
+    int i, index = ITEM_INDEX(ent->item);
+
+    // its health, but not megahealth
+    if (index == ITEM_HEALTH && !(ent->style & HEALTH_TIMED))
+        return;
+
+    // useless counting this
+    if (ent->item->flags & IT_AMMO)
+        return;
+
+    // ignore tossed / dropped weapons
+    //if (ent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM))
+    //    return qfalse;
+
+    // ignore weapons if weapon stay is enabled
+    if ((ent->item->flags & IT_WEAPON) && DF(WEAPONS_STAY))
+        return;
+
+    // armor shards aren't worth tracking
+    if (ent->item->tag == ARMOR_SHARD)
+        return;
+
+    // by now we should have everything else - armor, weapons, powerups and mh
+    other->client->resp.items[index].pickups++;
+
+    for( i = 0, c = game.clients; i < game.maxclients; i++, c++ ) {
+        if( c->pers.connected == CONN_SPAWNED && c != other->client ) {
+            c->resp.items[index].misses++;
+        }
+    }
+}
+
+
 /*
 ===============
 Touch_Item
@@ -708,9 +741,8 @@ void Touch_Item (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf
         return;
     if (other->health < 1)
         return;     // dead people can't pickup
-    if( !ent->item ) {
+    if (!ent->item)
         return;
-    }
     if (!ent->item->pickup)
         return;     // not a grabbable item?
 
@@ -762,6 +794,10 @@ void Touch_Item (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf
             ent->flags &= ~FL_RESPAWN;
         else
             G_FreeEdict (ent);
+    }
+    else
+    {
+        AccountItemPickup(ent, other);
     }
 }
 
@@ -1275,7 +1311,7 @@ always owned, never in the world
         0,
         0,
         NULL,
-        IT_WEAPON|IT_STAY_COOP,
+        IT_WEAPON,
         WEAP_BLASTER,
         NULL,
         0,
@@ -1298,7 +1334,7 @@ always owned, never in the world
         0,
         1,
         "Shells",
-        IT_WEAPON|IT_STAY_COOP,
+        IT_WEAPON,
         WEAP_SHOTGUN,
         NULL,
         0,
@@ -1321,7 +1357,7 @@ always owned, never in the world
         0,
         2,
         "Shells",
-        IT_WEAPON|IT_STAY_COOP,
+        IT_WEAPON,
         WEAP_SUPERSHOTGUN,
         NULL,
         0,
@@ -1344,7 +1380,7 @@ always owned, never in the world
         0,
         1,
         "Bullets",
-        IT_WEAPON|IT_STAY_COOP,
+        IT_WEAPON,
         WEAP_MACHINEGUN,
         NULL,
         0,
@@ -1367,7 +1403,7 @@ always owned, never in the world
         0,
         1,
         "Bullets",
-        IT_WEAPON|IT_STAY_COOP,
+        IT_WEAPON,
         WEAP_CHAINGUN,
         NULL,
         0,
@@ -1413,7 +1449,7 @@ always owned, never in the world
         0,
         1,
         "Grenades",
-        IT_WEAPON|IT_STAY_COOP,
+        IT_WEAPON,
         WEAP_GRENADELAUNCHER,
         NULL,
         0,
@@ -1436,7 +1472,7 @@ always owned, never in the world
         0,
         1,
         "Rockets",
-        IT_WEAPON|IT_STAY_COOP,
+        IT_WEAPON,
         WEAP_ROCKETLAUNCHER,
         NULL,
         0,
@@ -1459,7 +1495,7 @@ always owned, never in the world
         0,
         1,
         "Cells",
-        IT_WEAPON|IT_STAY_COOP,
+        IT_WEAPON,
         WEAP_HYPERBLASTER,
         NULL,
         0,
@@ -1482,7 +1518,7 @@ always owned, never in the world
         0,
         1,
         "Slugs",
-        IT_WEAPON|IT_STAY_COOP,
+        IT_WEAPON,
         WEAP_RAILGUN,
         NULL,
         0,
@@ -1505,7 +1541,7 @@ always owned, never in the world
         0,
         50,
         "Cells",
-        IT_WEAPON|IT_STAY_COOP,
+        IT_WEAPON,
         WEAP_BFG,
         NULL,
         0,
@@ -1720,7 +1756,7 @@ always owned, never in the world
 /* width */     2,
         60,
         NULL,
-        IT_STAY_COOP|IT_POWERUP,
+        IT_POWERUP,
         0,
         NULL,
         0,
@@ -1743,7 +1779,7 @@ always owned, never in the world
 /* width */     2,
         60,
         NULL,
-        IT_STAY_COOP|IT_POWERUP,
+        IT_POWERUP,
         0,
         NULL,
         0,

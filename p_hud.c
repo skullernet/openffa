@@ -114,7 +114,7 @@ static size_t BuildDeathmatchScoreboard( char *buffer, gclient_t *client ) {
     for( i = 0; i < numranks; i++ ) {
         c = ranks[i];
 
-        sec = ( level.framenum - c->level.enter_framenum ) / HZ;
+        sec = ( level.framenum - c->resp.enter_framenum ) / HZ;
         if( !sec ) {
             sec = 1;
         }
@@ -151,7 +151,7 @@ static size_t BuildDeathmatchScoreboard( char *buffer, gclient_t *client ) {
             continue;
         }
 
-        sec = ( level.framenum - c->level.enter_framenum ) / HZ;
+        sec = ( level.framenum - c->resp.enter_framenum ) / HZ;
         if( !sec ) {
             sec = 1;
         }
@@ -278,10 +278,6 @@ INTERMISSION
 void MoveClientToIntermission (edict_t *ent)
 {
     PMenu_Close( ent );
-
-    if( PLAYER_SPAWNED( ent ) ) {
-        G_LogClient( ent );
-    }
 
     ent->client->layout = LAYOUT_SCORES;
     VectorCopy (level.intermission_origin, ent->s.origin);
@@ -643,7 +639,7 @@ void G_SetStats (edict_t *ent)
     // armor
     //
     cells = 0;
-    power_armor_type = PowerArmorType (ent);
+    power_armor_type = PowerArmorIndex (ent);
     if (power_armor_type)
     {
         cells = ent->client->inventory[ITEM_CELLS];

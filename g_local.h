@@ -95,6 +95,7 @@ typedef trace_t *(*trace_hacked_t)( trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, e
 #define FL_NO_KNOCKBACK         0x00000800
 #define FL_POWER_ARMOR          0x00001000  // power armor (if any) is active
 #define FL_NOCLIP_PROJECTILE    0x00002000  // projectile hack
+#define FL_MEGAHEALTH           0x00004000  // for megahealth kills tracking
 #define FL_HIDDEN               0x40000000  // used for banned items
 #define FL_RESPAWN              0x80000000  // used for item respawning
 
@@ -230,9 +231,9 @@ typedef enum {
 #define ARMOR_SHARD             4
 
 // power armor types
-#define POWER_ARMOR_NONE        0
-#define POWER_ARMOR_SCREEN      1
-#define POWER_ARMOR_SHIELD      2
+//#define POWER_ARMOR_NONE        0
+//#define POWER_ARMOR_SCREEN      1
+//#define POWER_ARMOR_SHIELD      2
 
 // handedness values
 #define RIGHT_HANDED            0
@@ -279,7 +280,7 @@ typedef struct {
 #define IT_WEAPON       1       // use makes active weapon
 #define IT_AMMO         2
 #define IT_ARMOR        4
-#define IT_STAY_COOP    8
+//#define IT_STAY_COOP    8
 #define IT_KEY          16
 #define IT_POWERUP      32
 
@@ -650,6 +651,11 @@ extern  cvar_t  *g_mute_chat;
 extern  cvar_t  *g_protection_time;
 extern  cvar_t  *dedicated;
 
+#if USE_SQLITE
+extern  cvar_t  *g_sql_database;
+extern  cvar_t  *g_sql_async;
+#endif
+
 extern  cvar_t  *sv_gravity;
 extern  cvar_t  *sv_maxvelocity;
 
@@ -723,7 +729,7 @@ void ChangeWeapon (edict_t *ent);
 void SpawnItem (edict_t *ent, gitem_t *item);
 void Think_Weapon (edict_t *ent);
 int ArmorIndex (edict_t *ent);
-int PowerArmorType (edict_t *ent);
+int PowerArmorIndex (edict_t *ent);
 qboolean Add_Ammo (edict_t *ent, gitem_t *item, int count);
 void Touch_Item (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf);
 void G_UpdateItemBans( void );
@@ -805,7 +811,7 @@ void fire_bfg (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, f
 // p_client.c
 //
 void respawn (edict_t *ent);
-void spectator_respawn (edict_t *ent);
+void spectator_respawn (edict_t *ent, int connected);
 void BeginIntermission (void);
 void PutClientInServer (edict_t *ent);
 void InitBodyQue (void);
@@ -862,8 +868,6 @@ void G_StuffText( edict_t *ent, const char *text );
 void G_RunFrame( void );
 void G_LoadScores( void );
 map_entry_t *G_FindMap( const char *name );
-void G_LogClient( edict_t *ent );
-void G_LogMap( void );
 
 //
 // g_spawn.c
@@ -966,18 +970,42 @@ typedef enum {
     LAYOUT_MENU
 } layout_t;
 
+typedef enum {
+    FRAG_UNKNOWN,
+    FRAG_BLASTER,
+    FRAG_SHOTGUN,
+    FRAG_SUPERSHOTGUN,
+    FRAG_MACHINEGUN,
+    FRAG_CHAINGUN,
+    FRAG_GRENADES,
+    FRAG_GRENADELAUNCHER,
+    FRAG_ROCKETLAUNCHER,
+    FRAG_HYPERBLASTER,
+    FRAG_RAILGUN,
+    FRAG_BFG,
+    FRAG_TELEPORT,
+    FRAG_WATER,
+    FRAG_SLIME,
+    FRAG_LAVA,
+    FRAG_CRUSH,
+    FRAG_FALLING,
+    FRAG_SUICIDE,
+    FRAG_TOTAL
+} frag_t;
+
 typedef struct {
     int kills;
     int deaths;
     int suicides;
-} modstat_t;
-
-typedef struct {
     int hits;
     int atts;
+} fragstat_t;
+
+typedef struct {
+    int pickups;
+    int misses;
     int kills;
-    int deaths;
-} weapstat_t;
+} itemstat_t;
 
 #define FLOOD_MSGS  10
 typedef struct flood_s {
@@ -1006,18 +1034,18 @@ typedef struct {
 // client data that stays across deathmatch respawns,
 // but cleared on spectator respawns
 typedef struct {
+    int         enter_framenum;     // level.framenum the client entered the game
+    int         activity_framenum;  // level.framenum last activity was seen
     int         score;              // frags, etc
     int         deaths;
-    weapstat_t  weap_stats[WEAP_TOTAL];
-    modstat_t   mod_stats[MOD_TOTAL];
+    fragstat_t  frags[FRAG_TOTAL];
+    itemstat_t  items[ITEM_TOTAL];
     int         damage_given, damage_recvd;
 } client_respawn_t;
 
 // client data that stays across respawns, 
 // but cleared on level changes
 typedef struct {
-    int         enter_framenum;     // level.framenum the client entered the game
-    int         activity_framenum;  // level.framenum last activity was seen
     qboolean    first_time : 1,     // true when just connected
                 jump_held: 1;
     vec3_t      cmd_angles;         // angles sent over in the last command
@@ -1115,7 +1143,6 @@ struct gclient_s
     int         pickup_framenum;
 
     int         respawn_framenum;   // can respawn when time > this
-    int         observer_framenum;
 
     edict_t         *chase_target;      // player we are chasing
     chase_mode_t    chase_mode;
@@ -1326,4 +1353,16 @@ void G_BanEdict( edict_t *victim, edict_t *initiator );
 void G_RemoveIP_f( edict_t *ent );
 void G_ListIP_f( edict_t *ent );
 void G_WriteIP_f( void );
+
+#if USE_SQLITE
+//
+// g_sqlite.c
+//
+void G_BeginLogging( void );
+void G_EndLogging( void );
+void G_LogClient( gclient_t *c );
+void G_LogClients( void );
+qboolean G_OpenDatabase( void );
+void G_CloseDatabase( void );
+#endif
 

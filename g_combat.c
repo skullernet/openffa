@@ -145,7 +145,7 @@ static int CheckPowerArmor (edict_t *ent, vec3_t point, vec3_t normal, int damag
 {
     gclient_t   *client;
     int         save;
-    int         power_armor_type;
+    int         power_armor_index;
     int         damagePerCell;
     int         pa_te_type;
     int         power;
@@ -162,18 +162,15 @@ static int CheckPowerArmor (edict_t *ent, vec3_t point, vec3_t normal, int damag
     if (dflags & DAMAGE_NO_ARMOR)
         return 0;
 
-    power_armor_type = PowerArmorType (ent);
-    if (power_armor_type != POWER_ARMOR_NONE)
-    {
-        power = client->inventory[ITEM_CELLS];
-    }
-
-    if (power_armor_type == POWER_ARMOR_NONE)
+    power_armor_index = PowerArmorIndex (ent);
+    if (!power_armor_index)
         return 0;
+    
+    power = client->inventory[ITEM_CELLS];
     if (!power)
         return 0;
 
-    if (power_armor_type == POWER_ARMOR_SCREEN)
+    if (power_armor_index == ITEM_POWER_SCREEN)
     {
         vec3_t      vec;
         float       dot;

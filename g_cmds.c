@@ -814,14 +814,14 @@ static void Cmd_Players_f( edict_t *ent ) {
             continue;
         }
         if( c->pers.connected == CONN_SPAWNED ) {
-            time = ( level.framenum - c->level.activity_framenum ) / HZ;
+            time = ( level.framenum - c->resp.activity_framenum ) / HZ;
             sprintf( score, "%d", c->resp.score );
             sprintf( idle, "%d", time );
         } else {
             strcpy( score, "SPECT" );
             strcpy( idle, "-" );
         }
-        time = ( level.framenum - c->level.enter_framenum ) / HZ;
+        time = ( level.framenum - c->resp.enter_framenum ) / HZ;
         gi.cprintf( ent, PRINT_HIGH, "%2d %5s %4d %4d %-15s %4s %s\n",
             i, score, c->ping, time / 60, c->pers.netname, idle,
             ent->client->pers.admin ? c->pers.ip : "" );
@@ -933,7 +933,7 @@ edict_t *G_SetVictim( edict_t *ent, int start ) {
 
 
 static qboolean G_SpecRateLimited( edict_t *ent ) {
-    if( level.framenum - ent->client->observer_framenum < 5*HZ ) {
+    if( level.framenum - ent->client->resp.enter_framenum < 5*HZ ) {
         gi.cprintf( ent, PRINT_HIGH, "You may not change modes too soon.\n" );
         return qtrue;
     }
@@ -950,11 +950,10 @@ static void Cmd_Observe_f( edict_t *ent ) {
         return;
     }
     if( ent->client->pers.connected == CONN_SPECTATOR ) {
-        ent->client->pers.connected = CONN_SPAWNED;
+        spectator_respawn( ent, CONN_SPAWNED );
     } else {
-        ent->client->pers.connected = CONN_SPECTATOR;
+        spectator_respawn( ent, CONN_SPECTATOR );
     }
-    spectator_respawn( ent );
 }
 
 static void Cmd_Chase_f( edict_t *ent ) {
@@ -1006,8 +1005,7 @@ static void Cmd_Chase_f( edict_t *ent ) {
         if( G_SpecRateLimited( ent ) ) {
             return;
         }
-        ent->client->pers.connected = CONN_SPECTATOR;
-        spectator_respawn( ent );
+        spectator_respawn( ent, CONN_SPECTATOR );
     }
 
     if( target ) {
@@ -1033,8 +1031,7 @@ static void Cmd_Join_f( edict_t *ent ) {
         if( G_SpecRateLimited( ent ) ) {
             return;
         }
-        ent->client->pers.connected = CONN_SPAWNED;
-        spectator_respawn( ent );
+        spectator_respawn( ent, CONN_SPAWNED );
         break;
     case CONN_SPAWNED:
         gi.cprintf( ent, PRINT_HIGH, "You are already in the game.\n" );
@@ -1052,7 +1049,7 @@ static const char weapnames[WEAP_TOTAL][12] = {
 
 void Cmd_Stats_f( edict_t *ent, qboolean check_other ) {
     int i;
-    weapstat_t *s;
+    fragstat_t *s;
     char acc[16];
     char hits[16];
     char frgs[16];
@@ -1070,13 +1067,13 @@ void Cmd_Stats_f( edict_t *ent, qboolean check_other ) {
         other = ent;
     }
 
-    for( i = WEAP_SHOTGUN; i < WEAP_BFG; i++ ) {
-        s = &other->client->resp.weap_stats[i];
+    for( i = FRAG_BLASTER; i <= FRAG_BFG; i++ ) {
+        s = &other->client->resp.frags[i];
         if( s->atts || s->deaths ) {
             break;
         }
     }
-    if( i == WEAP_BFG ) {
+    if( i > FRAG_BFG ) {
         gi.cprintf( ent, PRINT_HIGH, "No accuracy stats available for %s.\n",
             other->client->pers.netname );
         return;
@@ -1088,22 +1085,21 @@ void Cmd_Stats_f( edict_t *ent, qboolean check_other ) {
         "---------- ---- --------- ---- ----\n",
         other->client->pers.netname );
 
-    for( i = WEAP_SHOTGUN; i < WEAP_BFG; i++ ) {
-        s = &other->client->resp.weap_stats[i];
+    for( i = FRAG_BLASTER; i <= FRAG_BFG; i++ ) {
+        s = &other->client->resp.frags[i];
         if( !s->atts && !s->deaths ) {
             continue;
         }
-        if( s->atts ) {
+        if( s->atts && i != FRAG_BFG ) {
             sprintf( acc, "%3i%%", s->hits * 100 / s->atts );
             sprintf( hits, "%4d/%-4d", s->hits, s->atts );
-            if( s->kills ) {
-                sprintf( frgs, "%4d", s->kills );
-            } else {
-                strcpy( frgs, "    " );
-            }
         } else {
             strcpy( acc, "    " );
             strcpy( hits, "         " );
+        }
+        if( s->kills ) {
+            sprintf( frgs, "%4d", s->kills );
+        } else {
             strcpy( frgs, "    " );
         }
         if( s->deaths ) {
@@ -1335,8 +1331,7 @@ static qboolean become_spectator( edict_t *ent ) {
         if( G_SpecRateLimited( ent ) ) {
             return qfalse;
         }
-        ent->client->pers.connected = CONN_SPECTATOR;
-        spectator_respawn( ent );
+        spectator_respawn( ent, CONN_SPECTATOR );
         break;
     case CONN_SPECTATOR:
         return qtrue;
@@ -1355,8 +1350,7 @@ static void select_test( edict_t *ent ) {
             if( G_SpecRateLimited( ent ) ) {
                 break;
             }
-            ent->client->pers.connected = CONN_SPECTATOR;
-            spectator_respawn( ent );
+            spectator_respawn( ent, CONN_SPECTATOR );
             break;
         }
         if( ent->client->pers.connected != CONN_PREGAME ) {
@@ -1364,8 +1358,7 @@ static void select_test( edict_t *ent ) {
                 break;
             }
         }
-        ent->client->pers.connected = CONN_SPAWNED;
-        spectator_respawn( ent );
+        spectator_respawn( ent, CONN_SPAWNED );
         break;
     case 5:
         if( become_spectator( ent ) ) {
@@ -1501,7 +1494,7 @@ void ClientCommand (edict_t *ent)
         return;
     }
 
-    //ent->client->level.activity_framenum = level.framenum;
+    //ent->client->resp.activity_framenum = level.framenum;
 
     cmd = gi.argv(0);
 

@@ -131,29 +131,63 @@ qboolean G_IsSameView( edict_t *ent, edict_t *other ) {
     return qfalse;
 }
 
-static int ModToWeapon( int mod ) {
-    switch( mod ) {
-    case MOD_BLASTER: return WEAP_BLASTER;
-    case MOD_SHOTGUN: return WEAP_SHOTGUN;
-    case MOD_SSHOTGUN: return WEAP_SUPERSHOTGUN;
-    case MOD_MACHINEGUN: return WEAP_MACHINEGUN;
-    case MOD_CHAINGUN: return WEAP_CHAINGUN;
-    case MOD_GRENADE:
-    case MOD_G_SPLASH: return WEAP_GRENADELAUNCHER;
-    case MOD_ROCKET:
-    case MOD_R_SPLASH: return WEAP_ROCKETLAUNCHER;
-    case MOD_HYPERBLASTER: return WEAP_HYPERBLASTER;
-    case MOD_RAILGUN: return WEAP_RAILGUN;
-    case MOD_HANDGRENADE:
-    case MOD_HG_SPLASH:
-    case MOD_HELD_GRENADE: return WEAP_GRENADES;
-    default: return WEAP_NONE;
+static const frag_t mod_to_frag[MOD_TOTAL] = {
+    FRAG_UNKNOWN,
+    FRAG_BLASTER,
+    FRAG_SHOTGUN,
+    FRAG_SUPERSHOTGUN,
+    FRAG_MACHINEGUN,
+    FRAG_CHAINGUN,
+    FRAG_GRENADELAUNCHER,
+    FRAG_GRENADELAUNCHER,
+    FRAG_ROCKETLAUNCHER,
+    FRAG_ROCKETLAUNCHER,
+    FRAG_HYPERBLASTER,
+    FRAG_RAILGUN,
+    FRAG_BFG,
+    FRAG_BFG,
+    FRAG_BFG,
+    FRAG_GRENADES,
+    FRAG_GRENADES,
+    FRAG_WATER,
+    FRAG_SLIME,
+    FRAG_LAVA,
+    FRAG_CRUSH,
+    FRAG_TELEPORT,
+    FRAG_FALLING,
+    FRAG_SUICIDE,
+    FRAG_GRENADES
+};
+
+static void AccountItemKills( edict_t *ent ) {
+    int index;
+
+    if( ent->flags & FL_MEGAHEALTH ) {
+        ent->client->resp.items[ITEM_HEALTH].kills++;
+    }
+    if( ent->client->quad_framenum > level.framenum ) {
+        // FIXME: should account based on inflictor?
+        ent->client->resp.items[ITEM_QUAD].kills++;
+    }
+    if( ent->client->invincible_framenum > level.framenum ) {
+        ent->client->resp.items[ITEM_INVULNERABILITY].kills++;
+    }
+
+    index = ArmorIndex( ent );
+    if( index ) {
+        ent->client->resp.items[index].kills++;
+    }
+
+    index = PowerArmorIndex( ent );
+    if( index ) {
+        ent->client->resp.items[index].kills++;
     }
 }
 
 static void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 {
-    int         mod, weapon;
+    int         mod;
+    frag_t      frag;
     char        *message, *name;
     char        *message2, *name2;
     qboolean    ff;
@@ -279,8 +313,9 @@ static void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker
         if( (int)dedicated->value ) {
             gi.dprintf( "%s %s.\n", self->client->pers.netname, message );
         }
+        frag = mod_to_frag[mod];
         self->client->resp.score--;
-        self->client->resp.mod_stats[mod].suicides++;
+        self->client->resp.frags[frag].suicides++;
         self->enemy = NULL;
         G_ScoreChanged( self );
         G_UpdateRanks();
@@ -392,13 +427,12 @@ static void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker
             if (ff) {
                 attacker->client->resp.score--;
             } else {
-                weapon = ModToWeapon( mod );
+                frag = mod_to_frag[mod];
                 attacker->client->resp.score++;
-                attacker->client->resp.mod_stats[mod].kills++;
-                attacker->client->resp.weap_stats[weapon].kills++;
+                attacker->client->resp.frags[frag].kills++;
                 self->client->resp.deaths++;
-                self->client->resp.mod_stats[mod].deaths++;
-                self->client->resp.weap_stats[weapon].deaths++;
+                self->client->resp.frags[frag].deaths++;
+                AccountItemKills( attacker );
             }
             G_ScoreChanged( attacker );
             G_UpdateRanks();
@@ -407,8 +441,9 @@ static void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker
     }
 
     gi.bprintf (PRINT_MEDIUM,"%s died.\n", self->client->pers.netname);
+    frag = mod_to_frag[mod];
     self->client->resp.score--;
-    self->client->resp.mod_stats[mod].suicides++;
+    self->client->resp.frags[frag].suicides++;
 
     G_ScoreChanged( self );
     G_UpdateRanks();
@@ -423,14 +458,14 @@ void G_BeginDamage( void ) {
 // called from T_Damage only when target is a living player
 // and inflictor is a real entity (not world)
 void G_AccountDamage( edict_t *targ, edict_t *inflictor, edict_t *attacker, int points ) {
-    int weapon;
+    frag_t frag;
 
     if( !damaging ) {
         return;
     }
 
-    weapon = ModToWeapon( meansOfDeath & ~MOD_FRIENDLY_FIRE );
-    if( !weapon ) {
+    frag = mod_to_frag[meansOfDeath & ~MOD_FRIENDLY_FIRE];
+    if( frag < FRAG_BLASTER || frag > FRAG_BFG ) {
         return; // only care about weapons
     }
 
@@ -442,8 +477,8 @@ void G_AccountDamage( edict_t *targ, edict_t *inflictor, edict_t *attacker, int 
     attacker->client->resp.damage_given += points;
 
     // don't count multiple damage as multiple hits (but railgun still counts)
-    if( damaging == 1 || weapon == WEAP_RAILGUN ) {
-        attacker->client->resp.weap_stats[weapon].hits++;
+    if( damaging == 1 || frag == FRAG_RAILGUN ) {
+        attacker->client->resp.frags[frag].hits++;
     }
 
     damaging++;
@@ -988,17 +1023,15 @@ void respawn (edict_t *self)
 /* 
  * only called when pers.spectator changes
  */
-void spectator_respawn (edict_t *ent)
+void spectator_respawn (edict_t *ent, int connected)
 {
     int total;
 
-    // clear client on respawn
-    memset( &ent->client->resp, 0, sizeof( ent->client->resp ) );
-
+    ent->client->pers.connected = connected;
     total = G_UpdateRanks();
 
     // notify others
-    if (ent->client->pers.connected == CONN_SPAWNED) {
+    if (connected == CONN_SPAWNED) {
         gi.bprintf (PRINT_HIGH, "%s entered the game (%d player%s)\n",
             ent->client->pers.netname, total, total == 1 ? "" : "s" );
 
@@ -1018,7 +1051,14 @@ void spectator_respawn (edict_t *ent)
 
         TossClientWeapon (ent);
 
-        G_LogClient( ent );
+#if USE_SQLITE
+        G_BeginLogging();
+        G_LogClient( ent->client );
+        G_EndLogging();
+#endif
+
+        // clear client on respawn
+        memset( &ent->client->resp, 0, sizeof( ent->client->resp ) );
 
         // send effect on removed player
         gi.WriteByte (svc_temp_entity);
@@ -1030,9 +1070,9 @@ void spectator_respawn (edict_t *ent)
         PutClientInServer (ent);
     }
 
+    ent->client->resp.enter_framenum = level.framenum;
+    ent->client->resp.activity_framenum = level.framenum;
     ent->client->respawn_framenum = level.framenum;
-    ent->client->observer_framenum = level.framenum;
-    ent->client->level.activity_framenum = level.framenum;
 
     G_CheckVote();
 }
@@ -1129,7 +1169,7 @@ void PutClientInServer (edict_t *ent)
     ent->die = player_die;
     ent->waterlevel = 0;
     ent->watertype = 0;
-    ent->flags &= ~FL_NO_KNOCKBACK;
+    ent->flags &= ~(FL_NO_KNOCKBACK|FL_MEGAHEALTH);
     ent->svflags &= ~(SVF_DEADMONSTER|SVF_NOCLIENT);
 
     VectorSet( ent->mins, -16, -16, -24 );
@@ -1245,10 +1285,10 @@ void ClientBegin (edict_t *ent)
 
     memset( &ent->client->resp, 0, sizeof( ent->client->resp ) );
 
-    ent->client->level.enter_framenum = level.framenum;
+    ent->client->resp.enter_framenum = level.framenum;
 
-    ent->client->pers.connected = ent->client->pers.mvdspec ?
-        CONN_SPECTATOR : CONN_PREGAME;
+    ent->client->pers.connected = ( level.intermission_framenum ||
+        ent->client->pers.mvdspec ) ? CONN_SPECTATOR : CONN_PREGAME;
 
     // locate ent at a spawn point
     PutClientInServer (ent);
@@ -1439,9 +1479,15 @@ void ClientDisconnect (edict_t *ent)
     ent->client->pers.connected = CONN_DISCONNECTED;
     ent->client->ps.stats[STAT_FRAGS] = 0;
 
-    if( connected == CONN_SPAWNED && !level.intermission_framenum ) {
-        G_LogClient( ent );
+#if USE_SQLITE
+    if( connected == CONN_SPAWNED ) {
+        G_BeginLogging();
+        G_LogClient( ent->client );
+        G_EndLogging();
+    }
+#endif
 
+    if( connected == CONN_SPAWNED && !level.intermission_framenum ) {
         // send effect
         gi.WriteByte (svc_muzzleflash);
         gi.WriteShort (ent-g_edicts);
@@ -1555,8 +1601,10 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
     client->level.cmd_angles[1] = SHORT2ANGLE(ucmd->angles[1]);
     client->level.cmd_angles[2] = SHORT2ANGLE(ucmd->angles[2]);
 
-    if( abs( ucmd->forwardmove ) >= 10 || abs( ucmd->upmove ) >= 10 || abs( ucmd->sidemove ) >= 10 ) {
-        client->level.activity_framenum = level.framenum;
+    if( abs( ucmd->forwardmove ) >= 10 || abs( ucmd->upmove ) >= 10 ||
+        abs( ucmd->sidemove ) >= 10 || client->buttons != ucmd->buttons )
+    {
+        client->resp.activity_framenum = level.framenum;
         if( client->pers.connected == CONN_SPAWNED ) {
             level.activity_framenum = level.framenum;
         }
@@ -1671,10 +1719,6 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
         }
     }
     
-    if( client->oldbuttons != client->buttons ) {
-        client->level.activity_framenum = level.framenum;
-    }
-
     client->oldbuttons = client->buttons;
     client->buttons = ucmd->buttons;
     client->latched_buttons |= client->buttons & ~client->oldbuttons;
@@ -1686,8 +1730,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
     // fire weapon from final position if needed
     if (client->latched_buttons & BUTTON_ATTACK) {
         if (client->pers.connected == CONN_PREGAME) {
-            client->pers.connected = CONN_SPAWNED;
-            spectator_respawn( ent );
+            spectator_respawn( ent, CONN_SPAWNED );
         } else if (client->pers.connected == CONN_SPECTATOR) {
             client->latched_buttons = 0;
             if (client->chase_target) {
@@ -1747,12 +1790,10 @@ void ClientBeginServerFrame (edict_t *ent)
             client->weapon_thunk = qfalse;
 
         if( g_idle_time->value > 0 ) {
-            if( level.framenum - client->level.activity_framenum > g_idle_time->value * HZ ) {
-                gi.bprintf( PRINT_HIGH,
-                    "Removing %s from the game due to inactivity.\n",
+            if( level.framenum - client->resp.activity_framenum > g_idle_time->value * HZ ) {
+                gi.bprintf( PRINT_HIGH, "Removing %s from the game due to inactivity.\n",
                     client->pers.netname );
-                client->pers.connected = CONN_SPECTATOR;
-                spectator_respawn( ent );
+                spectator_respawn( ent, CONN_SPECTATOR );
                 return;
             }
         }
