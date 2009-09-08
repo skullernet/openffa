@@ -760,12 +760,16 @@ static void Cmd_Say_f (edict_t *ent, chat_t chat)
     // stop flood during the match
     if( !cl->pers.admin && !level.intermission_framenum ) {
         if( cl->pers.muted ) {
-            gi.cprintf(ent, PRINT_HIGH, "You have been muted.\n" );
+            gi.cprintf( ent, PRINT_HIGH, "You are not allowed to talk.\n" );
             return;
         }
         if( (int)g_mute_chat->value ) {
-            if( PLAYER_SPAWNED( ent ) || (int)g_mute_chat->value > 1 ) {
-                gi.cprintf(ent, PRINT_HIGH, "You can't talk during the match.\n" );
+            if( PLAYER_SPAWNED( ent ) ) {
+                gi.cprintf( ent, PRINT_HIGH, "Players can't talk during the match.\n" );
+                return;
+            }
+            if( (int)g_mute_chat->value > 1 ) {
+                gi.cprintf( ent, PRINT_HIGH, "Spectators can't talk during the match.\n" );
                 return;
             }
             chat = CHAT_TEAM;
