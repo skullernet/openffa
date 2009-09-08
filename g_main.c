@@ -1028,7 +1028,7 @@ void Com_EPrintf( const char *fmt, ... ) {
     gi.dprintf( "ERROR: %s", text );
 }
 
-void Com_Error( comErrorType_t err_level, const char *error, ... ) {
+void Com_Error( error_type_t code, const char *error, ... ) {
     va_list     argptr;
     char        text[MAX_STRING_CHARS];
 

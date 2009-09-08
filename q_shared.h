@@ -115,25 +115,25 @@ typedef int fileHandle_t;
 
 #define MAX_CLIENT_NAME     16
 
-typedef enum comErrorType_e {
+typedef enum {
     ERR_FATAL,          // exit the entire game with a popup window
     ERR_DROP,           // print to console and disconnect from game
     ERR_DISCONNECT,     // don't kill server
     ERR_SILENT
-} comErrorType_t;
+} error_type_t;
 
-typedef enum comPrintType_e {
+typedef enum {
     PRINT_ALL,          // general messages
     PRINT_DEVELOPER,    // only print when "developer 1"
     PRINT_WARNING,      // print in yellow color
     PRINT_ERROR         // print in red color
-} comPrintType_t;
+} print_type_t;
 
 void        Com_Printf( const char *fmt, ... ) q_printf( 1, 2 );
 void        Com_DPrintf( const char *fmt, ... ) q_printf( 1, 2 );
 void        Com_WPrintf( const char *fmt, ... ) q_printf( 1, 2 );
 void        Com_EPrintf( const char *fmt, ... ) q_printf( 1, 2 );
-void        Com_Error( comErrorType_t code, const char *fmt, ... )
+void        Com_Error( error_type_t code, const char *fmt, ... )
                 q_noreturn q_printf( 2, 3 );
 
 // game print flags
@@ -143,7 +143,7 @@ void        Com_Error( comErrorType_t code, const char *fmt, ... )
 #define PRINT_CHAT          3       // chat messages    
 
 // destination class for gi.multicast()
-typedef enum multicast_e {
+typedef enum {
     MULTICAST_ALL,
     MULTICAST_PHS,
     MULTICAST_PVS,
@@ -318,15 +318,22 @@ static inline int rand_byte( void ) {
 
 //=============================================
 
+// fast "C" macros
 #define Q_isupper( c )  ( (c) >= 'A' && (c) <= 'Z' )
 #define Q_islower( c )  ( (c) >= 'a' && (c) <= 'z' )
 #define Q_isdigit( c )  ( (c) >= '0' && (c) <= '9' )
 #define Q_isalpha( c )  ( Q_isupper( c ) || Q_islower( c ) )
 #define Q_isalnum( c )  ( Q_isalpha( c ) || Q_isdigit( c ) )
 #define Q_isprint( c )  ( (c) >= 32 && (c) < 127 )
+#define Q_isgraph( c )  ( (c) > 32 && (c) < 127 )
+#define Q_isspace( c )  ( c == ' ' || c == '\f' || c == '\n' || \
+                          c == '\r' || c == '\t' || c == '\v' )
 
 // tests if specified character is valid quake path character
 #define Q_ispath( c )   ( Q_isalnum( c ) || (c) == '_' || (c) == '-' )
+
+// tests if specified character has special meaning to quake console
+#define Q_isspecial( c )  ( (c) == '\r' || (c) == '\n' || (c) == 127 )
 
 static inline int Q_tolower( int c ) {
     if( Q_isupper( c ) ) {
@@ -375,6 +382,15 @@ static inline int Q_charhex( int c ) {
         return c - '0';
     }
     return -1;
+}
+
+// makes quake char printable on a system terminal
+static inline int Q_sanitize( int c ) {
+    c &= 127;
+    if( Q_isgraph( c ) || Q_isspace( c ) ) {
+        return c;
+    }
+    return '.';
 }
 
 // portable case insensitive compare
@@ -497,7 +513,7 @@ char    *Info_ValueForKey( const char *s, const char *key );
 void    Info_RemoveKey( char *s, const char *key );
 qboolean    Info_SetValueForKey( char *s, const char *key, const char *value );
 qboolean    Info_Validate( const char *s );
-int     Info_SubValidate( const char *s );
+size_t  Info_SubValidate( const char *s );
 void    Info_NextPair( const char **string, char *key, char *value );
 void    Info_Print( const char *infostring );
 

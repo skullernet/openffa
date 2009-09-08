@@ -22,8 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 vec3_t vec3_origin = { 0, 0, 0 };
 
-//============================================================================
-
 void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
 {
     float        angle;
@@ -58,8 +56,6 @@ void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
         up[2] = cr*cp;
     }
 }
-
-//============================================================================
 
 vec_t VectorNormalize (vec3_t v)
 {
@@ -172,23 +168,12 @@ qboolean COM_HasSpaces( const char *s ) {
     return qfalse;
 }
 
-/*
-=================
-SortStrcmp
-=================
-*/
 int QDECL SortStrcmp( const void *p1, const void *p2 ) {
-    const char *s1 = *( const char ** )p1;
-    const char *s2 = *( const char ** )p2;
-
-    return strcmp( s1, s2 );
+    return strcmp( *( const char ** )p1, *( const char ** )p2 );
 }
 
 int QDECL SortStricmp( const void *p1, const void *p2 ) {
-    const char *s1 = *( const char ** )p1;
-    const char *s2 = *( const char ** )p2;
-
-    return Q_stricmp( s1, s2 );
+    return Q_stricmp( *( const char ** )p1, *( const char ** )p2 );
 }
 
 int Q_HighlightStr( char *out, const char *in, int bufsize ) {
@@ -217,12 +202,15 @@ int Q_HighlightStr( char *out, const char *in, int bufsize ) {
 Q_IsWhiteSpace
 ================
 */
-qboolean Q_IsWhiteSpace( const char *string ) {
-    while( *string ) {
-        if( ( *string & 127 ) > 32 ) {
+qboolean Q_IsWhiteSpace( const char *s ) {
+    int c;
+
+    while( *s ) {
+        c = *s++;
+        c &= 127;
+        if( Q_isgraph( c ) ) {
             return qfalse;
         }
-        string++;
     }
 
     return qtrue;
@@ -808,30 +796,35 @@ Also checks the length of keys/values and the whole string.
 ==================
 */
 qboolean Info_Validate( const char *s ) {
-    const char  *start;
-    int         c, len;
+    size_t len, total;
+    int c;
     
-    start = s;
+    total = 0;
     while( 1 ) {
         //
         // validate key
         //
         if( *s == '\\' ) {
             s++;
+            if( ++total == MAX_INFO_STRING ) {
+                return qfalse;    // oversize infostring
+            }
         }
         if( !*s ) {
             return qfalse;    // missing key
         }
         len = 0;
         while( *s != '\\' ) {
-            c = *s & 127;
-            if( c == '\\' || c == '\"' || c == ';' ) {
+            c = *s++;
+            if( !Q_isprint( c ) || c == '\"' || c == ';' ) {
                 return qfalse;    // illegal characters
             }
-            if( len == MAX_INFO_KEY - 1 ) {
+            if( ++len == MAX_INFO_KEY ) {
                 return qfalse;    // oversize key
             }
-            s++; len++;
+            if( ++total == MAX_INFO_STRING ) {
+                return qfalse;    // oversize infostring
+            }
             if( !*s ) {
                 return qfalse;    // missing value
             }
@@ -841,23 +834,25 @@ qboolean Info_Validate( const char *s ) {
         // validate value
         //
         s++;
+        if( ++total == MAX_INFO_STRING ) {
+            return qfalse;    // oversize infostring
+        }
         if( !*s ) {
             return qfalse;    // missing value
         }
         len = 0;
         while( *s != '\\' ) {
-            c = *s & 127;
-            if( c == '\\' || c == '\"' || c == ';' ) {
+            c = *s++;
+            if( !Q_isprint( c ) || c == '\"' || c == ';' ) {
                 return qfalse;    // illegal characters
             }
-            if( len == MAX_INFO_VALUE - 1 ) {
+            if( ++len == MAX_INFO_VALUE ) {
                 return qfalse;    // oversize value
             }
-            s++; len++;
+            if( ++total == MAX_INFO_STRING ) {
+                return qfalse;    // oversize infostring
+            }
             if( !*s ) {
-                if( s - start > MAX_INFO_STRING ) {
-                    return qfalse;
-                }
                 return qtrue;    // end of string
             }
         }
@@ -868,23 +863,23 @@ qboolean Info_Validate( const char *s ) {
 
 /*
 ============
-Info_ValidateSubstring
+Info_SubValidate
 ============
 */
-int Info_SubValidate( const char *s ) {
-    const char *start;
-    int c, len;
+size_t Info_SubValidate( const char *s ) {
+    size_t len;
+    int c;
 
-    for( start = s; *s; s++ ) {
-        c = *s & 127;
+    len = 0;
+    while( *s ) {
+        c = *s++;
+        c &= 127;       // strip high bits
         if( c == '\\' || c == '\"' || c == ';' ) {
-            return -1;
+            return SIZE_MAX;  // illegal characters
         }
-    }
-
-    len = s - start;
-    if( len >= MAX_QPATH ) {
-        return -1;
+        if( ++len == MAX_QPATH ) {
+            return MAX_QPATH;  // oversize value
+        }
     }
 
     return len;
@@ -897,17 +892,18 @@ Info_SetValueForKey
 */
 qboolean Info_SetValueForKey( char *s, const char *key, const char *value ) {
     char    newi[MAX_INFO_STRING], *v;
-    int     c, l, kl, vl;
+    size_t  l, kl, vl;
+    int     c;
 
     // validate key
     kl = Info_SubValidate( key );
-    if( kl == -1 ) {
+    if( kl >= MAX_QPATH ) {
         return qfalse;
     }
 
     // validate value
     vl = Info_SubValidate( value );
-    if( vl == -1 ) {
+    if( vl >= MAX_QPATH ) {
         return qfalse;
     }
 
@@ -916,7 +912,7 @@ qboolean Info_SetValueForKey( char *s, const char *key, const char *value ) {
         return qtrue;
     }
 
-    l = ( int )strlen( s );
+    l = strlen( s );
     if( l + kl + vl + 2 >= MAX_INFO_STRING ) {
         return qfalse;
     }
@@ -932,7 +928,7 @@ qboolean Info_SetValueForKey( char *s, const char *key, const char *value ) {
     while( *v ) {
         c = *v++;
         c &= 127;        // strip high bits
-        if( c >= 32 && c < 127 )
+        if( Q_isprint( c ) )
             *s++ = c;
     }
     *s = 0;
