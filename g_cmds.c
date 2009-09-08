@@ -725,9 +725,14 @@ static size_t build_chat( const char *name, chat_t chat, int start, char *buffer
             continue;
         if (total + len + 1 >= MAX_CHAT)
             break;
-        memcpy (buffer + total, p, len);
-        buffer[total + len] = ' ';
-        total += len + 1;
+        while (*p) {
+            int c = *p++;
+            c &= 127;   // strip high bits
+            // don't allow carriage returns, etc
+            if (!Q_isspecial(c))
+                buffer[total++] = c;
+        }
+        buffer[total++] = ' ';
     }
     buffer[total] = 0;
 
