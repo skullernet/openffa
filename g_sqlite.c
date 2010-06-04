@@ -120,6 +120,10 @@ void G_LogClient( gclient_t *c ) {
         //gi.dprintf( "created player_id=%llu\n", rowid );
     }
 
+    // MapChange \current\%s\next\%s\players\%d
+    // PlayerBegin \name\%s\id\%s
+    // PlayerEnd \name\%s\id\%s
+    // PlayerStats \name\%s\id\%s\time\%d\frg\%d\dth\%d\dmg\%d\dmr\%d\w%d\%d,%d,%d,%d,%d\i%d\%d,%d,%d
     db_execute( "INSERT INTO records VALUES(%llu,%lu,%d,%d,%d,%d,%d)",
         rowid, clock, ( level.framenum - c->resp.enter_framenum ) / HZ,
         c->resp.score, c->resp.deaths, c->resp.damage_given, c->resp.damage_recvd );

@@ -119,6 +119,7 @@ typedef trace_t *(*trace_hacked_t)( trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, e
 #define BODY_QUEUE_SIZE     8
 
 #define MAX_NETNAME     16
+#define MAX_SKINNAME    24
 
 typedef enum
 {
@@ -330,7 +331,11 @@ typedef struct gitem_s
     char        *precaches;     // string of all models, sounds, and images this item will use
 } gitem_t;
 
-
+typedef struct skin_entry_s {
+    struct skin_entry_s *next;
+    struct skin_entry_s *down;
+    char name[1];
+} skin_entry_t;
 
 //
 // this structure is left intact through an entire game
@@ -353,6 +358,9 @@ typedef struct
     int         serverFeatures;
 
     int         settings_modified;
+
+    // allowed skins list
+    skin_entry_t    *skins;
 
     char        dir[MAX_OSPATH]; // where variable data is stored
 } game_locals_t;
@@ -1017,7 +1025,7 @@ typedef struct flood_s {
 // client data that stays across multiple level loads
 typedef struct {
     char        netname[MAX_NETNAME];
-    char        skin[MAX_QPATH];
+    char        skin[MAX_SKINNAME];
     char        ip[32];
     int         hand;
     float       fov;

@@ -60,6 +60,7 @@ cvar_t  *g_team_chat;
 cvar_t  *g_mute_chat;
 cvar_t  *g_protection_time;
 cvar_t  *g_log_stats;
+cvar_t  *g_skins_file;
 cvar_t  *dedicated;
 
 #if USE_SQLITE
@@ -499,6 +500,80 @@ static void G_LoadMapList( void ) {
         nummaps, path );
 }
 
+static void G_LoadSkinList( void ) {
+    char path[MAX_OSPATH];
+    char buffer[MAX_STRING_CHARS];
+    char *token;
+    const char *data;
+    skin_entry_t *skin;
+    FILE *fp;
+    size_t len;
+    int linenum, numskins, numdirs;
+
+    if( !game.dir[0] ) {
+        return;
+    }
+    len = Q_concat( path, sizeof( path ), game.dir, "/",
+        g_skins_file->string, ".txt", NULL );
+    if( len >= sizeof( path ) ) {
+        return;
+    }
+
+    fp = fopen( path, "r" );
+    if( !fp ) {
+        gi.dprintf( "Couldn't load '%s'\n", path );
+        return;
+    }
+
+    linenum = numskins = numdirs = 0;
+    while( 1 ) {
+        data = fgets( buffer, sizeof( buffer ), fp );
+        if( !data ) {
+            break;
+        }
+
+        linenum++;
+
+        if( data[0] == '#' || data[0] == '/' ) {
+            continue;
+        }
+
+        token = COM_Parse( &data );
+        if( !*token ) {
+            continue;
+        }
+
+        len = strlen( token );
+        if( len >= MAX_SKINNAME ) {
+            gi.dprintf( "%s: oversize skinname at line %d\n",
+                __func__, linenum );
+            continue;
+        }
+
+        skin = G_Malloc( sizeof( *skin ) + len );
+        memcpy( skin->name, token, len + 1 );
+
+        if( token[ len - 1 ] == '/' ) {
+            skin->name[ len - 1 ] = 0;
+            skin->next = game.skins;
+            game.skins = skin;
+            numdirs++;
+        } else if( game.skins ) {
+            skin->next = game.skins->down;
+            game.skins->down = skin;
+            numskins++;
+        } else {
+            gi.dprintf( "%s: skinname before directory at line %d\n",
+                __func__, linenum );
+        }
+    }
+
+    fclose( fp );
+
+    gi.dprintf( "Loaded %d skins in %d dirs from '%s'\n",
+        numskins, numdirs, path );
+}
+
 /*
 =================
 EndDMLevel
@@ -799,7 +874,8 @@ static void G_Shutdown (void) {
 
     gi.FreeTags (TAG_LEVEL);
     gi.FreeTags (TAG_GAME);
-    game.clients = NULL;
+
+    memset( &game, 0, sizeof( game ) );
 
     // reset our features
     gi.cvar_forceset( "g_features", "0" );
@@ -894,6 +970,7 @@ static void G_Init (void) {
     g_sql_database = gi.cvar ("g_sql_database", "", 0);
     g_sql_async = gi.cvar ("g_sql_async", "0", 0);
 #endif
+    g_skins_file = gi.cvar ("g_skins_file", "", CVAR_LATCH);
 
     run_pitch = gi.cvar ("run_pitch", "0.002", 0);
     run_roll = gi.cvar ("run_roll", "0.005", 0);
@@ -964,6 +1041,11 @@ static void G_Init (void) {
 #if USE_SQLITE
     check_cvar( g_sql_database );
 #endif
+
+    check_cvar( g_skins_file );
+    if( g_skins_file->string[0] ) {
+        G_LoadSkinList();
+    }
 
     // obtain server features
     cv = gi.cvar( "sv_features", NULL, 0 );

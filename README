@@ -31,7 +31,7 @@ If you wish to try OpenFFA on your server, you can start by downloading
 a [nightly][1] build for your system. Binary builds for Win32 (x86) and GNU/Linux
 (i386 and amd64) are provided, along with source snapshots.
 
-[1]: http://skuller.ath.cx/openffa/nightly/
+[1]: http://skuller.net/openffa/nightly/
 
 SVN access
 ----------
@@ -40,12 +40,12 @@ Anonymous read-only access to OpenFFA SVN repository is available.
 Use the following commands to checkout a fresh working copy and prepare it
 for building:
 
-    $ svn co svn://skuller.ath.cx/openffa/trunk openffa
+    $ svn co svn://skuller.net/openffa/trunk openffa
     $ svnversion openffa > openffa/REVISION
 
 You can also browse OpenFFA source code [online][2].
 
-[2]: http://skuller.ath.cx/openffa/cvstrac/dir?d=trunk
+[2]: http://skuller.net/openffa/cvstrac/dir?d=trunk
 
 Bug tracker
 -----------
@@ -53,7 +53,7 @@ Bug tracker
 For reporting bugs and proposing enhancements to OpenFFA, please use
 the [bug tracker][3]. No registration (a trivial process though) is required.
 
-[3]: http://skuller.ath.cx/openffa/cvstrac
+[3]: http://skuller.net/openffa/cvstrac
 
 Server configuration
 --------------------
@@ -79,6 +79,11 @@ If this variable is not empty and there are some settings modified by voting,
 server will execute the specified config file after 5 minutes pass without
 any active players. Config file should reset all votable variables
 to their default values.
+
+- `set g_skins_file ""` (string)  
+Specifies name of the file to load skin list from. Should not include any
+extenstion part or slashes. If skin list is specified, players may only use
+skins defined in the list.
 
 - `set g_bugs 0` (integer)  
 Specifies whether some known Quake 2 gameplay bugs are enabled or not.
@@ -166,4 +171,20 @@ Each line of the map list file should have the following format:
 `<mapname> [min_players] [max_players] [flags]`. Minimum and maximum player
 counts are optional, as well as flags. Flags can be either 1 or 2, which makes
 the map entry not automatically selectable and not votable, respectively.
+
+Skin list format
+---------------
+
+Skin list is loaded at server startup from  `./openffa/${g_skins_file}.txt`.
+Each line of the skin list file should specify either a model name, or a skin name.
+It should begin with a model (directory) name, optionally followed by skin names
+allowed for that model. Model names are distinguished from skin names by the presence of
+trailing slash, e.g. `male/` and `female/` are models, `grunt` and `anthena` are skins.
+There may be several model names defined in the file. If there are no skins defined
+for the model, then any skin can be used for that model. When player skins are
+validated, if there is no matching skin found, then the last one defined for the matching
+model is used. Likewise, if there is no matching model found, then the last one defined
+in the file is used.
+
+
 

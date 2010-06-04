@@ -1321,13 +1321,99 @@ void ClientBegin (edict_t *ent)
     ClientEndServerFrame (ent);
 }
 
+static skin_entry_t *find_skin( skin_entry_t *head, const char *name ) {
+    skin_entry_t *e;
+
+    for( e = head; e; e = e->next ) {
+        if( !Q_stricmp( e->name, name ) ) {
+            return e;
+        }
+    }
+
+    return head; // use default
+}
+
+static qboolean validate_skin( const char *s ) {
+    if( !*s ) {
+        // empty skin is no good
+        return qfalse;
+    }
+
+    do {
+        if( !Q_ispath( *s ) ) {
+            // any non-path chars are bad also
+            return qfalse;
+        }
+    } while( *++s );
+
+    return qtrue;
+}
+
+static qboolean parse_skin( char *out, const char *in ) {
+    char *p;
+    skin_entry_t *m, *s;
+    size_t len;
+
+    // copy it off
+    len = Q_strlcpy( out, in, MAX_SKINNAME );
+    if( len >= MAX_SKINNAME ) {
+        goto bad;
+    }
+
+    // isolate the model name
+    p = strchr( out, '/' );
+    if( !p ) {
+        goto bad;
+    }
+    *p = 0;
+
+    // validate the model part
+    if( !validate_skin( out ) ) {
+        goto bad;
+    }
+
+    if( !game.skins ) {
+        // validate the skin part
+        if( !validate_skin( p + 1 ) ) {
+            goto bad;
+        }
+
+        // fix slash and return original skin
+        *p = '/';
+        return qfalse;
+    }
+
+    m = find_skin( game.skins, out );
+    if( !m->down ) {
+        // validate the skin part
+        if( !validate_skin( p + 1 ) ) {
+            goto bad;
+        }
+ 
+        // empty directory = wildcard
+        len = Q_concat( out, MAX_SKINNAME, m->name, "/", p + 1, NULL );
+    } else {
+        s = find_skin( m->down, p + 1 );
+        len = Q_concat( out, MAX_SKINNAME, m->name, "/", s->name, NULL );
+    }
+
+    if( len >= MAX_SKINNAME ) {
+        goto bad;
+    }
+    return qtrue;
+
+bad:
+    strcpy( out, "male/grunt" );
+    return qtrue;
+}
+
 static qboolean forbid_name_change( edict_t *ent ) {
     if( !ent->client->pers.skin[0] ) {
         return qfalse; // allow the very first one
     }
 
     return G_FloodProtect( ent, &ent->client->level.info_flood,
-        "change your name or skin", (int)flood_infos->value,
+        "change name or skin", (int)flood_infos->value,
         flood_perinfo->value, flood_infodelay->value );
 }
 
@@ -1346,7 +1432,9 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
     char    *s;
     int     playernum;
     gclient_t *client = ent->client;
-    char    name[MAX_NETNAME], skin[MAX_QPATH];
+    char    name[MAX_NETNAME], skin[MAX_SKINNAME];
+    char    playerskin[MAX_QPATH];
+    qboolean changed;
 
     // check for malformed or illegal info strings
     if (!Info_Validate(userinfo)) {
@@ -1356,19 +1444,27 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
     // set name
     s = Info_ValueForKey (userinfo, "name");
     Q_strlcpy( name, s, sizeof( name ) );
+    if( Q_IsWhiteSpace( name ) ) {
+        strcpy( name, "unnamed" );
+    }
 
-    // combine name and skin into a configstring
+    // set skin
     s = Info_ValueForKey (userinfo, "skin");
-    Q_concat( skin, sizeof( skin ), name, "\\", s, NULL );
+    parse_skin( skin, s );
+    
+    changed = strcmp( name, client->pers.netname ) ||
+        strcmp( skin, client->pers.skin );
 
-    if( !client->pers.mvdspec && strcmp( skin, client->pers.skin ) ) {
+    if( !client->pers.mvdspec && changed ) {
         if( forbid_name_change( ent ) ) {
             Info_SetValueForKey( userinfo, "name", client->pers.netname );
             //Info_SetValueForKey( userinfo, "skin", client->pers.skin );
             G_StuffText( ent, va( "set name \"%s\"\n", client->pers.netname ) );
         } else {
+            // combine name and skin into a configstring
+            Q_concat( playerskin, sizeof( playerskin ), name, "\\", skin, NULL );
             playernum = ( ent - g_edicts ) - 1;
-            gi.configstring( CS_PLAYERSKINS + playernum, skin );
+            gi.configstring( CS_PLAYERSKINS + playernum, playerskin );
             gi.configstring( CS_PLAYERNAMES + playernum, name );
             strcpy( client->pers.skin, skin );
             strcpy( client->pers.netname, name );

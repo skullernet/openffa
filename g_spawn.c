@@ -551,6 +551,7 @@ void G_SpawnEntities (const char *mapname, const char *entities, const char *spa
     int         i;
     client_persistant_t pers;
     char        *token;
+    char        playerskin[MAX_QPATH];
 
 #if USE_SQLITE
     G_OpenDatabase();
@@ -584,7 +585,11 @@ void G_SpawnEntities (const char *mapname, const char *entities, const char *spa
         client->edict = ent;
         client->clientNum = i;
         client->pers.connected = CONN_CONNECTED;
-        gi.configstring( CS_PLAYERSKINS + i, client->pers.skin );
+
+        // combine name and skin into a configstring
+        Q_concat( playerskin, sizeof( playerskin ),
+            client->pers.netname, "\\", client->pers.skin, NULL );
+        gi.configstring( CS_PLAYERSKINS + i, playerskin );
         gi.configstring( CS_PLAYERNAMES + i, client->pers.netname );
     }
 
