@@ -1003,6 +1003,7 @@ static void Cmd_Chase_f( edict_t *ent ) {
         gi.cprintf( ent, PRINT_HIGH, "Changed to spectator mode.\n" );
         if( target ) {
             SetChaseTarget( ent, target );
+            ent->client->chase_mode = CHASE_NONE;
         } else {
             GetChaseTarget( ent, mode );
         }
@@ -1024,6 +1025,7 @@ static void Cmd_Chase_f( edict_t *ent ) {
             return;
         }
         SetChaseTarget( ent, target );
+        ent->client->chase_mode = CHASE_NONE;
     } else {
         if( !ent->client->chase_target || mode != CHASE_NONE ) {
             GetChaseTarget( ent, mode );
