@@ -806,16 +806,17 @@ static void Cmd_Say_f (edict_t *ent, chat_t chat)
     }
 }
 
-static void Cmd_Players_f( edict_t *ent ) {
+void Cmd_Players_f( edict_t *ent ) {
     gclient_t *c;
-    int i, time;
-    char score[16], idle[16];
+    int i, sec;
+    char score[16], idle[16], time[16];
+    qboolean show_ips = !ent || ent->client->pers.admin;
 
     gi.cprintf( ent, PRINT_HIGH,
         "id score ping time name            idle %s\n"
         "-- ----- ---- ---- --------------- ---- %s\n",
-        ent->client->pers.admin ? "address" : "",
-        ent->client->pers.admin ? "-------" : "" );
+        show_ips ? "address" : "",
+        show_ips ? "-------" : "" );
 
     for( i = 0; i < game.maxclients; i++ ) {
         c = &game.clients[i];
@@ -823,21 +824,30 @@ static void Cmd_Players_f( edict_t *ent ) {
             continue;
         }
         if( c->pers.connected == CONN_SPAWNED ) {
-            time = ( level.framenum - c->resp.activity_framenum ) / HZ;
             sprintf( score, "%d", c->resp.score );
-            sprintf( idle, "%d", time );
+            sec = ( level.framenum - c->resp.activity_framenum ) / HZ;
+            if( level.framenum < 10 * 60 * HZ ) {
+                sprintf( idle, "%d:%02d", sec / 60, sec % 60 );
+            } else {
+                sprintf( idle, "%d", sec / 60 );
+            }
         } else {
             strcpy( score, "SPECT" );
             strcpy( idle, "-" );
         }
-        time = ( level.framenum - c->resp.enter_framenum ) / HZ;
-        gi.cprintf( ent, PRINT_HIGH, "%2d %5s %4d %4d %-15s %4s %s\n",
-            i, score, c->ping, time / 60, c->pers.netname, idle,
-            ent->client->pers.admin ? c->pers.ip : "" );
+        sec = ( level.framenum - c->resp.enter_framenum ) / HZ;
+        if( level.framenum < 10 * 60 * HZ ) {
+            sprintf( time, "%d:%02d", sec / 60, sec % 60 );
+        } else {
+            sprintf( time, "%d", sec / 60 );
+        }
+        gi.cprintf( ent, PRINT_HIGH, "%2d %5s %4d %4s %-15s %4s %s\n",
+            i, score, c->ping, time, c->pers.netname, idle,
+            show_ips ? c->pers.ip : "" );
     }
 }
 
-static void Cmd_HighScores_f( edict_t *ent ) {
+void Cmd_HighScores_f( edict_t *ent ) {
     int i;
     char date[MAX_QPATH];
     struct tm *tm;
@@ -1067,7 +1077,16 @@ void Cmd_Stats_f( edict_t *ent, qboolean check_other ) {
     char dths[16];
     edict_t *other;
 
-    if( check_other && gi.argc() > 1 ) {
+    if( !ent ) {
+        if( gi.argc() < 3 ) {
+            gi.cprintf( ent, PRINT_HIGH, "Usage: %s <playerID>\n", gi.argv( 1 ) );
+            return;
+        }
+        other = G_SetPlayer( ent, 2 );
+        if( !other ) {
+            return;
+        }
+    } else if( check_other && gi.argc() > 1 ) {
         other = G_SetPlayer( ent, 1 );
         if( !other ) {
             return;
@@ -1138,7 +1157,7 @@ static void Cmd_Id_f( edict_t *ent ) {
         ent->client->pers.noviewid ? "dis" : "en" );
 }
 
-static void Cmd_Settings_f( edict_t *ent ) {
+void Cmd_Settings_f( edict_t *ent ) {
     char buffer[MAX_QPATH], *s;
     int v;
 

@@ -79,6 +79,7 @@ global oldscores (client is NULL in the latter case).
 static size_t BuildDeathmatchScoreboard( char *buffer, gclient_t *client ) {
     char    entry[MAX_STRING_CHARS];
     char    status[MAX_QPATH];
+    char    timebuf[16];
     size_t  total, len;
     int     i, j, numranks;
     int     y, sec, eff;
@@ -126,11 +127,17 @@ static size_t BuildDeathmatchScoreboard( char *buffer, gclient_t *client ) {
             eff = 0;
         }
 
+        if( level.framenum < 10 * 60 * HZ ) {
+            sprintf( timebuf, "%d:%02d", sec / 60, sec % 60 );
+        } else {
+            sprintf( timebuf, "%d", sec / 60 );
+        }
+
         len = Q_snprintf( entry, sizeof( entry ),
-            "yv %d string%s \"%2d %-15s %3d %3d %3d %4d %4d %4d\"",
+            "yv %d string%s \"%2d %-15s %3d %3d %3d %4d %4s %4d\"",
             y, c == client ? "" : "2", i + 1,
             c->pers.netname, c->resp.score, c->resp.deaths, eff,
-            c->resp.score * 3600 / sec, sec / 60, c->ping );
+            c->resp.score * 3600 / sec, timebuf, c->ping );
         if( len >= sizeof( entry ) ) {
             continue;
         }
@@ -157,7 +164,7 @@ static size_t BuildDeathmatchScoreboard( char *buffer, gclient_t *client ) {
         }
 
         if( c->chase_target ) {
-            Q_snprintf( status, sizeof( status ), "(chasing %.8s)",
+            Q_snprintf( status, sizeof( status ), "(-> %.13s)",
                 c->chase_target->client->pers.netname );
         } else {
             strcpy( status, "(observing)" );

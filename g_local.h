@@ -713,7 +713,10 @@ extern  list_t  g_map_queue;
 //
 // g_cmds.c
 //
+void Cmd_Players_f( edict_t *ent );
+void Cmd_HighScores_f( edict_t *ent );
 void Cmd_Stats_f( edict_t *ent, qboolean check_other );
+void Cmd_Settings_f( edict_t *ent );
 edict_t *G_SetPlayer( edict_t *ent, int arg );
 edict_t *G_SetVictim( edict_t *ent, int start );
 void ValidateSelectedItem (edict_t *ent);

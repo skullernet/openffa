@@ -111,6 +111,14 @@ void G_ServerCommand (void) {
         Svcmd_MapList_f ();
     else if (!strcmp (cmd, "mapqueue"))
         Svcmd_MapQueue_f ();
+    else if (!strcmp (cmd, "players") || !strcmp (cmd, "playerlist"))
+        Cmd_Players_f( NULL );
+    else if (!strcmp (cmd, "highscores"))
+        Cmd_HighScores_f( NULL );
+    else if (!strcmp (cmd, "stats") || !strcmp (cmd, "accuracy"))
+        Cmd_Stats_f( NULL, qtrue );
+    else if (!strcmp (cmd, "settings") || !strcmp (cmd, "matchinfo"))
+        Cmd_Settings_f( NULL );
     else
         Com_Printf( "Unknown server command \"%s\"\n", cmd);
 }
