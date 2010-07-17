@@ -630,10 +630,6 @@ extern  edict_t         *g_edicts;
 #define DF( x )     ( ( ( int )dmflags->value & DF_ ## x ) != 0 )
 
 extern  cvar_t  *maxentities;
-#if USE_MIDAIR
-extern  cvar_t  *g_midair;  
-extern  cvar_t  *g_ctf;
-#endif
 extern  cvar_t  *dmflags;
 extern  cvar_t  *skill;
 extern  cvar_t  *fraglimit;
@@ -889,12 +885,10 @@ void G_ResetLevel( void );
 //============================================================================
 
 
-#define MAX_PRIVATE 4
-#define CS_PRIVATE  ( CS_GENERAL + MAX_GENERAL - MAX_PRIVATE )
-
 #define PCS_FRAGS   0
 #define PCS_DELTA   1
 #define PCS_RANK    2
+#define PCS_TOTAL   4
 
 #define CS_OBSERVE          ( CS_GENERAL + 1 )
 #define CS_TIME             ( CS_GENERAL + 2 )
@@ -903,6 +897,7 @@ void G_ResetLevel( void );
 #define CS_VOTE_PROPOSAL    ( CS_GENERAL + 5 )
 #define CS_VOTE_COUNT       ( CS_GENERAL + 6 )
 #define CS_PLAYERNAMES      ( CS_GENERAL + 10 )
+#define CS_PRIVATE          ( CS_GENERAL + MAX_GENERAL - PCS_TOTAL )
 
 #define STAT_FRAGS_STRING           18
 #define STAT_DELTA_STRING           19
@@ -1060,7 +1055,7 @@ typedef struct {
     qboolean    first_time : 1,     // true when just connected
                 jump_held: 1;
     vec3_t      cmd_angles;         // angles sent over in the last command
-    char        strings[MAX_PRIVATE][MAX_NETNAME]; // private configstrings
+    char        strings[PCS_TOTAL][MAX_NETNAME]; // private configstrings
     struct {
         int         index;
         qboolean    accepted;

@@ -300,124 +300,30 @@ void T_Damage (edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir,
     if (targ->flags & FL_NO_KNOCKBACK)
         knockback = 0;
 
-#if USE_MIDAIR
-    //--------------------------------------------------------midair-------------------------------------------
-    if (g_midair->value)
-    {   
-        float       playerheight, minheight = 45, midheight = 0;
-        qboolean    lowheight = qfalse;//, midairshot = qtrue;
-
-        playerheight = MidAir_Height(targ);
-        midheight = targ->s.origin[2] - inflictor->s.old_origin[2];
-
-        if (!knockback&&(mod==MOD_ROCKET))
-            knockback=damage; //If the player receives damage from a rocket He should be knocked out
-
+    // figure momentum add
+    if (!(dflags & DAMAGE_NO_KNOCKBACK))
+    {
         if ((knockback) && (targ->movetype != MOVETYPE_NONE) && (targ->movetype != MOVETYPE_BOUNCE) && (targ->movetype != MOVETYPE_PUSH) && (targ->movetype != MOVETYPE_STOP))
         {
-            float   mass = 50.0;
-            float   push;
+            float   mass;
+            float push;
 
-            if ( playerheight < minheight )
-                lowheight = qtrue;
+            if (targ->mass < 50)
+                mass = 50;
             else
-            {
-                damage *= ( 1 + ( playerheight - minheight ) / 64 );
-                lowheight = qfalse;
-            }
-
-            if (targ->mass > 50)
                 mass = targ->mass;
 
-            knockback = damage;
+            if (targ->client  && attacker == targ)
+                push = 1600.0f * ((float)knockback / mass);
+            else
+                push = 500.0f * ((float)knockback / mass);
 
-            push = 1600.0f * ((float)knockback / mass);
-                
             VectorMA( targ->velocity, push, dir, targ->velocity );
-            //gi.bprintf (PRINT_MEDIUM,"targ mass: %i .\n", (int)mass) ;
-            //gi.bprintf (PRINT_MEDIUM,"Vector Length: %i .   Vertical Scalar : %i .\n", (int)VectorLength (targ->velocity), (int)targ->velocity[2]) ;
-
-            if (lowheight)
-            {
-                targ->velocity[2] *= 1.5;
-            }
-            if(inflictor != world)
-            {  
-                if ((playerheight>minheight) && (attacker!=targ) && ((mod==MOD_ROCKET) || (mod==MOD_GRENADE)))
-                {
-                    char        *message;
-                    //gi.bprintf (PRINT_HIGH, "%1.f (midheight)\n", midheight) ;
-                    if (midheight > 190)
-                    {
-                        if ( midheight > 900 )
-                        {
-                        //if (level.status ==  MATCH_STATE_PLAYTIME)
-                            attacker->client->resp.score += 8;
-                        message = "d1am0nd midair";
-                        }
-                        else if ( midheight > 500 )
-                        {
-                            //if (level.status ==  MATCH_STATE_PLAYTIME)
-                                attacker->client->resp.score += 4;
-                            message = "g0ld midair";
-                        }
-                        else if ( midheight > 380 )
-                        {
-                            //if (level.status ==  MATCH_STATE_PLAYTIME)
-                                attacker->client->resp.score += 2;
-                            message = "s1lver midair";
-                        }
-                        else
-                        {
-                            //if (level.status ==  MATCH_STATE_PLAYTIME)
-                                attacker->client->resp.score++;
-                            message = "midair";
-                        }
-                        gi.bprintf (PRINT_CHAT, "%s got %s. %1.f (midheight)\n", attacker->client->pers.netname, message, midheight) ;
-                    }
-                }
-            }
-            else return;
-        }
-    }
-    else //-------------------------------------------------End of Midair------------------------------------------
-#endif
-    {
-    // figure momentum add
-        if (!(dflags & DAMAGE_NO_KNOCKBACK))
-        {
-            if ((knockback) && (targ->movetype != MOVETYPE_NONE) && (targ->movetype != MOVETYPE_BOUNCE) && (targ->movetype != MOVETYPE_PUSH) && (targ->movetype != MOVETYPE_STOP))
-            {
-                float   mass;
-                float push;
-
-                if (targ->mass < 50)
-                    mass = 50;
-                else
-                    mass = targ->mass;
-    
-                if (targ->client  && attacker == targ)
-                    push = 1600.0f * ((float)knockback / mass);
-                else
-                    push = 500.0f * ((float)knockback / mass);
-
-                VectorMA( targ->velocity, push, dir, targ->velocity );
-            }
         }
     }
 
-#if USE_MIDAIR
-//  if (midair->value && level.status != MATCH_STATE_PLAYTIME) // Midar: Damage can be received only during a match
-//  {
-//      take = 0;
-//      save = damage;
-//  }
-//  else
-//  {
-#endif
-        take = damage;
-        save = 0;
-//  }
+    take = damage;
+    save = 0;
 
     // check for godmode
     if ( (targ->flags & FL_GODMODE) && !(dflags & DAMAGE_NO_PROTECTION) )
@@ -518,10 +424,6 @@ void T_RadiusDamage (edict_t *inflictor, edict_t *attacker, float damage, edict_
     edict_t *ent = NULL;
     vec3_t  v;
     vec3_t  dir;
-#if USE_MIDAIR
-    if (g_midair->value)
-        radius = damage + 40;
-#endif
 
     while ((ent = findradius(ent, inflictor->s.origin, radius)) != NULL)
     {
@@ -546,20 +448,4 @@ void T_RadiusDamage (edict_t *inflictor, edict_t *attacker, float damage, edict_
         }
     }
 }
-
-#if USE_MIDAIR
-//-------------------------------------------------------------------------------
-float MidAir_Height (edict_t *targ)
-{
-    trace_t trace;
-    
-    trace = gi.trace(targ->s.origin, targ->mins, targ->maxs, tv(targ->s.origin[0], targ->s.origin[1], targ->s.origin[2] - 16000), targ, MASK_SOLID);
-
-    if( trace.fraction == 1 || trace.allsolid )
-    {
-        return 0.0f;
-    } else
-        return targ->s.origin[2] - trace.endpos[2];
-}
-#endif
 

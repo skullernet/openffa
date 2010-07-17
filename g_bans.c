@@ -390,13 +390,13 @@ void G_WriteIP_f( void ) {
         return;
     }
 
-    gi.cprintf (NULL, PRINT_HIGH, "Writing %s.\n", name);
-
     f = fopen (name, "wb");
     if (!f) {
         gi.cprintf (NULL, PRINT_HIGH, "Couldn't open %s\n", name);
         return;
     }
+
+    gi.cprintf (NULL, PRINT_HIGH, "Writing %s.\n", name);
     
     //fprintf(f, "set filterban %d\n", (int)filterban->value);
 

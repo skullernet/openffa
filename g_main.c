@@ -30,10 +30,6 @@ int meansOfDeath;
 
 edict_t        *g_edicts;
 
-#if USE_MIDAIR
-cvar_t  *g_midair;
-cvar_t  *g_ctf;
-#endif
 cvar_t  *dmflags;
 cvar_t  *skill;
 cvar_t  *fraglimit;
@@ -728,6 +724,7 @@ ExitLevel
 */
 void G_ExitLevel (void) {
     char command[256];
+    map_entry_t *map;
 
     if( level.intermission_exit ) {
         return; // already exited
@@ -737,6 +734,12 @@ void G_ExitLevel (void) {
     //if( game.settings_modified && !level.activity_framenum ) {
     //    G_ResetSettings();
     //}
+
+    map = G_FindMap( level.mapname );
+    if( map ) {
+        map->num_in += level.players_in;
+        map->num_out += level.players_out;
+    }
 
     if( !level.nextmap || !strcmp( level.nextmap, level.mapname ) ) {
         G_ResetLevel();
@@ -930,10 +933,6 @@ static void G_Init (void) {
     gi.cvar_set ("gamedate", __DATE__);
 
     maxclients = gi.cvar ("maxclients", "4", CVAR_SERVERINFO | CVAR_LATCH);
-#if USE_MIDAIR
-    g_midair = gi.cvar ("g_midair", "0", CVAR_LATCH);
-    g_ctf = gi.cvar ("g_ctf", "0", CVAR_LATCH);
-#endif
     maxentities = gi.cvar ("maxentities", "1024", CVAR_LATCH);
 
     // change anytime vars

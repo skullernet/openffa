@@ -158,7 +158,7 @@ void SetChaseTarget( edict_t *ent, edict_t *targ ) {
         ClientEndServerFrame( ent );
     } else {
         ent->client->clientNum = ( targ - g_edicts ) - 1;
-        for( i = 0; i < MAX_PRIVATE; i++ ) {
+        for( i = 0; i < PCS_TOTAL; i++ ) {
             G_PrivateString( ent, i, targ->client->level.strings[i] );
         }
         ChaseEndServerFrame( ent );

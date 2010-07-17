@@ -397,7 +397,7 @@ void G_PrivateString( edict_t *ent, int index, const char *string ) {
     gclient_t *client;
     int i;
 
-    if( index < 0 || index >= MAX_PRIVATE ) {
+    if( index < 0 || index >= PCS_TOTAL ) {
         gi.error( "%s: index %d out of range", __func__, index );
     }
 

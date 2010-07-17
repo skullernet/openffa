@@ -27,33 +27,47 @@ OpenFFA supports a number of custom client commands, some of them are given belo
 Download game library
 ---------------------
 
-If you wish to try OpenFFA on your server, you can start by downloading
+If you wish to try OpenFFA on your R1Q2 or Q2PRO server, you can start by downloading
 a [nightly][1] build for your system. Binary builds for Win32 (x86) and GNU/Linux
 (i386 and amd64) are provided, along with source snapshots.
 
 [1]: http://skuller.net/openffa/nightly/
 
+Linux packages
+--------------
+
+In addition to the manual installation method above, it is also possible to
+install OpenFFA pre-packaged for your Linux distribution, ready to use together
+with Q2PRO server.
+
+Debian GNU/Linux users can install OpenFFA from the skuller.net APT [repository][2].
+Ubuntu users can install OpenFFA from a [PPA][3] at launchpad.net.
+
+[2]: http://skuller.net/q2pro/download/apt/
+[3]: https://launchpad.net/~skuller/+archive/q2pro
+
 SVN access
 ----------
 
 Anonymous read-only access to OpenFFA SVN repository is available.
-Use the following commands to checkout a fresh working copy and prepare it
-for building:
+Use the following commands to checkout a fresh working copy and build it:
 
     $ svn co svn://skuller.net/openffa/trunk openffa
-    $ svnversion openffa > openffa/REVISION
+    $ cd openffa
+    $ svnversion > REVISION
+    $ make
 
-You can also browse OpenFFA source code [online][2].
+You can also browse OpenFFA source code [online][4].
 
-[2]: http://skuller.net/openffa/cvstrac/dir?d=trunk
+[4]: http://skuller.net/openffa/cvstrac/dir?d=trunk
 
 Bug tracker
 -----------
 
 For reporting bugs and proposing enhancements to OpenFFA, please use
-the [bug tracker][3]. No registration (a trivial process though) is required.
+the [bug tracker][5]. No registration (a trivial process though) is required.
 
-[3]: http://skuller.net/openffa/cvstrac
+[5]: http://skuller.net/openffa/cvstrac
 
 Server configuration
 --------------------
