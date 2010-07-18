@@ -331,16 +331,13 @@ map_entry_t *G_FindMap( const char *name ) {
             return map;
         }
     }
-    return NULL;
-}
 
-static int QDECL random_cmp( const void *p1, const void *p2 ) {
-    return 1 - ( rand_byte() % 3 );
+    return NULL;
 }
 
 static qboolean G_RebuildMapQueue( void ) {
     map_entry_t *pool[256], *map;
-    int i, count;
+    int i, j, count;
 
     List_Init( &g_map_queue );
 
@@ -364,13 +361,18 @@ static qboolean G_RebuildMapQueue( void ) {
 
     // randomize it
     if( (int)g_maps_random->value > 0 ) {
-        qsort( pool, count, sizeof( map_entry_t * ), random_cmp );
+        for( i = count; i > 1; i-- ) {
+            j = rand_byte() % i;
+            map = pool[j];
+            pool[j] = pool[i - 1];
+            pool[i - 1] = map;
+        }
     }
 
     for( i = 0; i < count; i++ ) {
         List_Append( &g_map_queue, &pool[i]->queue );
-        //gi.dprintf( "%d: %s\n", i, pool[i]->name );
     }
+
     return qtrue;
 }
 
@@ -385,6 +387,7 @@ static map_entry_t *G_FindSuitableMap( void ) {
             }
         }
     }
+
     return NULL;
 }
 
