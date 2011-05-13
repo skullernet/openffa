@@ -97,7 +97,9 @@ static size_t BuildDeathmatchScoreboard( char *buffer, gclient_t *client ) {
 
     t = time( NULL );
     tm = localtime( &t );
-    strftime( status, sizeof( status ), "[%Y-%m-%d %H:%M]", tm );
+    len = strftime( status, sizeof( status ), "[%Y-%m-%d %H:%M]", tm );
+    if( len < 1 )
+        strcpy( status, "???" );
 
     total = Q_scnprintf( buffer, MAX_STRING_CHARS,
         "xv 0 %s"

@@ -852,6 +852,7 @@ void Cmd_HighScores_f( edict_t *ent ) {
     char date[MAX_QPATH];
     struct tm *tm;
     score_t *s;
+    size_t len;
 
     if( !level.numscores ) {
         gi.cprintf( ent, PRINT_HIGH, "No high scores available.\n" );
@@ -865,7 +866,9 @@ void Cmd_HighScores_f( edict_t *ent ) {
         s = &level.scores[i];
 
         tm = localtime( &s->time );
-        strftime( date, sizeof( date ), "%Y-%m-%d %H:%M", tm );
+        len = strftime( date, sizeof( date ), "%Y-%m-%d %H:%M", tm );
+        if( len < 1 )
+            strcpy( date, "???" );
         gi.cprintf( ent, PRINT_HIGH, "%2d %-15.15s %4d %s\n",
             i + 1, s->name, s->score, date );
     }
