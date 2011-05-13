@@ -105,7 +105,7 @@ static void Move_Final (edict_t *ent)
 
     VectorScale (move, HZ, ent->velocity);
 
-    NEXT_FRAME( ent, Move_Done );
+    NEXT_FRAME (ent, Move_Done);
 }
 
 static void Move_Begin (edict_t *ent)
@@ -164,7 +164,7 @@ static void Move_Calc (edict_t *ent, void(*func)(edict_t*))
         }
         else
         {
-            NEXT_FRAME( ent, Move_Begin );
+            NEXT_FRAME (ent, Move_Begin);
         }
     }
 }
@@ -197,7 +197,7 @@ static void AngleMove_Final (edict_t *ent)
 
     VectorScale (move, HZ, ent->avelocity);
 
-    NEXT_FRAME( ent, AngleMove_Done );
+    NEXT_FRAME (ent, AngleMove_Done);
 }
 
 static void AngleMove_Begin (edict_t *ent)
@@ -245,7 +245,7 @@ static void AngleMove_Calc (edict_t *ent, void(*func)(edict_t*))
     }
     else
     {
-        NEXT_FRAME( ent, AngleMove_Begin );
+        NEXT_FRAME (ent, AngleMove_Begin);
     }
 }
 
@@ -1298,9 +1298,9 @@ void SP_func_door (edict_t *ent)
     gi.linkentity (ent);
 
     if (ent->health || ent->targetname)
-        NEXT_FRAME( ent, Think_CalcMoveSpeed );
+        NEXT_FRAME (ent, Think_CalcMoveSpeed);
     else
-        NEXT_FRAME( ent, Think_SpawnDoorTrigger );
+        NEXT_FRAME (ent, Think_SpawnDoorTrigger);
 }
 
 
@@ -1429,9 +1429,9 @@ void SP_func_door_rotating (edict_t *ent)
     gi.linkentity (ent);
 
     if (ent->health || ent->targetname)
-        NEXT_FRAME( ent, Think_CalcMoveSpeed );
+        NEXT_FRAME (ent, Think_CalcMoveSpeed);
     else
-        NEXT_FRAME( ent, Think_SpawnDoorTrigger );
+        NEXT_FRAME (ent, Think_SpawnDoorTrigger);
 }
 
 
@@ -1700,7 +1700,7 @@ void func_train_find (edict_t *self)
 
     if (self->spawnflags & TRAIN_START_ON)
     {
-        NEXT_FRAME( self, train_next );
+        NEXT_FRAME (self, train_next);
         self->activator = self;
     }
 }
@@ -1758,7 +1758,7 @@ void SP_func_train (edict_t *self)
     {
         // start trains on the second frame, to make sure their targets have had
         // a chance to spawn
-        NEXT_FRAME( self, func_train_find );
+        NEXT_FRAME (self, func_train_find);
     }
     else
     {
@@ -1822,7 +1822,7 @@ static void trigger_elevator_init (edict_t *self)
 
 void SP_trigger_elevator (edict_t *self)
 {
-    NEXT_FRAME( self, trigger_elevator_init );
+    NEXT_FRAME (self, trigger_elevator_init);
 }
 
 

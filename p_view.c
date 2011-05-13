@@ -72,9 +72,9 @@ static void P_DamageFeedback (edict_t *player) {
     float   realcount, count, kick;
     vec3_t  v;
     int     r, l;
-    static  vec3_t  power_color = {0.0, 1.0, 0.0};
-    static  vec3_t  acolor = {1.0, 1.0, 1.0};
-    static  vec3_t  bcolor = {1.0, 0.0, 0.0};
+    static  const vec3_t power_color = {0.0, 1.0, 0.0};
+    static  const vec3_t acolor = {1.0, 1.0, 1.0};
+    static  const vec3_t bcolor = {1.0, 0.0, 0.0};
 
     if (!FRAMESYNC)
         return;
@@ -419,8 +419,7 @@ static void P_CalcBlend (edict_t *ent) {
     vec3_t  vieworg;
     int     remaining;
 
-    ent->client->ps.blend[0] = ent->client->ps.blend[1] = 
-        ent->client->ps.blend[2] = ent->client->ps.blend[3] = 0;
+    Vector4Clear (ent->client->ps.blend);
 
     // add for contents
     VectorAdd (ent->s.origin, ent->client->ps.viewoffset, vieworg);
@@ -535,9 +534,8 @@ static void P_FallingDamage (edict_t *ent) {
 
     if (delta < 15)
     {
-        if( !ent->s.event ) {
+        if (!ent->s.event)
             ent->s.event = EV_FOOTSTEP;
-        }
         return;
     }
 

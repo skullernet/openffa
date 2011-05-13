@@ -934,7 +934,7 @@ void droptofloor (edict_t *ent)
         ent->solid = SOLID_NOT;
         if (ent == ent->teammaster)
         {
-            NEXT_FRAME( ent, DoRespawn );
+            NEXT_FRAME (ent, DoRespawn);
         }
     } else if( ItemBanned( ent ) ) {
         // hide this item

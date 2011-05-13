@@ -796,7 +796,7 @@ void SP_misc_viper (edict_t *ent)
     VectorSet (ent->mins, -16, -16, 0);
     VectorSet (ent->maxs, 16, 16, 32);
 
-    NEXT_FRAME( ent, func_train_find );
+    NEXT_FRAME (ent, func_train_find);
     ent->use = misc_viper_use;
     ent->svflags |= SVF_NOCLIENT;
     ent->moveinfo.accel = ent->moveinfo.decel = ent->moveinfo.speed = ent->speed;
@@ -925,7 +925,7 @@ void SP_misc_strogg_ship (edict_t *ent)
     VectorSet (ent->mins, -16, -16, 0);
     VectorSet (ent->maxs, 16, 16, 32);
 
-    NEXT_FRAME( ent, func_train_find );
+    NEXT_FRAME (ent, func_train_find);
     ent->use = misc_strogg_ship_use;
     ent->svflags |= SVF_NOCLIENT;
     ent->moveinfo.accel = ent->moveinfo.decel = ent->moveinfo.speed = ent->speed;
@@ -1614,7 +1614,7 @@ void SP_turret_breach (edict_t *self)
 
     self->blocked = turret_blocked;
 
-    NEXT_FRAME( self, turret_breach_finish_init );
+    NEXT_FRAME (self, turret_breach_finish_init);
     gi.linkentity (self);
 }
 

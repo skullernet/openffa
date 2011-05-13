@@ -58,7 +58,7 @@ static void multi_trigger (edict_t *ent)
     {   // we can't just remove (self) here, because this is a touch function
         // called while looping through area links...
         ent->touch = NULL;
-        NEXT_FRAME( ent, G_FreeEdict );
+        NEXT_FRAME (ent, G_FreeEdict);
     }
 }
 

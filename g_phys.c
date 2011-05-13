@@ -270,11 +270,7 @@ static qboolean SV_Push (edict_t *pusher, vec3_t move, vec3_t amove)
     {
         float   temp;
         temp = move[i]*8.0;
-        if (temp > 0.0)
-            temp += 0.5;
-        else
-            temp -= 0.5;
-        move[i] = 0.125 * (int)temp;
+        move[i] = 0.125 * Q_rint (temp);
     }
 
     // find the bounding box
