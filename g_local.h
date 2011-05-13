@@ -31,8 +31,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define GAME_INCLUDE
 #include "g_public.h"
 
+#if USE_FPS
+#define G_GMF_VARIABLE_FPS GMF_VARIABLE_FPS
+#else
+#define G_GMF_VARIABLE_FPS 0
+#endif
+
 // features this game supports
-#define G_FEATURES  (GMF_PROPERINUSE|GMF_CLIENTNUM|GMF_MVDSPEC|GMF_WANT_ALL_DISCONNECTS)
+#define G_FEATURES  (GMF_CLIENTNUM|GMF_PROPERINUSE|GMF_MVDSPEC|\
+                     GMF_WANT_ALL_DISCONNECTS|G_GMF_VARIABLE_FPS)
 
 // the "gameversion" client command will print this plus compile date
 #define GAMEVERSION "OpenFFA"
@@ -100,9 +107,18 @@ typedef trace_t *(*trace_hacked_t)( trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, e
 #define FL_HIDDEN               0x40000000  // used for banned items
 #define FL_RESPAWN              0x80000000  // used for item respawning
 
-
-#define FRAMETIME       0.1
-#define HZ              10
+// variable server FPS
+#if USE_FPS
+#define HZ              game.framerate
+#define FRAMETIME       game.frametime
+#define FRAMEDIV        game.framediv
+#define FRAMESYNC       !(level.framenum % game.framediv)
+#else
+#define HZ              BASE_FRAMERATE
+#define FRAMETIME       BASE_FRAMETIME_1000
+#define FRAMEDIV        1
+#define FRAMESYNC       1
+#endif
 
 #define NEXT_FRAME( ent, func ) \
     do { \
@@ -357,6 +373,12 @@ typedef struct
     // cross level triggers
     int         serverflags;
     int         serverFeatures;
+
+#if USE_FPS
+    int         framerate;
+    float       frametime;
+    int         framediv;
+#endif
 
     int         settings_modified;
 

@@ -1055,6 +1055,29 @@ static void G_Init (void) {
         game.serverFeatures = ( int )cv->value;
     }
 
+#if USE_FPS
+    // setup framerate parameters
+    if( game.serverFeatures & GMF_VARIABLE_FPS ) {
+        int framediv;
+
+        cv = gi.cvar ("sv_fps", NULL, 0);
+        if( !cv )
+            gi.error ("GMF_VARIABLE_FPS exported but no 'sv_fps' cvar");
+
+        framediv = (int)cv->value / BASE_FRAMERATE;
+
+        clamp( framediv, 1, MAX_FRAMEDIV );
+
+        game.framerate = framediv * BASE_FRAMERATE;
+        game.frametime = BASE_FRAMETIME_1000 / framediv;
+        game.framediv = framediv;
+    } else {
+        game.framerate = BASE_FRAMERATE;
+        game.frametime = BASE_FRAMETIME_1000;
+        game.framediv = 1;
+    }
+#endif
+
     // export our own features
     gi.cvar_forceset( "g_features", va( "%d", G_FEATURES ) );
 }

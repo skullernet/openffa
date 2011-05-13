@@ -1879,11 +1879,14 @@ void ClientBeginServerFrame (edict_t *ent)
     client = ent->client;
     
     if( client->pers.connected == CONN_SPAWNED ) {
-        // run weapon animations if it hasn't been done by a ucmd_t
-        if (!client->weapon_thunk)
-            Think_Weapon (ent);
-        else
-            client->weapon_thunk = qfalse;
+        if (FRAMESYNC)
+        {
+            // run weapon animations if it hasn't been done by a ucmd_t
+            if (!client->weapon_thunk)
+                Think_Weapon (ent);
+            else
+                client->weapon_thunk = qfalse;
+        }
 
         if( g_idle_time->value > 0 ) {
             if( level.framenum - client->resp.activity_framenum > g_idle_time->value * HZ ) {

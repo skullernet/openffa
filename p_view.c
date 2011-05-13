@@ -76,6 +76,9 @@ static void P_DamageFeedback (edict_t *player) {
     static  vec3_t  acolor = {1.0, 1.0, 1.0};
     static  vec3_t  bcolor = {1.0, 0.0, 0.0};
 
+    if (!FRAMESYNC)
+        return;
+
     client = player->client;
 
     // flash the backgrounds behind the status numbers
@@ -225,29 +228,34 @@ static void P_CalcViewOffset (edict_t *ent) {
 
     if (ent->movetype == MOVETYPE_NOCLIP) {
         // don't add any kicks/bobs for spectators
-        VectorClear( ent->client->ps.kick_angles );
-        VectorSet( ent->client->ps.viewoffset, 0, 0, ent->viewheight );
+        VectorClear (ent->client->ps.kick_angles);
+        VectorSet (ent->client->ps.viewoffset, 0, 0, ent->viewheight);
         return;
     }
+
+    // if dead, fix the angle
+    if (ent->deadflag) {
+        ent->client->ps.viewangles[ROLL] = 40;
+        ent->client->ps.viewangles[PITCH] = -15;
+        ent->client->ps.viewangles[YAW] = ent->client->killer_yaw;
+    }
+
+    if (!FRAMESYNC)
+        return;
 
 //===================================
 
     // base angles
     angles = ent->client->ps.kick_angles;
 
-    // if dead, fix the angle and don't add any kick
+    // if dead, don't add any kick
     if (ent->deadflag)
     {
         VectorClear (angles);
-
-        ent->client->ps.viewangles[ROLL] = 40;
-        ent->client->ps.viewangles[PITCH] = -15;
-        ent->client->ps.viewangles[YAW] = ent->client->killer_yaw;
     }
     else
     {
         // add angles based on weapon kick
-
         VectorCopy (ent->client->kick_angles, angles);
 
         // add angles based on damage kick
@@ -338,6 +346,9 @@ P_CalcGunOffset
 static void P_CalcGunOffset (edict_t *ent) {
     int     i;
     float   delta;
+
+    if (!FRAMESYNC)
+        return;
 
     // gun angles from bobbing
     ent->client->ps.gunangles[ROLL] = xyspeed * bobfracsin * 0.005;
@@ -496,6 +507,9 @@ static void P_FallingDamage (edict_t *ent) {
     if (ent->movetype == MOVETYPE_NOCLIP)
         return;
 
+    if (!FRAMESYNC)
+        return;
+
     if ((ent->client->oldvelocity[2] < 0) && (ent->velocity[2] > ent->client->oldvelocity[2]) && (!ent->groundentity))
     {
         delta = ent->client->oldvelocity[2];
@@ -541,7 +555,7 @@ static void P_FallingDamage (edict_t *ent) {
             else
                 ent->s.event = EV_FALL;
         }
-        ent->pain_debounce_framenum = level.framenum;   // no normal pain sound
+        ent->pain_debounce_framenum = KEYFRAME(FRAMEDIV);   // no normal pain sound
         damage = (delta-30)/2;
         if (damage < 1)
             damage = 1;
@@ -669,7 +683,7 @@ static void P_WorldEffects (void) {
                     gi.sound (current_player, CHAN_VOICE, level.sounds.gurp[r], 1, ATTN_NORM, 0);
                 }
 
-                current_player->pain_debounce_framenum = level.framenum;
+                current_player->pain_debounce_framenum = KEYFRAME(FRAMEDIV);
 
                 T_Damage (current_player, world, world, vec3_origin, current_player->s.origin, vec3_origin, current_player->dmg, 0, DAMAGE_NO_ARMOR, MOD_WATER);
             }
@@ -697,15 +711,18 @@ static void P_WorldEffects (void) {
                 current_player->pain_debounce_framenum = level.framenum + 1*HZ;
             }
 
-            if (envirosuit) // take 1/3 damage with envirosuit
-                T_Damage (current_player, world, world, vec3_origin, current_player->s.origin, vec3_origin, 1*waterlevel, 0, 0, MOD_LAVA);
-            else
-                T_Damage (current_player, world, world, vec3_origin, current_player->s.origin, vec3_origin, 3*waterlevel, 0, 0, MOD_LAVA);
+            if (FRAMESYNC)
+            {
+                if (envirosuit) // take 1/3 damage with envirosuit
+                    T_Damage (current_player, world, world, vec3_origin, current_player->s.origin, vec3_origin, 1*waterlevel, 0, 0, MOD_LAVA);
+                else
+                    T_Damage (current_player, world, world, vec3_origin, current_player->s.origin, vec3_origin, 3*waterlevel, 0, 0, MOD_LAVA);
+            }
         }
 
         if (current_player->watertype & CONTENTS_SLIME)
         {
-            if (!envirosuit)
+            if (!envirosuit && FRAMESYNC)
             {   // no damage from slime with envirosuit
                 T_Damage (current_player, world, world, vec3_origin, current_player->s.origin, vec3_origin, 1*waterlevel, 0, 0, MOD_SLIME);
             }
@@ -775,6 +792,9 @@ static void P_SetEvent (edict_t *ent) {
     if (ent->s.event)
         return;
 
+    if (!FRAMESYNC)
+        return;
+
     if ( ent->groundentity && xyspeed > 225) {
         if ( (int)(current_client->bobtime+bobmove) != bobcycle )
             ent->s.event = EV_FOOTSTEP;
@@ -817,6 +837,9 @@ static void P_SetFrame (edict_t *ent) {
 
     if (ent->s.modelindex != 255)
         return;     // not in the player model
+
+    if (!FRAMESYNC)
+        return;
 
     client = ent->client;
 
@@ -904,6 +927,38 @@ newanim:
     }
 }
 
+static void P_CalcBob (edict_t *ent)
+{
+    float   bobtime;
+
+    if (!FRAMESYNC)
+        return;
+
+    xyspeed = sqrt(ent->velocity[0]*ent->velocity[0] + ent->velocity[1]*ent->velocity[1]);
+
+    if (xyspeed < 5) {
+        bobmove = 0;
+        current_client->bobtime = 0;    // start at beginning of cycle again
+    } else if (ent->groundentity) { // so bobbing only cycles when on ground
+        if (xyspeed > 210)
+            bobmove = 0.25;
+        else if (xyspeed > 100)
+            bobmove = 0.125;
+        else
+            bobmove = 0.0625;
+    } else {
+        bobmove = 0;
+    }
+
+    bobtime = (current_client->bobtime += bobmove);
+
+    if (current_client->ps.pmove.pm_flags & PMF_DUCKED)
+        bobtime *= 4;
+
+    bobcycle = (int)bobtime;
+    bobfracsin = fabs(sin(bobtime*M_PI));
+}
+
 void IntermissionEndServerFrame( edict_t *ent ) {
     ent->client->ps.stats[STAT_FLASHES] = 0;
     ent->client->ps.blend[3] = 0;
@@ -923,7 +978,6 @@ and right after spawning
 */
 void ClientEndServerFrame (edict_t *ent)
 {
-    float   bobtime;
     int     i;
 
     current_player = ent;
@@ -963,29 +1017,7 @@ void ClientEndServerFrame (edict_t *ent)
     // calculate speed and cycle to be used for
     // all cyclic walking effects
     //
-    xyspeed = sqrt(ent->velocity[0]*ent->velocity[0] + ent->velocity[1]*ent->velocity[1]);
-
-    if (xyspeed < 5) {
-        bobmove = 0;
-        current_client->bobtime = 0;    // start at beginning of cycle again
-    } else if (ent->groundentity) { // so bobbing only cycles when on ground
-        if (xyspeed > 210)
-            bobmove = 0.25;
-        else if (xyspeed > 100)
-            bobmove = 0.125;
-        else
-            bobmove = 0.0625;
-    } else {
-        bobmove = 0;
-    }
-
-    bobtime = (current_client->bobtime += bobmove);
-
-    if (current_client->ps.pmove.pm_flags & PMF_DUCKED)
-        bobtime *= 4;
-
-    bobcycle = (int)bobtime;
-    bobfracsin = fabs(sin(bobtime*M_PI));
+    P_CalcBob (ent);
 
     // detect hitting the floor
     P_FallingDamage (ent);
@@ -1014,7 +1046,10 @@ void ClientEndServerFrame (edict_t *ent)
 
     P_SetFrame (ent);
 
-    G_SetStats(ent);
+    G_SetStats (ent);
+
+    if (!FRAMESYNC)
+        return;
 
     VectorCopy (ent->velocity, ent->client->oldvelocity);
     VectorCopy (ent->client->ps.viewangles, ent->client->oldviewangles);
