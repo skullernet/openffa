@@ -229,7 +229,7 @@ void ThrowClientHead (edict_t *self, int damage)
 {
     vec3_t  vd;
 
-    if (rand()&1)
+    if (rand_byte()&1)
     {
 
         self->s.modelindex = level.models.head;
@@ -753,7 +753,7 @@ void SP_misc_banner (edict_t *ent)
     ent->movetype = MOVETYPE_NONE;
     ent->solid = SOLID_NOT;
     ent->s.modelindex = gi.modelindex ("models/objects/banner/tris.md2");
-    ent->s.frame = rand() % 16;
+    ent->s.frame = rand_byte() % 16;
     gi.linkentity (ent);
 
     NEXT_FRAME( ent, misc_banner_think );

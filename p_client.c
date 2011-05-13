@@ -665,7 +665,7 @@ void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
                 self->client->anim_end = FRAME_death308;
                 break;
             }
-            r = rand() & 3;
+            r = rand_byte() & 3;
             gi.sound (self, CHAN_VOICE, level.sounds.death[r], 1, ATTN_NORM, 0);
         }
     }

@@ -367,7 +367,7 @@ void BeginIntermission (void)
     }
     else
     {    // chose one of four spots
-        i = rand() & 3;
+        i = rand_byte() & 3;
         while (i--)
         {
             ent = G_Find (ent, FOFS(classname), "info_player_intermission");
