@@ -96,6 +96,7 @@ typedef trace_t *(*trace_hacked_t)( trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, e
 #define FL_POWER_ARMOR          0x00001000  // power armor (if any) is active
 #define FL_NOCLIP_PROJECTILE    0x00002000  // projectile hack
 #define FL_MEGAHEALTH           0x00004000  // for megahealth kills tracking
+#define FL_ACCELERATE           0x20000000  // accelerative movement
 #define FL_HIDDEN               0x40000000  // used for banned items
 #define FL_RESPAWN              0x80000000  // used for item respawning
 
@@ -539,11 +540,11 @@ typedef struct
     int         sound_end;
 
     float       accel;
-    float       speed;
+    float       speed; // in units per frame
     float       decel;
     float       distance;
 
-    float       wait;
+    int         wait; // in frames
 
     // state data
     int         state;
