@@ -96,7 +96,7 @@ void G_UpdateVote( void ) {
     }
 
     remaining = level.vote.framenum - level.framenum;
-    if( remaining % 10 ) {
+    if( remaining % HZ ) {
         return;
     }
 

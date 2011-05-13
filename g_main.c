@@ -144,7 +144,7 @@ static void ClientEndServerFrames (void) {
         }
 
         // if the scoreboard is up, update it
-        if( c->layout == LAYOUT_SCORES && !( level.framenum & 31 ) ) {
+        if( c->layout == LAYOUT_SCORES && !(level.framenum % (3*HZ)) ) {
             DeathmatchScoreboardMessage( c->edict, qfalse );
         }
 
@@ -802,7 +802,7 @@ void G_RunFrame (void)
     } else if( level.intermission_framenum ) {
         int exit_delta = g_intermission_time->value*HZ;
 
-        clamp( exit_delta, 50, 1200 );
+        clamp( exit_delta, 5*HZ, 120*HZ );
 
         delta = level.framenum - level.intermission_framenum;
         if( delta == 1*HZ ) {

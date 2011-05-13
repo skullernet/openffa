@@ -92,7 +92,7 @@ gibs
 static void gib_think (edict_t *self)
 {
     self->s.frame++;
-    self->nextthink = level.framenum + 1;
+    self->nextthink = level.framenum + FRAMEDIV;
 
     if (self->s.frame == 10)
     {
@@ -121,7 +121,8 @@ static void gib_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_
         if (self->s.modelindex == level.models.meat)
         {
             self->s.frame++;
-            NEXT_FRAME( self, gib_think );
+            self->nextthink = level.framenum + FRAMEDIV;
+            self->think = gib_think;
         }
     }
 }
@@ -382,7 +383,7 @@ Just for the debugging level.  Don't use
 static void TH_viewthing(edict_t *ent)
 {
     ent->s.frame = (ent->s.frame + 1) % 7;
-    ent->nextthink = level.framenum + 1;
+    ent->nextthink = level.framenum + FRAMEDIV;
 }
 
 void SP_viewthing(edict_t *ent)
@@ -596,7 +597,7 @@ static void misc_blackhole_think (edict_t *self)
     if (++self->s.frame >= 19) {        
         self->s.frame = 0;
     }
-    self->nextthink = level.framenum + 1;
+    self->nextthink = level.framenum + FRAMEDIV;
 }
 
 void SP_misc_blackhole (edict_t *ent)
@@ -621,7 +622,7 @@ static void misc_eastertank_think (edict_t *self)
     if (++self->s.frame >= 293) {       
         self->s.frame = 254;
     }
-    self->nextthink = level.framenum + 1;
+    self->nextthink = level.framenum + FRAMEDIV;
 }
 
 void SP_misc_eastertank (edict_t *ent)
@@ -646,7 +647,7 @@ static void misc_easterchick_think (edict_t *self)
     if (++self->s.frame >= 247) {       
         self->s.frame = 208;
     }
-    self->nextthink = level.framenum + 1;
+    self->nextthink = level.framenum + FRAMEDIV;
 }
 
 void SP_misc_easterchick (edict_t *ent)
@@ -671,7 +672,7 @@ static void misc_easterchick2_think (edict_t *self)
     if (++self->s.frame >= 287) {       
         self->s.frame = 248;
     }
-    self->nextthink = level.framenum + 1;
+    self->nextthink = level.framenum + FRAMEDIV;
 }
 
 void SP_misc_easterchick2 (edict_t *ent)
@@ -696,7 +697,7 @@ There should be a item_commander_head that has this as it's target.
 static void commander_body_think (edict_t *self)
 {
     if (++self->s.frame < 24)
-        self->nextthink = level.framenum + 1;
+        self->nextthink = level.framenum + FRAMEDIV;
     else
         self->nextthink = 0;
 
@@ -745,7 +746,7 @@ The banner is 128 tall.
 static void misc_banner_think (edict_t *ent)
 {
     ent->s.frame = (ent->s.frame + 1) % 16;
-    ent->nextthink = level.framenum + 1;
+    ent->nextthink = level.framenum + FRAMEDIV;
 }
 
 void SP_misc_banner (edict_t *ent)
@@ -939,7 +940,7 @@ static void misc_satellite_dish_think (edict_t *self)
 {
     self->s.frame++;
     if (self->s.frame < 38)
-        self->nextthink = level.framenum + 1;
+        self->nextthink = level.framenum + FRAMEDIV;
 }
 
 static void misc_satellite_dish_use (edict_t *self, edict_t *other, edict_t *activator)
@@ -1520,9 +1521,9 @@ static void turret_breach_think (edict_t *self)
     if (delta[1] < -1 * self->speed * FRAMETIME)
         delta[1] = -1 * self->speed * FRAMETIME;
 
-    VectorScale (delta, 1.0/FRAMETIME, self->avelocity);
+    VectorScale (delta, HZ, self->avelocity);
 
-    self->nextthink = level.time + FRAMETIME;
+    self->nextthink = level.framenum + 1;
 
     for (ent = self->teammaster; ent; ent = ent->teamchain)
         ent->avelocity[1] = self->avelocity[1];
@@ -1548,15 +1549,15 @@ static void turret_breach_think (edict_t *self)
         target[2] = self->owner->s.origin[2];
 
         VectorSubtract (target, self->owner->s.origin, dir);
-        self->owner->velocity[0] = dir[0] * 1.0 / FRAMETIME;
-        self->owner->velocity[1] = dir[1] * 1.0 / FRAMETIME;
+        self->owner->velocity[0] = dir[0] * HZ;
+        self->owner->velocity[1] = dir[1] * HZ;
 
         // z
         angle = self->s.angles[PITCH] * (M_PI*2 / 360);
         target_z = SnapToEights(self->s.origin[2] + self->owner->move_origin[0] * tan(angle) + self->owner->move_origin[2]);
 
         diff = target_z - self->owner->s.origin[2];
-        self->owner->velocity[2] = diff * 1.0 / FRAMETIME;
+        self->owner->velocity[2] = diff * HZ;
 
         if (self->spawnflags & 65536)
         {

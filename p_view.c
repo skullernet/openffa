@@ -430,33 +430,33 @@ static void P_CalcBlend (edict_t *ent) {
     if (ent->client->quad_framenum > level.framenum)
     {
         remaining = ent->client->quad_framenum - level.framenum;
-        if (remaining == 30)    // beginning to fade
+        if (remaining == 3*HZ)    // beginning to fade
             gi.sound(ent, CHAN_ITEM, gi.soundindex("items/damage2.wav"), 1, ATTN_NORM, 0);
-        if (remaining > 30 || (remaining & 4) )
+        if (remaining > 3*HZ || ((remaining / FRAMEDIV) & 4))
             P_AddBlend (0, 0, 1, 0.08, ent->client->ps.blend);
     }
     else if (ent->client->invincible_framenum > level.framenum)
     {
         remaining = ent->client->invincible_framenum - level.framenum;
-        if (remaining == 30)    // beginning to fade
+        if (remaining == 3*HZ)    // beginning to fade
             gi.sound(ent, CHAN_ITEM, gi.soundindex("items/protect2.wav"), 1, ATTN_NORM, 0);
-        if (remaining > 30 || (remaining & 4) )
+        if (remaining > 3*HZ || ((remaining / FRAMEDIV) & 4))
             P_AddBlend (1, 1, 0, 0.08, ent->client->ps.blend);
     }
     else if (ent->client->enviro_framenum > level.framenum)
     {
         remaining = ent->client->enviro_framenum - level.framenum;
-        if (remaining == 30)    // beginning to fade
+        if (remaining == 3*HZ)    // beginning to fade
             gi.sound(ent, CHAN_ITEM, gi.soundindex("items/airout.wav"), 1, ATTN_NORM, 0);
-        if (remaining > 30 || (remaining & 4) )
+        if (remaining > 3*HZ || ((remaining / FRAMEDIV) & 4))
             P_AddBlend (0, 1, 0, 0.08, ent->client->ps.blend);
     }
     else if (ent->client->breather_framenum > level.framenum)
     {
         remaining = ent->client->breather_framenum - level.framenum;
-        if (remaining == 30)    // beginning to fade
+        if (remaining == 3*HZ)    // beginning to fade
             gi.sound(ent, CHAN_ITEM, gi.soundindex("items/airout.wav"), 1, ATTN_NORM, 0);
-        if (remaining > 30 || (remaining & 4) )
+        if (remaining > 3*HZ || ((remaining / FRAMEDIV) & 4))
             P_AddBlend (0.4, 1, 0.4, 0.04, ent->client->ps.blend);
     }
 
@@ -469,12 +469,12 @@ static void P_CalcBlend (edict_t *ent) {
         P_AddBlend (0.85, 0.7, 0.3, ent->client->bonus_alpha, ent->client->ps.blend);
 
     // drop the damage value
-    ent->client->damage_alpha -= 0.06;
+    ent->client->damage_alpha -= 0.6*FRAMETIME;
     if (ent->client->damage_alpha < 0)
         ent->client->damage_alpha = 0;
 
     // drop the bonus value
-    ent->client->bonus_alpha -= 0.1;
+    ent->client->bonus_alpha -= 1.0*FRAMETIME;
     if (ent->client->bonus_alpha < 0)
         ent->client->bonus_alpha = 0;
 }
@@ -637,7 +637,7 @@ static void P_WorldEffects (void) {
         {
             current_player->air_finished_framenum = level.framenum + 10*HZ;
 
-            if (((int)(current_client->breather_framenum - level.framenum) % 25) == 0)
+            if (((current_client->breather_framenum - level.framenum) % (25*FRAMEDIV)) == 0)
             {
                 if (!current_client->breather_sound)
                     gi.sound (current_player, CHAN_AUTO, level.sounds.breath[0], 1, ATTN_NORM, 0);
@@ -746,14 +746,14 @@ static void P_SetEffects (edict_t *ent) {
     if (ent->client->quad_framenum > level.framenum)
     {
         remaining = ent->client->quad_framenum - level.framenum;
-        if (remaining > 30 || (remaining & 4) )
+        if (remaining > 3*HZ || ((remaining / FRAMEDIV) & 4))
             ent->s.effects |= EF_QUAD;
     }
 
     if (ent->client->invincible_framenum > level.framenum)
     {
         remaining = ent->client->invincible_framenum - level.framenum;
-        if (remaining > 30 || (remaining & 4) )
+        if (remaining > 3*HZ || ((remaining / FRAMEDIV) & 4))
             ent->s.effects |= EF_PENT;
     }
 
@@ -978,7 +978,7 @@ void ClientEndServerFrame (edict_t *ent)
     } else {
         bobmove = 0;
     }
-    
+
     bobtime = (current_client->bobtime += bobmove);
 
     if (current_client->ps.pmove.pm_flags & PMF_DUCKED)

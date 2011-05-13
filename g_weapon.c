@@ -640,7 +640,7 @@ void bfg_explode (edict_t *self)
         }
     }
 
-    self->nextthink = level.framenum + 1;
+    self->nextthink = level.framenum + FRAMEDIV;
     self->s.frame++;
     if (self->s.frame == 5)
         self->think = G_FreeEdict;
@@ -671,7 +671,8 @@ void bfg_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf
     self->s.frame = 0;
     self->s.sound = 0;
     self->s.effects &= ~EF_ANIM_ALLFAST;
-    NEXT_FRAME( self, bfg_explode );
+    self->nextthink = level.framenum + FRAMEDIV;
+    self->think = bfg_explode;
     self->enemy = other;
 
     gi.WriteByte (svc_temp_entity);
@@ -752,7 +753,7 @@ void bfg_think (edict_t *self)
         gi.multicast (self->s.origin, MULTICAST_PHS);
     }
 
-    self->nextthink = level.framenum + 1;
+    self->nextthink = level.framenum + FRAMEDIV;
 }
 
 
