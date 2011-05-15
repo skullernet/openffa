@@ -675,28 +675,28 @@ static void Cmd_Wave_f (edict_t *ent)
     {
     case 0:
         gi.cprintf (ent, PRINT_LOW, "flipoff\n");
-        ent->s.frame = FRAME_flip01-1;
+        ent->client->anim_start = FRAME_flip01;
         ent->client->anim_end = FRAME_flip12;
         break;
     case 1:
         gi.cprintf (ent, PRINT_LOW, "salute\n");
-        ent->s.frame = FRAME_salute01-1;
+        ent->client->anim_start = FRAME_salute01;
         ent->client->anim_end = FRAME_salute11;
         break;
     case 2:
         gi.cprintf (ent, PRINT_LOW, "taunt\n");
-        ent->s.frame = FRAME_taunt01-1;
+        ent->client->anim_start = FRAME_taunt01;
         ent->client->anim_end = FRAME_taunt17;
         break;
     case 3:
         gi.cprintf (ent, PRINT_LOW, "wave\n");
-        ent->s.frame = FRAME_wave01-1;
+        ent->client->anim_start = FRAME_wave01;
         ent->client->anim_end = FRAME_wave11;
         break;
     case 4:
     default:
         gi.cprintf (ent, PRINT_LOW, "point\n");
-        ent->s.frame = FRAME_point01-1;
+        ent->client->anim_start = FRAME_point01;
         ent->client->anim_end = FRAME_point12;
         break;
     }

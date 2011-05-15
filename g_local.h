@@ -1155,6 +1155,7 @@ struct gclient_s
     int         machinegun_shots;   // for weapon raising
 
     // animation vars
+    int         anim_start;
     int         anim_end;
     int         anim_priority;
     qboolean    anim_duck;

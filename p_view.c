@@ -101,7 +101,7 @@ static void P_DamageFeedback (edict_t *player) {
         client->anim_priority = ANIM_PAIN;
         if (client->ps.pmove.pm_flags & PMF_DUCKED)
         {
-            player->s.frame = FRAME_crpain1-1;
+            client->anim_start = FRAME_crpain1;
             client->anim_end = FRAME_crpain4;
         }
         else
@@ -110,15 +110,15 @@ static void P_DamageFeedback (edict_t *player) {
             switch (i)
             {
             case 0:
-                player->s.frame = FRAME_pain101-1;
+                client->anim_start = FRAME_pain101;
                 client->anim_end = FRAME_pain104;
                 break;
             case 1:
-                player->s.frame = FRAME_pain201-1;
+                client->anim_start = FRAME_pain201;
                 client->anim_end = FRAME_pain204;
                 break;
             case 2:
-                player->s.frame = FRAME_pain301-1;
+                client->anim_start = FRAME_pain301;
                 client->anim_end = FRAME_pain304;
                 break;
             }
@@ -857,6 +857,13 @@ static void P_SetFrame (edict_t *ent) {
         goto newanim;
     if (!ent->groundentity && client->anim_priority <= ANIM_WAVE)
         goto newanim;
+
+    if (client->anim_start)
+    {
+        ent->s.frame = client->anim_start;
+        client->anim_start = 0;
+        return;
+    }
 
     if(client->anim_priority == ANIM_REVERSE)
     {

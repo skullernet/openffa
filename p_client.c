@@ -648,20 +648,20 @@ void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
             self->client->anim_priority = ANIM_DEATH;
             if (self->client->ps.pmove.pm_flags & PMF_DUCKED)
             {
-                self->s.frame = FRAME_crdeath1-1;
+                self->client->anim_start = FRAME_crdeath1;
                 self->client->anim_end = FRAME_crdeath5;
             }
             else switch (i) {
             case 0:
-                self->s.frame = FRAME_death101-1;
+                self->client->anim_start = FRAME_death101;
                 self->client->anim_end = FRAME_death106;
                 break;
             case 1:
-                self->s.frame = FRAME_death201-1;
+                self->client->anim_start = FRAME_death201;
                 self->client->anim_end = FRAME_death206;
                 break;
             case 2:
-                self->s.frame = FRAME_death301-1;
+                self->client->anim_start = FRAME_death301;
                 self->client->anim_end = FRAME_death308;
                 break;
             }
