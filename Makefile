@@ -5,13 +5,17 @@ VERSION:=$(shell cat REVISION)
 REVISION:=$(shell cat REVISION | tr -d -c [:digit:])
 DEFINES:=-DVERSION=\"r$(VERSION)\" -DREVISION=$(REVISION)
 
+ifdef USE_FPS
+DEFINES+=-DUSE_FPS=1
+endif
+
 ifdef USE_SQLITE
 DEFINES+=-DUSE_SQLITE=1
 endif
 
 VIS:=$(shell ./vis.sh)
 
-CFLAGS:=-pipe -ffloat-store $(VIS) -O2 -g -fPIC $(DEFINES) -Wall -Wstrict-prototypes
+CFLAGS:=-pipe -fno-strict-aliasing $(VIS) -O2 -g -fPIC $(DEFINES) -Wall -Wstrict-prototypes
 ifdef USE_SQLITE
 LDFLAGS:=-lsqlite3
 endif
