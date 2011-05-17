@@ -121,8 +121,7 @@ static void gib_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_
         if (self->s.modelindex == level.models.meat)
         {
             self->s.frame++;
-            self->nextthink = level.framenum + FRAMEDIV;
-            self->think = gib_think;
+            NEXT_KEYFRAME (self, gib_think);
         }
     }
 }
@@ -397,7 +396,7 @@ void SP_viewthing(edict_t *ent)
     VectorSet (ent->maxs, 16, 16, 32);
     ent->s.modelindex = gi.modelindex ("models/objects/banner/tris.md2");
     gi.linkentity (ent);
-    ent->nextthink = level.framenum + 0.5*HZ;
+    ent->nextthink = KEYFRAME(0.5*HZ);
     ent->think = TH_viewthing;
     return;
 }
@@ -610,7 +609,7 @@ void SP_misc_blackhole (edict_t *ent)
     ent->s.renderfx = RF_TRANSLUCENT;
     ent->use = misc_blackhole_use;
     ent->think = misc_blackhole_think;
-    ent->nextthink = level.framenum + 2;
+    ent->nextthink = KEYFRAME(2*FRAMEDIV);
     gi.linkentity (ent);
 }
 
@@ -634,7 +633,7 @@ void SP_misc_eastertank (edict_t *ent)
     ent->s.modelindex = gi.modelindex ("models/monsters/tank/tris.md2");
     ent->s.frame = 254;
     ent->think = misc_eastertank_think;
-    ent->nextthink = level.framenum + 2;
+    ent->nextthink = KEYFRAME(2*FRAMEDIV);
     gi.linkentity (ent);
 }
 
@@ -659,7 +658,7 @@ void SP_misc_easterchick (edict_t *ent)
     ent->s.modelindex = gi.modelindex ("models/monsters/bitch/tris.md2");
     ent->s.frame = 208;
     ent->think = misc_easterchick_think;
-    ent->nextthink = level.framenum + 2;
+    ent->nextthink = KEYFRAME(2*FRAMEDIV);
     gi.linkentity (ent);
 }
 
@@ -684,7 +683,7 @@ void SP_misc_easterchick2 (edict_t *ent)
     ent->s.modelindex = gi.modelindex ("models/monsters/bitch/tris.md2");
     ent->s.frame = 248;
     ent->think = misc_easterchick2_think;
-    ent->nextthink = level.framenum + 2;
+    ent->nextthink = KEYFRAME(2*FRAMEDIV);
     gi.linkentity (ent);
 }
 
@@ -707,7 +706,7 @@ static void commander_body_think (edict_t *self)
 
 static void commander_body_use (edict_t *self, edict_t *other, edict_t *activator)
 {
-    NEXT_FRAME( self, commander_body_think );
+    NEXT_KEYFRAME (self, commander_body_think);
     gi.sound (self, CHAN_BODY, gi.soundindex ("tank/pain.wav"), 1, ATTN_NORM, 0);
 }
 
@@ -757,7 +756,7 @@ void SP_misc_banner (edict_t *ent)
     ent->s.frame = rand_byte() % 16;
     gi.linkentity (ent);
 
-    NEXT_FRAME( ent, misc_banner_think );
+    NEXT_KEYFRAME (ent, misc_banner_think);
 }
 
 /*QUAKED misc_viper (1 .5 0) (-16 -16 0) (16 16 32)
@@ -946,7 +945,7 @@ static void misc_satellite_dish_think (edict_t *self)
 static void misc_satellite_dish_use (edict_t *self, edict_t *other, edict_t *activator)
 {
     self->s.frame = 0;
-    NEXT_FRAME( self, misc_satellite_dish_think );
+    NEXT_KEYFRAME (self, misc_satellite_dish_think);
 }
 
 void SP_misc_satellite_dish (edict_t *ent)

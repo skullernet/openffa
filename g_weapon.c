@@ -671,8 +671,7 @@ void bfg_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf
     self->s.frame = 0;
     self->s.sound = 0;
     self->s.effects &= ~EF_ANIM_ALLFAST;
-    self->nextthink = level.framenum + FRAMEDIV;
-    self->think = bfg_explode;
+    NEXT_KEYFRAME (self, bfg_explode);
     self->enemy = other;
 
     gi.WriteByte (svc_temp_entity);
@@ -756,7 +755,6 @@ void bfg_think (edict_t *self)
     self->nextthink = level.framenum + FRAMEDIV;
 }
 
-
 void fire_bfg (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius)
 {
     edict_t *bfg;
@@ -775,7 +773,7 @@ void fire_bfg (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, f
     bfg->s.modelindex = gi.modelindex ("sprites/s_bfg1.sp2");
     bfg->owner = self;
     bfg->touch = bfg_touch;
-    NEXT_FRAME( bfg, bfg_think );
+    NEXT_KEYFRAME (bfg, bfg_think);
     bfg->radius_dmg = damage;
     bfg->dmg_radius = damage_radius;
     bfg->classname = "bfg blast";

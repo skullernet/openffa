@@ -120,11 +120,14 @@ typedef trace_t *(*trace_hacked_t)( trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, e
 #define FRAMESYNC       1
 #endif
 
-#define NEXT_FRAME( ent, func ) \
-    do { \
-            (ent)->nextthink = level.framenum + 1; \
-            (ent)->think = func; \
-    } while( 0 )
+#define KEYFRAME(x)   (level.framenum + (x) - (level.framenum % FRAMEDIV))
+
+#define NEXT_FRAME(ent, func) \
+    ((ent)->think = (func), (ent)->nextthink = level.framenum + 1)
+
+#define NEXT_KEYFRAME(ent, func) \
+    ((ent)->think = (func), (ent)->nextthink = KEYFRAME(FRAMEDIV))
+
 
 // memory tags to allow dynamic memory to be cleaned up
 #define TAG_GAME    765     // clear when unloading the dll
