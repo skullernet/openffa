@@ -142,6 +142,7 @@ void ChangeWeapon (edict_t *ent)
     }
 
     ent->client->weaponstate = WEAPON_ACTIVATING;
+    ent->client->weaponframe = 0;
     ent->client->ps.gunframe = 0;
     ent->client->ps.gunindex = gi.modelindex(ent->client->weapon->view_model);
 
@@ -325,12 +326,12 @@ static void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIR
 
     if (ent->client->weaponstate == WEAPON_DROPPING)
     {
-        if (ent->client->ps.gunframe == FRAME_DEACTIVATE_LAST)
+        if (ent->client->weaponframe == FRAME_DEACTIVATE_LAST)
         {
             ChangeWeapon (ent);
             return;
         }
-        else if ((FRAME_DEACTIVATE_LAST - ent->client->ps.gunframe) == 4)
+        else if ((FRAME_DEACTIVATE_LAST - ent->client->weaponframe) == 4)
         {
             ent->client->anim_priority = ANIM_REVERSE;
             if(ent->client->ps.pmove.pm_flags & PMF_DUCKED)
@@ -346,27 +347,27 @@ static void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIR
             }
         }
 
-        ent->client->ps.gunframe++;
+        ent->client->weaponframe++;
         return;
     }
 
     if (ent->client->weaponstate == WEAPON_ACTIVATING)
     {
-        if (ent->client->ps.gunframe == FRAME_ACTIVATE_LAST)
+        if (ent->client->weaponframe == FRAME_ACTIVATE_LAST)
         {
             ent->client->weaponstate = WEAPON_READY;
-            ent->client->ps.gunframe = FRAME_IDLE_FIRST;
+            ent->client->weaponframe = FRAME_IDLE_FIRST;
             return;
         }
 
-        ent->client->ps.gunframe++;
+        ent->client->weaponframe++;
         return;
     }
 
     if ((ent->client->newweapon) && (ent->client->weaponstate != WEAPON_FIRING))
     {
         ent->client->weaponstate = WEAPON_DROPPING;
-        ent->client->ps.gunframe = FRAME_DEACTIVATE_FIRST;
+        ent->client->weaponframe = FRAME_DEACTIVATE_FIRST;
 
         if ((FRAME_DEACTIVATE_LAST - FRAME_DEACTIVATE_FIRST) < 4)
         {
@@ -394,7 +395,7 @@ static void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIR
             if ((!ent->client->ammo_index) || 
                 ( ent->client->inventory[ent->client->ammo_index] >= ent->client->weapon->quantity))
             {
-                ent->client->ps.gunframe = FRAME_FIRE_FIRST;
+                ent->client->weaponframe = FRAME_FIRE_FIRST;
                 ent->client->weaponstate = WEAPON_FIRING;
 
                 // start the animation
@@ -417,9 +418,9 @@ static void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIR
         }
         else
         {
-            if (ent->client->ps.gunframe == FRAME_IDLE_LAST)
+            if (ent->client->weaponframe == FRAME_IDLE_LAST)
             {
-                ent->client->ps.gunframe = FRAME_IDLE_FIRST;
+                ent->client->weaponframe = FRAME_IDLE_FIRST;
                 return;
             }
 
@@ -427,7 +428,7 @@ static void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIR
             {
                 for (n = 0; pause_frames[n]; n++)
                 {
-                    if (ent->client->ps.gunframe == pause_frames[n])
+                    if (ent->client->weaponframe == pause_frames[n])
                     {
                         if (rand_byte()&15)
                             return;
@@ -435,7 +436,7 @@ static void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIR
                 }
             }
 
-            ent->client->ps.gunframe++;
+            ent->client->weaponframe++;
             return;
         }
     }
@@ -444,7 +445,7 @@ static void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIR
     {
         for (n = 0; fire_frames[n]; n++)
         {
-            if (ent->client->ps.gunframe == fire_frames[n])
+            if (ent->client->weaponframe == fire_frames[n])
             {
                 if (ent->client->quad_framenum > level.framenum)
                     gi.sound(ent, CHAN_ITEM, gi.soundindex("items/damage3.wav"), 1, ATTN_NORM, 0);
@@ -455,9 +456,9 @@ static void Weapon_Generic (edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIR
         }
 
         if (!fire_frames[n])
-            ent->client->ps.gunframe++;
+            ent->client->weaponframe++;
 
-        if (ent->client->ps.gunframe == FRAME_IDLE_FIRST+1)
+        if (ent->client->weaponframe == FRAME_IDLE_FIRST+1)
             ent->client->weaponstate = WEAPON_READY;
     }
 }
@@ -537,7 +538,7 @@ void Weapon_Grenade (edict_t *ent)
     if (ent->client->weaponstate == WEAPON_ACTIVATING)
     {
         ent->client->weaponstate = WEAPON_READY;
-        ent->client->ps.gunframe = 16;
+        ent->client->weaponframe = 16;
         return;
     }
 
@@ -548,7 +549,7 @@ void Weapon_Grenade (edict_t *ent)
             ent->client->latched_buttons &= ~BUTTON_ATTACK;
             if (ent->client->inventory[ent->client->ammo_index])
             {
-                ent->client->ps.gunframe = 1;
+                ent->client->weaponframe = 1;
                 ent->client->weaponstate = WEAPON_FIRING;
                 ent->client->grenade_framenum = 0;
                 ent->client->grenade_state = GRENADE_NONE;
@@ -560,23 +561,23 @@ void Weapon_Grenade (edict_t *ent)
             return;
         }
 
-        if ((ent->client->ps.gunframe == 29) || (ent->client->ps.gunframe == 34) || (ent->client->ps.gunframe == 39) || (ent->client->ps.gunframe == 48))
+        if ((ent->client->weaponframe == 29) || (ent->client->weaponframe == 34) || (ent->client->weaponframe == 39) || (ent->client->weaponframe == 48))
         {
             if (rand_byte()&15)
                 return;
         }
 
-        if (++ent->client->ps.gunframe > 48)
-            ent->client->ps.gunframe = 16;
+        if (++ent->client->weaponframe > 48)
+            ent->client->weaponframe = 16;
         return;
     }
 
     if (ent->client->weaponstate == WEAPON_FIRING)
     {
-        if (ent->client->ps.gunframe == 5)
+        if (ent->client->weaponframe == 5)
             gi.sound(ent, CHAN_WEAPON, gi.soundindex("weapons/hgrena1b.wav"), 1, ATTN_NORM, 0);
 
-        if (ent->client->ps.gunframe == 11)
+        if (ent->client->weaponframe == 11)
         {
             if (!ent->client->grenade_framenum)
             {
@@ -599,7 +600,7 @@ void Weapon_Grenade (edict_t *ent)
             {
                 if (level.framenum >= ent->client->grenade_framenum)
                 {
-                    ent->client->ps.gunframe = 15;
+                    ent->client->weaponframe = 15;
                     ent->client->grenade_state = GRENADE_NONE;
                 }
                 else
@@ -609,19 +610,19 @@ void Weapon_Grenade (edict_t *ent)
             }
         }
 
-        if (ent->client->ps.gunframe == 12)
+        if (ent->client->weaponframe == 12)
         {
             ent->client->weapon_sound = 0;
             weapon_grenade_fire (ent, qfalse);
             ent->client->grenade_state = GRENADE_THROWN;
         }
 
-        if ((ent->client->ps.gunframe == 15) && (level.framenum < ent->client->grenade_framenum))
+        if ((ent->client->weaponframe == 15) && (level.framenum < ent->client->grenade_framenum))
             return;
 
-        ent->client->ps.gunframe++;
+        ent->client->weaponframe++;
 
-        if (ent->client->ps.gunframe == 16)
+        if (ent->client->weaponframe == 16)
         {
             ent->client->grenade_framenum = 0;
             ent->client->grenade_state = GRENADE_NONE;
@@ -664,7 +665,7 @@ static void weapon_grenadelauncher_fire (edict_t *ent)
     gi.WriteByte (MZ_GRENADE | is_silenced);
     gi.multicast (ent->s.origin, MULTICAST_PVS);
 
-    ent->client->ps.gunframe++;
+    ent->client->weaponframe++;
 
     if (ent->client->silencer_shots) {
         ent->client->silencer_shots--;
@@ -724,7 +725,7 @@ static void weapon_rocketlauncher_fire (edict_t *ent)
     gi.WriteByte (MZ_ROCKET | is_silenced);
     gi.multicast (ent->s.origin, MULTICAST_PVS);
 
-    ent->client->ps.gunframe++;
+    ent->client->weaponframe++;
 
     if (ent->client->silencer_shots) {
         ent->client->silencer_shots--;
@@ -789,7 +790,7 @@ static void weapon_blaster_fire (edict_t *ent)
 {
     blaster_fire (ent, vec3_origin, 15, qfalse, EF_BLASTER);
     ent->client->resp.frags[FRAG_BLASTER].atts++;
-    ent->client->ps.gunframe++;
+    ent->client->weaponframe++;
 }
 
 void Weapon_Blaster (edict_t *ent)
@@ -811,7 +812,7 @@ static void weapon_hyperblaster_fire (edict_t *ent)
 
     if (!(ent->client->buttons & BUTTON_ATTACK))
     {
-        ent->client->ps.gunframe++;
+        ent->client->weaponframe++;
     }
     else
     {
@@ -821,12 +822,12 @@ static void weapon_hyperblaster_fire (edict_t *ent)
         }
         else
         {
-            rotation = (ent->client->ps.gunframe - 5) * 2*M_PI/6;
+            rotation = (ent->client->weaponframe - 5) * 2*M_PI/6;
             offset[0] = -4 * sin(rotation);
             offset[1] = 0;
             offset[2] = 4 * cos(rotation);
 
-            if ((ent->client->ps.gunframe == 6) || (ent->client->ps.gunframe == 9))
+            if ((ent->client->weaponframe == 6) || (ent->client->weaponframe == 9))
                 effect = EF_HYPERBLASTER;
             else
                 effect = 0;
@@ -849,12 +850,12 @@ static void weapon_hyperblaster_fire (edict_t *ent)
             }
         }
 
-        ent->client->ps.gunframe++;
-        if (ent->client->ps.gunframe == 12 && ent->client->inventory[ent->client->ammo_index])
-            ent->client->ps.gunframe = 6;
+        ent->client->weaponframe++;
+        if (ent->client->weaponframe == 12 && ent->client->inventory[ent->client->ammo_index])
+            ent->client->weaponframe = 6;
     }
 
-    if (ent->client->ps.gunframe == 12)
+    if (ent->client->weaponframe == 12)
     {
         gi.sound(ent, CHAN_AUTO, gi.soundindex("weapons/hyprbd1a.wav"), 1, ATTN_NORM, 0);
         ent->client->weapon_sound = 0;
@@ -891,18 +892,18 @@ static void weapon_machinegun_fire (edict_t *ent)
     if (!(ent->client->buttons & BUTTON_ATTACK))
     {
         ent->client->machinegun_shots = 0;
-        ent->client->ps.gunframe++;
+        ent->client->weaponframe++;
         return;
     }
 
-    if (ent->client->ps.gunframe == 5)
-        ent->client->ps.gunframe = 4;
+    if (ent->client->weaponframe == 5)
+        ent->client->weaponframe = 4;
     else
-        ent->client->ps.gunframe = 5;
+        ent->client->weaponframe = 5;
 
     if (ent->client->inventory[ent->client->ammo_index] < 1)
     {
-        ent->client->ps.gunframe = 6;
+        ent->client->weaponframe = 6;
         NoAmmoWeaponChange (ent);
         return;
     }
@@ -976,26 +977,26 @@ static void weapon_chaingun_fire (edict_t *ent)
     int         damage = 6;
     int         kick = 2;
 
-    if (ent->client->ps.gunframe == 5)
+    if (ent->client->weaponframe == 5)
         gi.sound(ent, CHAN_AUTO, gi.soundindex("weapons/chngnu1a.wav"), 1, ATTN_IDLE, 0);
 
-    if ((ent->client->ps.gunframe == 14) && !(ent->client->buttons & BUTTON_ATTACK))
+    if ((ent->client->weaponframe == 14) && !(ent->client->buttons & BUTTON_ATTACK))
     {
-        ent->client->ps.gunframe = 32;
+        ent->client->weaponframe = 32;
         ent->client->weapon_sound = 0;
         return;
     }
-    else if ((ent->client->ps.gunframe == 21) && (ent->client->buttons & BUTTON_ATTACK)
+    else if ((ent->client->weaponframe == 21) && (ent->client->buttons & BUTTON_ATTACK)
         && ent->client->inventory[ent->client->ammo_index])
     {
-        ent->client->ps.gunframe = 15;
+        ent->client->weaponframe = 15;
     }
     else
     {
-        ent->client->ps.gunframe++;
+        ent->client->weaponframe++;
     }
 
-    if (ent->client->ps.gunframe == 22)
+    if (ent->client->weaponframe == 22)
     {
         ent->client->weapon_sound = 0;
         gi.sound(ent, CHAN_AUTO, gi.soundindex("weapons/chngnd1a.wav"), 1, ATTN_IDLE, 0);
@@ -1008,18 +1009,18 @@ static void weapon_chaingun_fire (edict_t *ent)
     ent->client->anim_priority = ANIM_ATTACK;
     if (ent->client->ps.pmove.pm_flags & PMF_DUCKED)
     {
-        ent->client->anim_start = FRAME_crattak1 + 1 - (ent->client->ps.gunframe & 1);
+        ent->client->anim_start = FRAME_crattak1 + 1 - (ent->client->weaponframe & 1);
         ent->client->anim_end = FRAME_crattak9;
     }
     else
     {
-        ent->client->anim_start = FRAME_attack1 + 1 - (ent->client->ps.gunframe & 1);
+        ent->client->anim_start = FRAME_attack1 + 1 - (ent->client->weaponframe & 1);
         ent->client->anim_end = FRAME_attack8;
     }
 
-    if (ent->client->ps.gunframe <= 9)
+    if (ent->client->weaponframe <= 9)
         shots = 1;
-    else if (ent->client->ps.gunframe <= 14)
+    else if (ent->client->weaponframe <= 14)
     {
         if (ent->client->buttons & BUTTON_ATTACK)
             shots = 2;
@@ -1106,9 +1107,9 @@ static void weapon_shotgun_fire (edict_t *ent)
     int         damage = 4;
     int         kick = 8;
 
-    if (ent->client->ps.gunframe == 9)
+    if (ent->client->weaponframe == 9)
     {
-        ent->client->ps.gunframe++;
+        ent->client->weaponframe++;
         return;
     }
 
@@ -1136,7 +1137,7 @@ static void weapon_shotgun_fire (edict_t *ent)
     gi.WriteByte (MZ_SHOTGUN | is_silenced);
     gi.multicast (ent->s.origin, MULTICAST_PVS);
 
-    ent->client->ps.gunframe++;
+    ent->client->weaponframe++;
 
     if (ent->client->silencer_shots) {
         ent->client->silencer_shots--;
@@ -1197,7 +1198,7 @@ static void weapon_supershotgun_fire (edict_t *ent)
     gi.WriteByte (MZ_SSHOTGUN | is_silenced);
     gi.multicast (ent->s.origin, MULTICAST_PVS);
 
-    ent->client->ps.gunframe++;
+    ent->client->weaponframe++;
 
     if (ent->client->silencer_shots) {
         ent->client->silencer_shots--;
@@ -1256,7 +1257,7 @@ static void weapon_railgun_fire (edict_t *ent)
     gi.WriteByte (MZ_RAILGUN | is_silenced);
     gi.multicast (ent->s.origin, MULTICAST_PVS);
 
-    ent->client->ps.gunframe++;
+    ent->client->weaponframe++;
 
     if (ent->client->silencer_shots) {
         ent->client->silencer_shots--;
@@ -1293,7 +1294,7 @@ static void weapon_bfg_fire (edict_t *ent)
     int     damage = 200;
     float   damage_radius = 1000;
 
-    if (ent->client->ps.gunframe == 9)
+    if (ent->client->weaponframe == 9)
     {
         // send muzzle flash
         gi.WriteByte (svc_muzzleflash);
@@ -1301,7 +1302,7 @@ static void weapon_bfg_fire (edict_t *ent)
         gi.WriteByte (MZ_BFG | is_silenced);
         gi.multicast (ent->s.origin, MULTICAST_PVS);
 
-        ent->client->ps.gunframe++;
+        ent->client->weaponframe++;
 
         if (ent->client->silencer_shots) {
             ent->client->silencer_shots--;
@@ -1313,7 +1314,7 @@ static void weapon_bfg_fire (edict_t *ent)
     // check again and abort firing if we don't have enough now
     if (ent->client->inventory[ent->client->ammo_index] < 50)
     {
-        ent->client->ps.gunframe++;
+        ent->client->weaponframe++;
         return;
     }
 
@@ -1333,7 +1334,7 @@ static void weapon_bfg_fire (edict_t *ent)
     P_ProjectSource (ent->client, ent->s.origin, offset, forward, right, start);
     fire_bfg (ent, start, forward, damage, 400, damage_radius);
 
-    ent->client->ps.gunframe++;
+    ent->client->weaponframe++;
 
     if (ent->client->silencer_shots) {
         ent->client->silencer_shots--;

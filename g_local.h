@@ -1136,6 +1136,7 @@ struct gclient_s
     float       killer_yaw;         // when dead, look at killer
 
     weaponstate_t   weaponstate;
+    int             weaponframe;
     vec3_t      kick_angles;    // weapon kicks
     vec3_t      kick_origin;
     float       v_dmg_roll, v_dmg_pitch, v_dmg_time;    // damage kicks

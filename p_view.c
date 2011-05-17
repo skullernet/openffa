@@ -350,6 +350,8 @@ static void P_CalcGunOffset (edict_t *ent) {
     if (!FRAMESYNC)
         return;
 
+    ent->client->ps.gunframe = ent->client->weaponframe;
+
     // gun angles from bobbing
     ent->client->ps.gunangles[ROLL] = xyspeed * bobfracsin * 0.005;
     ent->client->ps.gunangles[YAW] = xyspeed * bobfracsin * 0.01;
