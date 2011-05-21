@@ -985,6 +985,10 @@ static void CopyToBodyQue (edict_t *ent)
     body->s.number = body - g_edicts;
     body->s.event = EV_OTHER_TELEPORT;
 
+    // start with dead player frame
+    if (ent->s.modelindex == 255 && ent->client && ent->client->anim_priority == ANIM_DEATH)
+        body->s.frame = ent->client->anim_end;
+
     body->svflags = ent->svflags;
     VectorCopy (ent->mins, body->mins);
     VectorCopy (ent->maxs, body->maxs);
