@@ -670,6 +670,9 @@ void player_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damag
         }
     }
 
+    // no normal pain sound
+    self->pain_debounce_framenum = KEYFRAME(FRAMEDIV);
+
     self->deadflag = DEAD_DEAD;
 
     gi.linkentity (self);
