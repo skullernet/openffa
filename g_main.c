@@ -767,9 +767,6 @@ void G_RunFrame (void)
     int     i, delta;
     edict_t *ent;
 
-    level.framenum++;
-    level.time = level.framenum*FRAMETIME;
-
     //
     // treat each object in turn
     // even the world gets a chance to think
@@ -865,6 +862,10 @@ void G_RunFrame (void)
     if( game.settings_modified && level.framenum - level.activity_framenum > 5 * 60 * HZ ) {
         G_ResetSettings();
     }
+
+    // advance for next frame
+    level.framenum++;
+    level.time = level.framenum*FRAMETIME;
 }
 
 
