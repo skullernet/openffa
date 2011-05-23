@@ -337,7 +337,7 @@ map_entry_t *G_FindMap( const char *name ) {
 
 static qboolean G_RebuildMapQueue( void ) {
     map_entry_t *pool[256], *map;
-    int i, j, count;
+    int i, count;
 
     List_Init( &g_map_queue );
 
@@ -361,12 +361,7 @@ static qboolean G_RebuildMapQueue( void ) {
 
     // randomize it
     if( (int)g_maps_random->value > 0 ) {
-        for( i = count; i > 1; i-- ) {
-            j = rand_byte() % i;
-            map = pool[j];
-            pool[j] = pool[i - 1];
-            pool[i - 1] = map;
-        }
+        G_ShuffleArray( pool, count );
     }
 
     for( i = 0; i < count; i++ ) {

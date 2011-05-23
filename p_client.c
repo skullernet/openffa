@@ -734,12 +734,19 @@ static float PlayersRangeFromSpot (edict_t *spot) {
 }
 
 static edict_t *SelectRandomDeathmatchSpawnPointAvoidingTelefrag( void ) {
+    edict_t *spawns[MAX_SPAWNS];
     edict_t *spot;
     float range;
     int i;
 
     for( i = 0; i < level.numspawns; i++ ) {
-        spot = level.spawns[i];
+        spawns[i] = level.spawns[i];
+    }
+
+    G_ShuffleArray( spawns, level.numspawns );
+
+    for( i = 0; i < level.numspawns; i++ ) {
+        spot = spawns[i];
 
         range = PlayersRangeFromSpot(spot);
         if( range > 64 ) {

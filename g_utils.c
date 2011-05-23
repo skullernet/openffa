@@ -531,6 +531,22 @@ void    G_TouchSolids (edict_t *ent)
 }
 #endif
 
+void G_ShuffleArray( void *base, size_t n ) {
+    size_t i, j;
+    void *temp, **array;
+
+    if( n < 2 )
+        return;
+
+    array = base;
+    for( i = n - 1; i > 0; i-- ) {
+        j = rand_byte() % ( i + 1 );
+        temp = array[j];
+        array[j] = array[i];
+        array[i] = temp;
+    }
+}
+
 /*
 ==============================================================================
 

@@ -410,7 +410,7 @@ typedef struct
 
 #define VF(x)   (((int)g_vote_flags->value&VF_##x)!=0)
 
-#define MAX_SPAWNS      32
+#define MAX_SPAWNS      64
 
 #define ITB_QUAD    1
 #define ITB_INVUL   2
@@ -784,6 +784,8 @@ void    G_FreeEdict (edict_t *e);
 
 void    G_TouchTriggers (edict_t *ent);
 //void  G_TouchSolids (edict_t *ent);
+
+void    G_ShuffleArray( void *base, size_t n );
 
 #define G_Malloc( x )   gi.TagMalloc( x, TAG_GAME )
 char    *G_CopyString (const char *in);

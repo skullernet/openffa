@@ -619,7 +619,7 @@ void G_SpawnEntities (const char *mapname, const char *entities, const char *spa
             break;
         }
     }
-    gi.dprintf( "Map has %d spawn points\n", level.numspawns );
+    gi.dprintf( "%d spawn points\n", level.numspawns );
 }
 
 void G_ResetLevel( void ) {
