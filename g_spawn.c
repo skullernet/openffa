@@ -124,9 +124,6 @@ void SP_misc_easterchick2 (edict_t *self);
 
 void SP_monster_commander_body (edict_t *self);
 
-void SP_turret_breach (edict_t *self);
-void SP_turret_base (edict_t *self);
-
 static const spawn_t    g_spawns[] = {
     {"item_health", SP_item_health},
     {"item_health_small", SP_item_health_small},
@@ -206,9 +203,6 @@ static const spawn_t    g_spawns[] = {
     {"misc_easterchick2", SP_misc_easterchick2},
 
     {"monster_commander_body", SP_monster_commander_body},
-
-    {"turret_breach", SP_turret_breach},
-    {"turret_base", SP_turret_base},
 
     {NULL, NULL}
 };
