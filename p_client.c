@@ -1195,7 +1195,9 @@ void PutClientInServer (edict_t *ent)
     client->ps.gunindex = gi.modelindex(client->weapon->view_model);
 
     // clear entity state values
+    ent->s.sound = 0;
     ent->s.effects = 0;
+    ent->s.renderfx = 0;
     ent->s.modelindex = 255;        // will use the skin specified model
     ent->s.modelindex2 = 255;       // custom gun model
     // sknum is player num and weapon number
@@ -1621,10 +1623,14 @@ void ClientDisconnect (edict_t *ent)
     }
 
     gi.unlinkentity (ent);
+
     ent->s.modelindex = 0;
+    ent->s.modelindex2 = 0;
     ent->s.sound = 0;
     ent->s.event = 0;
     ent->s.effects = 0;
+    ent->s.renderfx = 0;
+    ent->s.solid = 0;
     ent->solid = SOLID_NOT;
     ent->inuse = qfalse;
     ent->classname = "disconnected";
