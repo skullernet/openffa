@@ -574,10 +574,10 @@ void SP_func_plat (edict_t *ent)
         ent->speed = 200;
 
     if (!ent->accel)
-        ent->accel = 500;
+        ent->accel = 50;
 
     if (!ent->decel)
-        ent->decel = 500;
+        ent->decel = 50;
 
     if (!ent->dmg)
         ent->dmg = 2;
@@ -611,12 +611,15 @@ void SP_func_plat (edict_t *ent)
     if (ent->accel != ent->speed || ent->decel != ent->speed)
     {
         ent->flags |= FL_ACCELERATE;
+        // rescale to correct units/second^2
+        ent->accel *= 10;
+        ent->decel *= 10;
     }
     else
     {
 #ifdef BUGGY_ACCEL
         // follow the bug in original code (10x slower)
-        ent->accel = ent->decel = ent->speed = ent->speed * 0.1f;
+        ent->speed *= 0.1f;
 #endif
     }
 
