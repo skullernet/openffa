@@ -400,6 +400,7 @@ static void AccelMove_Begin (edict_t *ent)
 
     ent->moveinfo.remaining_distance = VectorNormalize (ent->moveinfo.dir);
     ent->moveinfo.current_speed = 0;
+    ent->moveinfo.next_speed = 0;
     NEXT_FRAME (ent, AccelMove_Think);
 }
 
@@ -624,8 +625,8 @@ void SP_func_plat (edict_t *ent)
     }
 
     ent->moveinfo.speed = ent->speed * FRAMETIME;
-    ent->moveinfo.accel = ent->accel * (FRAMETIME*FRAMETIME);
-    ent->moveinfo.decel = ent->decel * (FRAMETIME*FRAMETIME);
+    ent->moveinfo.accel = ent->accel * FRAMETIME * FRAMETIME;
+    ent->moveinfo.decel = ent->decel * FRAMETIME * FRAMETIME;
     VectorCopy (ent->pos1, ent->moveinfo.end_origin);
     VectorCopy (ent->s.angles, ent->moveinfo.end_angles);
     VectorCopy (ent->pos2, ent->moveinfo.start_origin);
@@ -876,8 +877,8 @@ void SP_func_button (edict_t *ent)
     }
 
     ent->moveinfo.speed = ent->speed * FRAMETIME;
-    ent->moveinfo.accel = ent->accel * (FRAMETIME*FRAMETIME);
-    ent->moveinfo.decel = ent->decel * (FRAMETIME*FRAMETIME);
+    ent->moveinfo.accel = ent->accel * FRAMETIME * FRAMETIME;
+    ent->moveinfo.decel = ent->decel * FRAMETIME * FRAMETIME;
     ent->moveinfo.wait = ent->wait * HZ;
     VectorCopy (ent->pos1, ent->moveinfo.start_origin);
     VectorCopy (ent->s.angles, ent->moveinfo.start_angles);
@@ -1281,8 +1282,8 @@ void SP_func_door (edict_t *ent)
     }
 
     ent->moveinfo.speed = ent->speed * FRAMETIME;
-    ent->moveinfo.accel = ent->accel * (FRAMETIME*FRAMETIME);
-    ent->moveinfo.decel = ent->decel * (FRAMETIME*FRAMETIME);
+    ent->moveinfo.accel = ent->accel * FRAMETIME * FRAMETIME;
+    ent->moveinfo.decel = ent->decel * FRAMETIME * FRAMETIME;
     ent->moveinfo.wait = ent->wait * HZ;
     VectorCopy (ent->pos1, ent->moveinfo.start_origin);
     VectorCopy (ent->s.angles, ent->moveinfo.start_angles);
@@ -1414,8 +1415,8 @@ void SP_func_door_rotating (edict_t *ent)
     // FIXME: accelerative angular movement is not supported
     ent->moveinfo.state = STATE_BOTTOM;
     ent->moveinfo.speed = ent->speed * FRAMETIME;
-    ent->moveinfo.accel = ent->accel * (FRAMETIME*FRAMETIME);
-    ent->moveinfo.decel = ent->decel * (FRAMETIME*FRAMETIME);
+    ent->moveinfo.accel = ent->accel * FRAMETIME * FRAMETIME;
+    ent->moveinfo.decel = ent->decel * FRAMETIME * FRAMETIME;
     ent->moveinfo.wait = ent->wait * HZ;
     VectorCopy (ent->s.origin, ent->moveinfo.start_origin);
     VectorCopy (ent->pos1, ent->moveinfo.start_angles);
