@@ -72,6 +72,7 @@ void G_FinishVote( void ) {
     }
     level.vote.proposal = 0;
     level.vote.framenum = level.framenum;
+    level.vote.victim = NULL;
 }
 
 void G_UpdateVote( void ) {
