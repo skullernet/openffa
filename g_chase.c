@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -19,11 +19,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 #include "g_local.h"
 
-static void SetChaseStats( gclient_t *client ) {
+static void SetChaseStats(gclient_t *client)
+{
     edict_t *targ = client->chase_target;
-    int playernum = ( targ - g_edicts ) - 1;
+    int playernum = (targ - g_edicts) - 1;
 
-    memcpy( client->ps.stats, targ->client->ps.stats, sizeof( client->ps.stats ) );
+    memcpy(client->ps.stats, targ->client->ps.stats, sizeof(client->ps.stats));
 
     // layouts are independant in chasecam mode
     client->ps.stats[STAT_LAYOUTS] = 0;
@@ -38,14 +39,15 @@ static void SetChaseStats( gclient_t *client ) {
     client->ps.stats[STAT_FRAGS] = 0;
 
     // check view id settings
-    if( client->pers.noviewid ) {
+    if (client->pers.noviewid) {
         client->ps.stats[STAT_VIEWID] = 0;
-    } else if( targ->client->pers.noviewid ) {
-        client->ps.stats[STAT_VIEWID] = G_GetPlayerIdView( targ );
+    } else if (targ->client->pers.noviewid) {
+        client->ps.stats[STAT_VIEWID] = G_GetPlayerIdView(targ);
     }
 }
 
-static void UpdateChaseCamHack( gclient_t *client ) {
+static void UpdateChaseCamHack(gclient_t *client)
+{
     vec3_t o, ownerv, goal;
     edict_t *ent = client->edict;
     edict_t *targ = client->chase_target;
@@ -60,7 +62,7 @@ static void UpdateChaseCamHack( gclient_t *client ) {
     VectorCopy(targ->client->v_angle, angles);
     if (angles[PITCH] > 56)
         angles[PITCH] = 56;
-    AngleVectors (angles, forward, right, NULL);
+    AngleVectors(angles, forward, right, NULL);
     VectorNormalize(forward);
     VectorMA(ownerv, -30, forward, o);
 
@@ -102,14 +104,14 @@ static void UpdateChaseCamHack( gclient_t *client ) {
     client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
 
     VectorCopy(goal, ent->s.origin);
-    VectorScale( goal, 8, client->ps.pmove.origin );
+    VectorScale(goal, 8, client->ps.pmove.origin);
 
     if (targ->deadflag) {
         client->ps.viewangles[ROLL] = 40;
         client->ps.viewangles[PITCH] = -15;
         client->ps.viewangles[YAW] = targ->client->killer_yaw;
     } else {
-        G_SetDeltaAngles( ent, targ->client->v_angle );
+        G_SetDeltaAngles(ent, targ->client->v_angle);
         VectorCopy(targ->client->v_angle, ent->client->ps.viewangles);
         VectorCopy(targ->client->v_angle, client->v_angle);
     }
@@ -118,71 +120,74 @@ static void UpdateChaseCamHack( gclient_t *client ) {
 //  gi.linkentity(ent);
 }
 
-static void UpdateChaseCam( gclient_t *client ) {
+static void UpdateChaseCam(gclient_t *client)
+{
     edict_t *ent = client->edict;
     edict_t *targ = client->chase_target;
 
     client->ps = targ->client->ps;
-    if( client->pers.uf & UF_LOCALFOV ) {
+    if (client->pers.uf & UF_LOCALFOV) {
         client->ps.fov = client->pers.fov;
     }
     client->ps.pmove.pm_flags |= PMF_NO_PREDICTION;
-    /*if( targ->deadflag ) {
+    /*if (targ->deadflag) {
         client->ps.pmove.pm_type = PM_DEAD;
     } else*/ {
         client->ps.pmove.pm_type = PM_FREEZE;
     }
 
-    VectorCopy( ent->client->ps.viewangles, ent->s.angles );
-    VectorCopy( ent->client->ps.viewangles, ent->client->v_angle );
-    VectorScale( ent->client->ps.pmove.origin, 0.125f, ent->s.origin );
+    VectorCopy(ent->client->ps.viewangles, ent->s.angles);
+    VectorCopy(ent->client->ps.viewangles, ent->client->v_angle);
+    VectorScale(ent->client->ps.pmove.origin, 0.125f, ent->s.origin);
     ent->viewheight = targ->viewheight;
 }
 
-void SetChaseTarget( edict_t *ent, edict_t *targ ) {
+void SetChaseTarget(edict_t *ent, edict_t *targ)
+{
     int i;
 
     ent->client->chase_target = targ;
 
     // stop chasecam
-    if( !targ ) {
-        ent->client->clientNum = ( ent - g_edicts ) - 1;
+    if (!targ) {
+        ent->client->clientNum = (ent - g_edicts) - 1;
         ent->client->ps.pmove.pm_flags = 0;
         ent->client->ps.pmove.pm_type = PM_SPECTATOR;
         ent->client->ps.viewangles[ROLL] = 0;
-        G_SetDeltaAngles( ent, ent->client->ps.viewangles );
-        VectorCopy( ent->client->ps.viewangles, ent->s.angles );
-        VectorCopy( ent->client->ps.viewangles, ent->client->v_angle );
-        VectorScale( ent->client->ps.pmove.origin, 0.125f, ent->s.origin );
+        G_SetDeltaAngles(ent, ent->client->ps.viewangles);
+        VectorCopy(ent->client->ps.viewangles, ent->s.angles);
+        VectorCopy(ent->client->ps.viewangles, ent->client->v_angle);
+        VectorScale(ent->client->ps.pmove.origin, 0.125f, ent->s.origin);
         ent->client->chase_mode = CHASE_NONE;
-        ClientEndServerFrame( ent );
+        ClientEndServerFrame(ent);
     } else {
-        ent->client->clientNum = ( targ - g_edicts ) - 1;
-        for( i = 0; i < PCS_TOTAL; i++ ) {
-            G_PrivateString( ent, i, targ->client->level.strings[i] );
+        ent->client->clientNum = (targ - g_edicts) - 1;
+        for (i = 0; i < PCS_TOTAL; i++) {
+            G_PrivateString(ent, i, targ->client->level.strings[i]);
         }
-        ChaseEndServerFrame( ent );
+        ChaseEndServerFrame(ent);
     }
 
 }
 
-void UpdateChaseTargets( chase_mode_t mode, edict_t *targ ) {
+void UpdateChaseTargets(chase_mode_t mode, edict_t *targ)
+{
     edict_t *other;
     int i;
 
-    for( i = 0; i < game.maxclients; i++ ) {
+    for (i = 0; i < game.maxclients; i++) {
         other = &g_edicts[ i + 1 ];
-        if( !other->inuse ) {
+        if (!other->inuse) {
             continue;
         }
-        if( other->client->pers.connected != CONN_SPECTATOR ) {
+        if (other->client->pers.connected != CONN_SPECTATOR) {
             continue;
         }
-        if( other->client->chase_mode != mode ) {
+        if (other->client->chase_mode != mode) {
             continue;
         }
-        if( other->client->chase_target != targ ) {
-            SetChaseTarget( other, targ );
+        if (other->client->chase_target != targ) {
+            SetChaseTarget(other, targ);
         }
     }
 }
@@ -192,7 +197,7 @@ void ChaseNext(edict_t *ent)
     int i;
     edict_t *e, *targ = ent->client->chase_target;
 
-    if( !targ )
+    if (!targ)
         return;
 
     i = targ - g_edicts;
@@ -201,12 +206,12 @@ void ChaseNext(edict_t *ent)
         if (i > game.maxclients)
             i = 1;
         e = g_edicts + i;
-        if( e == targ ) {
+        if (e == targ) {
             return;
         }
-    } while( e->client->pers.connected != CONN_SPAWNED );
+    } while (e->client->pers.connected != CONN_SPAWNED);
 
-    SetChaseTarget( ent, e );
+    SetChaseTarget(ent, e);
 }
 
 void ChasePrev(edict_t *ent)
@@ -214,7 +219,7 @@ void ChasePrev(edict_t *ent)
     int i;
     edict_t *e, *targ = ent->client->chase_target;
 
-    if( !targ )
+    if (!targ)
         return;
 
     i = targ - g_edicts;
@@ -223,45 +228,46 @@ void ChasePrev(edict_t *ent)
         if (i < 1)
             i = game.maxclients;
         e = g_edicts + i;
-        if( e == targ ) {
+        if (e == targ) {
             return;
         }
-    } while( e->client->pers.connected != CONN_SPAWNED );
+    } while (e->client->pers.connected != CONN_SPAWNED);
 
-    SetChaseTarget( ent, e );
+    SetChaseTarget(ent, e);
 }
 
-qboolean GetChaseTarget( edict_t *ent, chase_mode_t mode ) {
+qboolean GetChaseTarget(edict_t *ent, chase_mode_t mode)
+{
     gclient_t *ranks[MAX_CLIENTS];
     edict_t *other;
     int i;
 
-    if( mode == CHASE_LEADER ) {
-        if( G_CalcRanks( ranks ) ) {
+    if (mode == CHASE_LEADER) {
+        if (G_CalcRanks(ranks)) {
             other = ranks[0]->edict;
             goto found;
         }
         goto notfound;
     }
 
-    for( i = 0; i < game.maxclients; i++ ) {
+    for (i = 0; i < game.maxclients; i++) {
         other = &g_edicts[ i + 1 ];
-        if( !other->inuse ) {
+        if (!other->inuse) {
             continue;
         }
-        if( !PLAYER_SPAWNED( other ) ) {
+        if (!PLAYER_SPAWNED(other)) {
             continue;
         }
-        switch( mode ) {
+        switch (mode) {
         case CHASE_NONE:
             goto found;
         case CHASE_QUAD:
-            if( other->client->quad_framenum > level.framenum ) {
+            if (other->client->quad_framenum > level.framenum) {
                 goto found;
             }
             break;
         case CHASE_INVU:
-            if( other->client->invincible_framenum > level.framenum ) {
+            if (other->client->invincible_framenum > level.framenum) {
                 goto found;
             }
             break;
@@ -275,38 +281,37 @@ notfound:
     return qfalse;
 
 found:
-    SetChaseTarget( ent, other );
+    SetChaseTarget(ent, other);
     ent->client->chase_mode = mode;
     return qtrue;
 }
 
 
-void ChaseEndServerFrame( edict_t *ent ) {
+void ChaseEndServerFrame(edict_t *ent)
+{
     gclient_t *c = ent->client;
 
-    if( !c->chase_target ) {
+    if (!c->chase_target) {
         return;
     }
 
     // is our chase target gone?
-    if( c->chase_target->client->pers.connected != CONN_SPAWNED ) {
+    if (c->chase_target->client->pers.connected != CONN_SPAWNED) {
         edict_t *old = c->chase_target;
-        ChaseNext( ent );
-        if( c->chase_target == old ) {
-            SetChaseTarget( ent, NULL );
+        ChaseNext(ent);
+        if (c->chase_target == old) {
+            SetChaseTarget(ent, NULL);
             return;
         }
     }
-   
+
     // camera
-    if( game.serverFeatures & GMF_CLIENTNUM ) {
-        UpdateChaseCam( c );
+    if (game.serverFeatures & GMF_CLIENTNUM) {
+        UpdateChaseCam(c);
     } else {
-        UpdateChaseCamHack( c );
+        UpdateChaseCamHack(c);
     }
 
     // stats
-    SetChaseStats( c );
-
+    SetChaseStats(c);
 }
-
