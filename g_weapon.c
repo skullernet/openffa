@@ -38,7 +38,7 @@ static void fire_lead (edict_t *self, vec3_t start, vec3_t aimdir, int damage, i
     qboolean    water = qfalse;
     int         content_mask = MASK_SHOT | MASK_WATER;
 
-    gi_trace( &tr, self->s.origin, NULL, NULL, start, self, MASK_SHOT);
+    tr = gi.trace(self->s.origin, NULL, NULL, start, self, MASK_SHOT);
     if (!(tr.fraction < 1.0))
     {
         vectoangles (aimdir, dir);
@@ -57,7 +57,7 @@ static void fire_lead (edict_t *self, vec3_t start, vec3_t aimdir, int damage, i
             content_mask &= ~MASK_WATER;
         }
 
-        gi_trace( &tr, start, NULL, NULL, end, self, content_mask);
+        tr = gi.trace(start, NULL, NULL, end, self, content_mask);
 
         // see if we hit water
         if (tr.contents & MASK_WATER)
@@ -106,7 +106,7 @@ static void fire_lead (edict_t *self, vec3_t start, vec3_t aimdir, int damage, i
             }
 
             // re-trace ignoring water this time
-            gi_trace( &tr, water_start, NULL, NULL, end, self, MASK_SHOT);
+            tr = gi.trace(water_start, NULL, NULL, end, self, MASK_SHOT);
         }
     }
 
@@ -144,7 +144,7 @@ static void fire_lead (edict_t *self, vec3_t start, vec3_t aimdir, int damage, i
         if (gi.pointcontents (pos) & MASK_WATER)
             VectorCopy (pos, tr.endpos);
         else
-            gi_trace( &tr, pos, NULL, NULL, water_start, tr.ent, MASK_WATER);
+            tr = gi.trace(pos, NULL, NULL, water_start, tr.ent, MASK_WATER);
 
         VectorAdd (water_start, tr.endpos, pos);
         VectorScale (pos, 0.5, pos);
@@ -270,7 +270,7 @@ void fire_blaster (edict_t *self, vec3_t start, vec3_t dir, int damage, int spee
         bolt->spawnflags = 1;
     gi.linkentity (bolt);
 
-    gi_trace( &tr, self->s.origin, NULL, NULL, bolt->s.origin, bolt, MASK_SHOT);
+    tr = gi.trace(self->s.origin, NULL, NULL, bolt->s.origin, bolt, MASK_SHOT);
     if (tr.fraction < 1.0)
     {
         VectorMA (bolt->s.origin, -10, dir, bolt->s.origin);
@@ -550,7 +550,7 @@ void fire_rail (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick
     mask = MASK_SHOT|CONTENTS_SLIME|CONTENTS_LAVA;
     for( i = 0; i < 100; i++ )
     {
-        gi_trace( &tr, from, NULL, NULL, end, ignore, mask);
+        tr = gi.trace(from, NULL, NULL, end, ignore, mask);
 
         if (tr.contents & (CONTENTS_SLIME|CONTENTS_LAVA))
         {
@@ -719,7 +719,7 @@ void bfg_think (edict_t *self)
         VectorMA (start, 2048, dir, end);
         while(1)
         {
-            gi_trace( &tr, start, NULL, NULL, end, ignore, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_DEADMONSTER);
+            tr = gi.trace(start, NULL, NULL, end, ignore, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_DEADMONSTER);
 
             if (!tr.ent)
                 break;

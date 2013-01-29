@@ -1216,7 +1216,7 @@ void PutClientInServer (edict_t *ent)
     VectorCopy (spawn_origin, temp2);
     temp[2] -= 64;
     temp2[2] += 16;
-    gi_trace (&tr, temp2, ent->mins, ent->maxs, temp, ent, MASK_PLAYERSOLID);
+    tr = gi.trace (temp2, ent->mins, ent->maxs, temp, ent, MASK_PLAYERSOLID);
     if (!tr.allsolid && !tr.startsolid)
     {
         VectorCopy (tr.endpos, ent->s.origin);
@@ -1658,15 +1658,9 @@ void ClientDisconnect (edict_t *ent)
 static edict_t  *pm_passent;
 static int      pm_mask;
 
-#if ( defined _WIN32 ) && ( defined __GNUC__ )
-static trace_t *PM_trace( trace_t *tr, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end ) {
-    return (( trace_hacked_t )gi.trace)( tr, start, mins, maxs, end, pm_passent, pm_mask );
-}
-#else
 static trace_t PM_trace( vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end ) {
     return gi.trace( start, mins, maxs, end, pm_passent, pm_mask );
 }
-#endif
 
 /*
 ==============
@@ -1684,7 +1678,7 @@ static void G_TouchProjectiles (edict_t *ent, vec3_t start) {
 
     ignore = ent;
     for (i = 0; i < 10; i++) {
-        gi_trace (&tr, start, ent->mins, ent->maxs, ent->s.origin,
+        tr = gi.trace (start, ent->mins, ent->maxs, ent->s.origin,
             ignore, CONTENTS_MONSTER|CONTENTS_DEADMONSTER);
         if (!tr.ent || tr.ent == world)
             continue;
@@ -1773,7 +1767,7 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 
         pm.cmd = *ucmd;
 
-        pm.trace = ( void * )PM_trace;  // adds default parms
+        pm.trace = PM_trace;  // adds default parms
         pm.pointcontents = gi.pointcontents;
 
         // perform a pmove

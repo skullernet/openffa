@@ -451,7 +451,7 @@ static qboolean visible (edict_t *self, edict_t *other, int mask) {
     spot2[2] += other->viewheight;
 
     for (i = 0; i < 10; i++) {
-        gi_trace (&trace, spot1, vec3_origin, vec3_origin, spot2, self, mask);
+        trace = gi.trace (spot1, vec3_origin, vec3_origin, spot2, self, mask);
 
         if (trace.fraction == 1.0)
             return qtrue;
@@ -508,7 +508,7 @@ static edict_t *find_by_tracing( edict_t *ent ) {
 
     // find best player through tracing
     for (i = 0; i < 10; i++) {
-        gi_trace (&tr, start, mins, maxs, forward, ignore, tracemask);
+        tr = gi.trace (start, mins, maxs, forward, ignore, tracemask);
 
         // entire move is inside water volume
         if (tr.allsolid && (tr.contents & MASK_WATER)) {

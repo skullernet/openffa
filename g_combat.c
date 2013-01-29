@@ -40,15 +40,15 @@ qboolean CanDamage (edict_t *targ, edict_t *inflictor)
     {
         VectorAdd (targ->absmin, targ->absmax, dest);
         VectorScale (dest, 0.5, dest);
-        gi_trace (&trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
+        trace = gi.trace (inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
         if (trace.fraction == 1.0)
             return qtrue;
         if (trace.ent == targ)
             return qtrue;
         return qfalse;
     }
-    
-    gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, targ->s.origin, inflictor, MASK_SOLID);
+
+    trace = gi.trace(inflictor->s.origin, vec3_origin, vec3_origin, targ->s.origin, inflictor, MASK_SOLID);
     if (trace.fraction == 1.0)
         return qtrue;
    
@@ -60,7 +60,7 @@ qboolean CanDamage (edict_t *targ, edict_t *inflictor)
             dest[1] = bounds[(i>>1)&1][1];
             dest[2] = bounds[(i>>2)&1][2];
 
-            gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
+            trace = gi.trace(inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
             if (trace.fraction == 1.0)
                 return qtrue;
         }
@@ -78,7 +78,7 @@ qboolean CanDamage (edict_t *targ, edict_t *inflictor)
                 dest[1] = targ->s.origin[1] + 15.0f;
             }
 
-            gi_trace( &trace, inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
+            trace = gi.trace(inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
             if (trace.fraction == 1.0)
                 return qtrue;
         }

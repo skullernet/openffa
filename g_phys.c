@@ -55,7 +55,7 @@ static edict_t *SV_TestEntityPosition (edict_t *ent)
         mask = ent->clipmask;
     else
         mask = MASK_SOLID;
-    gi_trace( &trace, ent->s.origin, ent->mins, ent->maxs, ent->s.origin, ent, mask);
+    trace = gi.trace(ent->s.origin, ent->mins, ent->maxs, ent->s.origin, ent, mask);
     
     if (trace.startsolid)
         return g_edicts;
@@ -209,7 +209,7 @@ retry:
     else
         mask = MASK_SOLID;
 
-    gi_trace( &trace, start, ent->mins, ent->maxs, end, ent, mask);
+    trace = gi.trace(start, ent->mins, ent->maxs, end, ent, mask);
     
     VectorCopy (trace.endpos, ent->s.origin);
     gi.linkentity (ent);

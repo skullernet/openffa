@@ -71,7 +71,7 @@ static void UpdateChaseCamHack( gclient_t *client ) {
     if (!targ->groundentity)
         o[2] += 16;
 
-    gi_trace(&trace, ownerv, vec3_origin, vec3_origin, o, targ, MASK_SOLID);
+    trace = gi.trace(ownerv, vec3_origin, vec3_origin, o, targ, MASK_SOLID);
 
     VectorCopy(trace.endpos, goal);
 
@@ -80,7 +80,7 @@ static void UpdateChaseCamHack( gclient_t *client ) {
     // pad for floors and ceilings
     VectorCopy(goal, o);
     o[2] += 6;
-    gi_trace(&trace, goal, vec3_origin, vec3_origin, o, targ, MASK_SOLID);
+    trace = gi.trace(goal, vec3_origin, vec3_origin, o, targ, MASK_SOLID);
     if (trace.fraction < 1) {
         VectorCopy(trace.endpos, goal);
         goal[2] -= 6;
@@ -88,7 +88,7 @@ static void UpdateChaseCamHack( gclient_t *client ) {
 
     VectorCopy(goal, o);
     o[2] -= 6;
-    gi_trace(&trace, goal, vec3_origin, vec3_origin, o, targ, MASK_SOLID);
+    trace = gi.trace(goal, vec3_origin, vec3_origin, o, targ, MASK_SOLID);
     if (trace.fraction < 1) {
         VectorCopy(trace.endpos, goal);
         goal[2] += 6;

@@ -411,7 +411,7 @@ static void target_laser_think (edict_t *self)
     VectorMA (start, 2048, self->movedir, end);
     while(1)
     {
-        gi_trace( &tr, start, NULL, NULL, end, ignore, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_DEADMONSTER);
+        tr = gi.trace(start, NULL, NULL, end, ignore, CONTENTS_SOLID|CONTENTS_MONSTER|CONTENTS_DEADMONSTER);
 
         if (!tr.ent)
             break;
