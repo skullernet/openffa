@@ -159,10 +159,6 @@ static void SetUnhide( edict_t *ent ) {
 
 qboolean Pickup_Powerup (edict_t *ent, edict_t *other)
 {
-    int     quantity;
-
-    quantity = other->client->inventory[ITEM_INDEX(ent->item)];
-
     other->client->inventory[ITEM_INDEX(ent->item)]++;
 
     if (!(ent->spawnflags & DROPPED_ITEM) )
