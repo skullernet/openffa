@@ -335,11 +335,17 @@ map_entry_t *G_FindMap( const char *name ) {
     return NULL;
 }
 
-static qboolean G_RebuildMapQueue( void ) {
-    map_entry_t *pool[256], *map;
+static int G_RebuildMapQueue( void ) {
+    map_entry_t **pool, *map;
     int i, count;
 
     List_Init( &g_map_queue );
+
+    count = List_Count(&g_map_list);
+    if (!count)
+        return 0;
+
+    pool = G_Malloc(sizeof(map_entry_t *) * count);
 
     // build the queue from available map list
     count = 0;
@@ -347,15 +353,18 @@ static qboolean G_RebuildMapQueue( void ) {
         if( map->flags & MAP_NOAUTO ) {
             continue;
         }
-        pool[count++] = map;
-        if( count == 256 ) {
-            break;
+        if( map->flags & MAP_EXCLUSIVE ) {
+            if( count && (pool[count - 1]->flags & MAP_WEIGHTED) )
+                continue;
+        } else if( map->flags & MAP_WEIGHTED ) {
+            if( random() > map->weight )
+                continue;
         }
+        pool[count++] = map;
     }
 
-    if( !count ) {
-        return qfalse;
-    }
+    if( !count )
+        goto done;
 
     gi.dprintf( "Map queue: %d entries\n", count );
 
@@ -368,7 +377,9 @@ static qboolean G_RebuildMapQueue( void ) {
         List_Append( &g_map_queue, &pool[i]->queue );
     }
 
-    return qtrue;
+done:
+    gi.TagFree(pool);
+    return count;
 }
 
 static map_entry_t *G_FindSuitableMap( void ) {
@@ -476,6 +487,17 @@ static void G_LoadMapList( void ) {
 
         token = COM_Parse( &data );
         map->flags = atoi( token );
+
+        token = COM_Parse( &data );
+        if (*token == '@') {
+            map->flags |= MAP_EXCLUSIVE;
+            map->weight = 0;
+        } else if (*token) {
+            map->flags |= MAP_WEIGHTED;
+            map->weight = atof(token);
+        } else {
+            map->weight = 1;
+        }
 
         if( map->min_players < 0 ) {
             map->min_players = 0;

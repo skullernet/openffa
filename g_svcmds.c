@@ -44,14 +44,15 @@ static void Svcmd_MapList_f( void ) {
         return;
     }
 
-    Com_Printf( "map             min max fl hits   in  out\n"
-                "--------------- --- --- -- ---- ---- ----\n" );
+    Com_Printf( "map             min max fl wgh hits   in  out\n"
+                "--------------- --- --- -- --- ---- ---- ----\n" );
     LIST_FOR_EACH( map_entry_t, map, &g_map_list, list ) {
-        Com_Printf( "%-15.15s %3d %3d %c%c %4d %4d %4d\n",
+        Com_Printf( "%-15.15s %3d %3d %c%c %.1f %4d %4d %4d\n",
             map->name, map->min_players, map->max_players,
             ( map->flags & MAP_NOAUTO ) ? ' ' : 'A',
             ( map->flags & MAP_NOVOTE ) ? ' ' : 'V',
-            map->num_hits, map->num_in, map->num_out );
+            map->weight, map->num_hits,
+            map->num_in, map->num_out );
     }
 }
 

@@ -583,13 +583,16 @@ typedef struct
 } moveinfo_t;
 
 
-#define MAP_NOAUTO  1
-#define MAP_NOVOTE  2
+#define MAP_NOAUTO      1
+#define MAP_NOVOTE      2
+#define MAP_EXCLUSIVE   0x40000000
+#define MAP_WEIGHTED    0x80000000
 
 typedef struct map_entry_s {
     list_t list, queue;
     int min_players, max_players;
     int flags;
+    float weight;
     int num_hits, num_in, num_out; // for statistics
     char name[1];
 } map_entry_t;
