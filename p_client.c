@@ -184,6 +184,21 @@ static void AccountItemKills( edict_t *ent ) {
     }
 }
 
+static size_t G_HighlightStr(char *dst, const char *src, size_t size)
+{
+    size_t ret = strlen(src);
+
+    if (size) {
+        size_t i, len = ret >= size ? size - 1 : ret;
+
+        for (i = 0; i < len; i++)
+            dst[i] = src[i] | 0x80;
+        dst[i] = 0;
+    }
+
+    return ret;
+}
+
 static void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker)
 {
     int         mod;
@@ -304,7 +319,7 @@ static void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker
             name = self->client->pers.netname;
             level = PRINT_MEDIUM;
             if( G_IsSameView( ent, self ) ) {
-                Q_HighlightStr( buffer, name, MAX_NETNAME );
+                G_HighlightStr( buffer, name, MAX_NETNAME );
                 name = buffer;
                 level = PRINT_HIGH;
             }
@@ -408,11 +423,11 @@ static void ClientObituary (edict_t *self, edict_t *inflictor, edict_t *attacker
                 name2 = attacker->client->pers.netname;
                 level = PRINT_MEDIUM;
                 if( G_IsSameView( ent, attacker ) ) {
-                    Q_HighlightStr( buffer, name, MAX_NETNAME );
+                    G_HighlightStr( buffer, name, MAX_NETNAME );
                     name = buffer;
                     level = PRINT_HIGH;
                 } else if( G_IsSameView( ent, self ) ) {
-                    Q_HighlightStr( buffer, name2, MAX_NETNAME );
+                    G_HighlightStr( buffer, name2, MAX_NETNAME );
                     name2 = buffer;
                     level = PRINT_HIGH;
                 }
@@ -1466,7 +1481,7 @@ void ClientUserinfoChanged (edict_t *ent, char *userinfo)
     // set name
     s = Info_ValueForKey (userinfo, "name");
     Q_strlcpy( name, s, sizeof( name ) );
-    if( Q_IsWhiteSpace( name ) ) {
+    if( COM_IsWhite( name ) ) {
         strcpy( name, "unnamed" );
     }
 
@@ -1658,7 +1673,7 @@ void ClientDisconnect (edict_t *ent)
 static edict_t  *pm_passent;
 static int      pm_mask;
 
-static trace_t PM_trace( vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end ) {
+static trace_t q_gameabi PM_trace( vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end ) {
     return gi.trace( start, mins, maxs, end, pm_passent, pm_mask );
 }
 

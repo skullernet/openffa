@@ -162,7 +162,7 @@ static void ClientEndServerFrames (void) {
     }
 }
 
-static int QDECL ScoreCmp( const void *p1, const void *p2 ) {
+static int ScoreCmp( const void *p1, const void *p2 ) {
     score_t *a = ( score_t * )p1;
     score_t *b = ( score_t * )p2;
 
@@ -196,7 +196,7 @@ static void G_SaveScores( void ) {
     if( len >= sizeof( path ) ) {
         return;
     }
-    Q_mkdir( path );
+    os_mkdir( path );
 
     len = Q_concat( path, sizeof( path ), game.dir, "/highscores/",
         level.mapname, ".txt", NULL );
@@ -1117,7 +1117,7 @@ static void G_ReadLevel (const char *filename) {
 #ifndef GAME_HARD_LINKED
 
 // this is only here so the functions in q_shared.c can link
-void Com_Printf( const char *fmt, ... ) {
+void Com_LPrintf( print_type_t type, const char *fmt, ... ) {
     va_list     argptr;
     char        text[MAX_STRING_CHARS];
 
@@ -1126,31 +1126,6 @@ void Com_Printf( const char *fmt, ... ) {
     va_end( argptr );
 
     gi.dprintf( "%s", text );
-}
-
-void Com_DPrintf( const char *fmt, ... ) {
-}
-
-void Com_WPrintf( const char *fmt, ... ) {
-    va_list     argptr;
-    char        text[MAX_STRING_CHARS];
-
-    va_start( argptr, fmt );
-    Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-    va_end( argptr );
-
-    gi.dprintf( "WARNING: %s", text );
-}
-
-void Com_EPrintf( const char *fmt, ... ) {
-    va_list     argptr;
-    char        text[MAX_STRING_CHARS];
-
-    va_start( argptr, fmt );
-    Q_vsnprintf( text, sizeof( text ), fmt, argptr );
-    va_end( argptr );
-
-    gi.dprintf( "ERROR: %s", text );
 }
 
 void Com_Error( error_type_t code, const char *error, ... ) {
@@ -1174,7 +1149,7 @@ Returns a pointer to the structure with all entry points
 and global variables
 =================
 */
-EXPORTED game_export_t *GetGameAPI( game_import_t *import ) {
+q_exported game_export_t *GetGameAPI( game_import_t *import ) {
     gi = *import;
 
     globals.apiversion = GAME_API_VERSION;
