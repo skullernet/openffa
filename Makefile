@@ -1,48 +1,97 @@
-# this nice line comes from the linux kernel makefile
-ARCH:=$(shell uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc64/ -e s/arm.*/arm/ -e s/sa110/arm/ -e s/alpha/axp/)
+### OpenFFA Makefile ###
 
-VERSION:=$(shell cat REVISION)
-REVISION:=$(shell cat REVISION | tr -d -c [:digit:])
-DEFINES:=-DVERSION=\"r$(VERSION)\" -DREVISION=$(REVISION)
+-include .config
 
-ifdef USE_FPS
-DEFINES+=-DUSE_FPS=1
+ifndef CPU
+    CPU := $(shell uname -m | sed -e s/i.86/i386/ -e s/amd64/x86_64/ -e s/sun4u/sparc64/ -e s/arm.*/arm/ -e s/sa110/arm/ -e s/alpha/axp/)
 endif
 
-ifdef USE_SQLITE
-DEFINES+=-DUSE_SQLITE=1
+ifndef REV
+    REV := $(shell git rev-list HEAD | wc -l)
 endif
 
-VIS:=$(shell ./vis.sh)
-
-CFLAGS:=-pipe -fno-strict-aliasing $(VIS) -O2 -g -fPIC $(DEFINES) -Wall -Wstrict-prototypes
-ifdef USE_SQLITE
-LDFLAGS:=-lsqlite3
+ifndef VER
+    VER := r$(REV)~$(shell git rev-parse --short HEAD)
 endif
 
-SRCFILES=q_shared.c \
-	g_chase.c   g_func.c   g_misc.c   g_svcmds.c   g_utils.c   p_hud.c \
-	g_cmds.c    g_items.c  g_phys.c   g_target.c   g_weapon.c  p_view.c \
-	g_combat.c  g_main.c   g_spawn.c  g_trigger.c  p_client.c  p_weapon.c \
-	p_menu.c    g_vote.c   g_bans.c
+CC ?= gcc
+WINDRES ?= windres
+STRIP ?= strip
+RM ?= rm -f
 
-ifdef USE_SQLITE
-SRCFILES+=g_sqlite.c
+CFLAGS ?= -O2 -fno-strict-aliasing -g -Wall -MMD $(INCLUDES)
+LDFLAGS ?= -shared
+LIBS ?=
+
+ifdef CONFIG_WINDOWS
+    LDFLAGS += -mconsole
+    LDFLAGS += -Wl,--nxcompat,--dynamicbase
+else
+    CFLAGS += -fPIC -fvisibility=hidden
+    LDFLAGS += -Wl,--no-undefined
 endif
 
-OBJFILES=$(SRCFILES:%.c=%.o)
+CFLAGS += -DOPENFFA_VERSION='"$(VER)"' -DOPENFFA_REVISION=$(REV)
+RCFLAGS += -DOPENFFA_VERSION='\"$(VER)\"' -DOPENFFA_REVISION=$(REV)
 
-TARGET=game$(ARCH).so
+OBJS := g_bans.o g_chase.o g_cmds.o g_combat.o g_func.o g_items.o g_main.o \
+g_misc.o g_phys.o g_spawn.o g_svcmds.o g_target.o g_trigger.o g_utils.o \
+g_vote.o g_weapon.o p_client.o p_hud.o p_menu.o p_view.o p_weapon.o q_shared.o
 
-default: $(TARGET)
+ifdef CONFIG_VARIABLE_SERVER_FPS
+    CFLAGS += -DUSE_FPS=1
+endif
 
-strip: $(TARGET)
-	strip $^
+ifdef CONFIG_SQLITE
+    SQLITE_CFLAGS ?=
+    SQLITE_LIBS ?= -lsqlite3
+    CFLAGS += -DUSE_SQLITE=1 $(SQLITE_CFLAGS)
+    LIBS += $(SQLITE_LIBS)
+    OBJS += g_sqlite.o
+endif
+
+ifdef CONFIG_WINDOWS
+    OBJS += openffa.o
+    TARGET := game$(CPU).dll
+else
+    LIBS += -lm
+    TARGET := game$(CPU).so
+endif
+
+all: $(TARGET)
+
+default: all
+
+.PHONY: all default clean strip
+
+# Define V=1 to show command line.
+ifdef V
+    Q :=
+    E := @true
+else
+    Q := @
+    E := @echo
+endif
+
+-include $(OBJS:.o=.d)
+
+%.o: %.c
+	$(E) [CC] $@
+	$(Q)$(CC) -c $(CFLAGS) -o $@ $<
+
+%.o: %.rc
+	$(E) [RC] $@
+	$(Q)$(WINDRES) $(RCFLAGS) -o $@ $<
+
+$(TARGET): $(OBJS)
+	$(E) [LD] $@
+	$(Q)$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 clean:
-	rm -f *.o $(TARGET)
+	$(E) [CLEAN]
+	$(Q)$(RM) *.o *.d $(TARGET)
 
-.PHONY: clean
+strip: $(TARGET)
+	$(E) [STRIP]
+	$(Q)$(STRIP) $(TARGET)
 
-$(TARGET): $(OBJFILES)
-	$(CC) -shared -o $@ $^ $(LDFLAGS)

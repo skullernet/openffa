@@ -1452,7 +1452,7 @@ static const pmenu_entry_t main_menu[MAX_MENU_ENTRIES] = {
     { NULL },
     { "Use [ and ] to move cursor", PMENU_ALIGN_CENTER },
     { "Press Enter to select", PMENU_ALIGN_CENTER },
-    { "*"VERSION, PMENU_ALIGN_RIGHT }
+    { "*" OPENFFA_VERSION, PMENU_ALIGN_RIGHT }
 };
 
 void Cmd_Menu_f( edict_t *ent ) {
