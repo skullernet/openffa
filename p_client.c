@@ -188,21 +188,6 @@ static void AccountItemKills(edict_t *ent)
     }
 }
 
-static size_t G_HighlightStr(char *dst, const char *src, size_t size)
-{
-    size_t ret = strlen(src);
-
-    if (size) {
-        size_t i, len = ret >= size ? size - 1 : ret;
-
-        for (i = 0; i < len; i++)
-            dst[i] = src[i] | 0x80;
-        dst[i] = 0;
-    }
-
-    return ret;
-}
-
 static void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker)
 {
     int         mod;

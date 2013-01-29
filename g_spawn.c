@@ -838,15 +838,8 @@ Only used for the world.
 */
 void SP_worldspawn(edict_t *ent)
 {
-    static const char specmode[] = {
-        0xd3, 0xd0, 0xc5, 0xc3, 0xd4, 0xc1, 0xd4, 0xcf,
-        0xd2, 0xa0, 0xcd, 0xcf, 0xc4, 0xc5, 0
-    };
-    static const char pregame[] = {
-        0xd0, 0xf2, 0xe5, 0xf3, 0xf3, 0xa0, 0xc1, 0xd4,
-        0xd4, 0xc1, 0xc3, 0xcb, 0xa0, 0xf4, 0xef, 0xa0,
-        0xea, 0xef, 0xe9, 0xee, 0
-    };
+    char buffer[MAX_QPATH];
+
     ent->movetype = MOVETYPE_PUSH;
     ent->solid = SOLID_BSP;
     ent->inuse = qtrue;         // since the world doesn't use G_Spawn()
@@ -887,8 +880,12 @@ void SP_worldspawn(edict_t *ent)
     gi.configstring(CS_STATUSBAR, dm_statusbar);
 
     gi.configstring(CS_OBSERVE, "SPECT");
-    gi.configstring(CS_SPECMODE, specmode);
-    gi.configstring(CS_PREGAME, pregame);
+
+    G_HighlightStr(buffer, "SPECTATOR MODE", sizeof(buffer));
+    gi.configstring(CS_SPECMODE, buffer);
+
+    G_HighlightStr(buffer, "Press ATTACK to join", sizeof(buffer));
+    gi.configstring(CS_PREGAME, buffer);
 
     //---------------
 
