@@ -992,6 +992,7 @@ static void CopyToBodyQue(edict_t *ent)
     body->s.number = body - g_edicts;
     VectorCopy(ent->s.origin, body->s.origin);
     VectorCopy(ent->s.origin, body->s.old_origin);
+    VectorCopy(ent->s.origin, body->old_origin);
     VectorCopy(ent->s.angles, body->s.angles);
     body->s.modelindex = ent->s.modelindex;
     body->s.frame = ent->s.frame;
@@ -1227,6 +1228,7 @@ void PutClientInServer(edict_t *ent)
     }
 
     VectorCopy(ent->s.origin, ent->s.old_origin);
+    VectorCopy(ent->s.origin, ent->old_origin);
 
     client->ps.pmove.origin[0] = ent->s.origin[0] * 8;
     client->ps.pmove.origin[1] = ent->s.origin[1] * 8;

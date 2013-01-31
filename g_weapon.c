@@ -230,7 +230,7 @@ void fire_blaster(edict_t *self, vec3_t start, vec3_t dir, int damage, int speed
     // the object.  Right now trying to run into a firing hyperblaster
     // is very jerky since you are predicted 'against' the shots.
     VectorCopy(start, bolt->s.origin);
-    VectorCopy(start, bolt->s.old_origin);
+    VectorCopy(start, bolt->old_origin);
     vectoangles(dir, bolt->s.angles);
     VectorScale(dir, speed, bolt->velocity);
     bolt->movetype = MOVETYPE_FLYMISSILE;
@@ -356,6 +356,7 @@ void fire_grenade(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int sp
 
     grenade = G_Spawn();
     VectorCopy(start, grenade->s.origin);
+    VectorCopy(start, grenade->old_origin);
     VectorScale(aimdir, speed, grenade->velocity);
     VectorMA(grenade->velocity, 200 + crandom() * 10.0, up, grenade->velocity);
     VectorMA(grenade->velocity, crandom() * 10.0, right, grenade->velocity);
@@ -389,6 +390,7 @@ void fire_grenade2(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int s
 
     grenade = G_Spawn();
     VectorCopy(start, grenade->s.origin);
+    VectorCopy(start, grenade->old_origin);
     VectorScale(aimdir, speed, grenade->velocity);
     VectorMA(grenade->velocity, 200 + crandom() * 10.0, up, grenade->velocity);
     VectorMA(grenade->velocity, crandom() * 10.0, right, grenade->velocity);
@@ -471,6 +473,7 @@ void fire_rocket(edict_t *self, vec3_t start, vec3_t dir, int damage, int speed,
 
     rocket = G_Spawn();
     VectorCopy(start, rocket->s.origin);
+    VectorCopy(start, rocket->old_origin);
     VectorCopy(dir, rocket->movedir);
     vectoangles(dir, rocket->s.angles);
     VectorScale(dir, speed, rocket->velocity);
@@ -717,6 +720,7 @@ void fire_bfg(edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, fl
 
     bfg = G_Spawn();
     VectorCopy(start, bfg->s.origin);
+    VectorCopy(start, bfg->old_origin);
     VectorCopy(dir, bfg->movedir);
     vectoangles(dir, bfg->s.angles);
     VectorScale(dir, speed, bfg->velocity);

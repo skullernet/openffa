@@ -143,6 +143,7 @@ void ThrowGib(edict_t *self, int modelindex, int damage, int type)
     gib->s.origin[0] = origin[0] + crandom() * size[0];
     gib->s.origin[1] = origin[1] + crandom() * size[1];
     gib->s.origin[2] = origin[2] + crandom() * size[2];
+    VectorCopy(gib->s.origin, gib->old_origin);
 
     gib->s.modelindex = modelindex;
     gib->solid = SOLID_NOT;
@@ -1243,6 +1244,7 @@ static void teleporter_touch(edict_t *self, edict_t *other, cplane_t *plane, csu
 
     VectorCopy(dest->s.origin, other->s.origin);
     VectorCopy(dest->s.origin, other->s.old_origin);
+    VectorCopy(dest->s.origin, other->old_origin);
     other->s.origin[2] += 10;
 
     if ((int)g_teleporter_nofreeze->value == 0) {

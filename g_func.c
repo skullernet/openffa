@@ -1552,6 +1552,7 @@ again:
         first = qfalse;
         VectorSubtract(ent->s.origin, self->mins, self->s.origin);
         VectorCopy(self->s.origin, self->s.old_origin);
+        VectorCopy(self->s.origin, self->old_origin);
         self->s.event = EV_OTHER_TELEPORT;
         gi.linkentity(self);
         goto again;

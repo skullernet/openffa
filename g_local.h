@@ -1332,6 +1332,9 @@ struct edict_s {
 
     // common data blocks
     moveinfo_t      moveinfo;
+
+    // hack for proper s.old_origin updates
+    vec3_t      old_origin;
 };
 
 //

@@ -811,7 +811,7 @@ void G_RunFrame(void)
 
         level.current_entity = ent;
 
-        VectorCopy(ent->s.origin, ent->s.old_origin);
+        VectorCopy(ent->old_origin, ent->s.old_origin);
 
         // if the ground entity moved, make sure we are still on it
         if ((ent->groundentity) && (ent->groundentity->linkcount != ent->groundentity_linkcount)) {
@@ -895,6 +895,12 @@ void G_RunFrame(void)
     // reset settings if no one was active for the last 5 minutes
     if (game.settings_modified && level.framenum - level.activity_framenum > 5 * 60 * HZ) {
         G_ResetSettings();
+    }
+
+    // save old_origins for next frame
+    for (i = 0, ent = g_edicts; i < globals.num_edicts; i++, ent++) {
+        if (ent->inuse)
+            VectorCopy(ent->s.origin, ent->old_origin);
     }
 
     // advance for next frame
