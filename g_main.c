@@ -38,6 +38,7 @@ cvar_t  *maxclients;
 cvar_t  *maxentities;
 cvar_t  *g_select_empty;
 cvar_t  *g_idle_time;
+cvar_t  *g_idle_kick;
 cvar_t  *g_vote_mask;
 cvar_t  *g_vote_time;
 cvar_t  *g_vote_treshold;
@@ -995,6 +996,7 @@ static void G_Init(void)
 
     g_select_empty = gi.cvar("g_select_empty", "0", CVAR_ARCHIVE);
     g_idle_time = gi.cvar("g_idle_time", "0", 0);
+    g_idle_kick = gi.cvar("g_idle_kick", "0", 0);
     g_vote_mask = gi.cvar("g_vote_mask", "0", 0);
     g_vote_time = gi.cvar("g_vote_time", "60", 0);
     g_vote_treshold = gi.cvar("g_vote_treshold", "50", 0);

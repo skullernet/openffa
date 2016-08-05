@@ -652,6 +652,7 @@ extern  cvar_t  *fraglimit;
 extern  cvar_t  *timelimit;
 extern  cvar_t  *g_select_empty;
 extern  cvar_t  *g_idle_time;
+extern  cvar_t  *g_idle_kick;
 
 extern  cvar_t  *g_vote_mask;
 extern  cvar_t  *g_vote_time;
@@ -1074,7 +1075,14 @@ typedef struct {
 typedef struct {
     qboolean    first_time : 1,     // true when just connected
                 jump_held: 1;
-    vec3_t      cmd_angles;         // angles sent over in the last command
+    struct {
+        vec3_t      angles;         // angles sent over in the last command
+        int         framenum;
+        int         forwardmove;
+        int         upmove;
+        int         sidemove;
+        int         buttons;
+    } cmd;
     char        strings[PCS_TOTAL][MAX_NETNAME]; // private configstrings
     struct {
         int         index;

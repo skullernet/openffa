@@ -85,8 +85,16 @@ Server configuration
 Custom OpenFFA cvars are described below.
 
 g_idle_time::
-    Time, in seconds, after which inactive players are automatically put into
-    spectator mode. Default value is 0 (don't remove inactive players).
+    Time, in seconds, after which inactive players are removed from the game.
+    Default value is 0 (don't remove inactive players). Inactive players with
+    ‘stuck’ buttons are removed faster.
+
+g_idle_kick::
+    Specifies whether inactive players are kicked or put into spectator mode.
+    Default value is 0.
+       - 0 - put inactive players into spectator mode
+       - 1 - kick inactive players with ‘stuck’ buttons
+       - 2 - kick inactive players
 
 g_maps_random::
     Specifies whether map list is traversed in random on sequental order.

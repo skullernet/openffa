@@ -1106,7 +1106,7 @@ void G_SetDeltaAngles(edict_t *ent, vec3_t angles)
 
     for (i = 0; i < 3; i++) {
         ent->client->ps.pmove.delta_angles[i] = ANGLE2SHORT(
-                angles[i] - ent->client->level.cmd_angles[i]);
+                angles[i] - ent->client->level.cmd.angles[i]);
     }
 }
 
@@ -1721,17 +1721,25 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
     level.current_entity = ent;
     client = ent->client;
 
-    client->level.cmd_angles[0] = SHORT2ANGLE(ucmd->angles[0]);
-    client->level.cmd_angles[1] = SHORT2ANGLE(ucmd->angles[1]);
-    client->level.cmd_angles[2] = SHORT2ANGLE(ucmd->angles[2]);
+    client->level.cmd.angles[0] = SHORT2ANGLE(ucmd->angles[0]);
+    client->level.cmd.angles[1] = SHORT2ANGLE(ucmd->angles[1]);
+    client->level.cmd.angles[2] = SHORT2ANGLE(ucmd->angles[2]);
 
-    if (abs(ucmd->forwardmove) >= 10 || abs(ucmd->upmove) >= 10 ||
-        abs(ucmd->sidemove) >= 10 || client->buttons != ucmd->buttons) {
+    if (abs(ucmd->forwardmove - client->level.cmd.forwardmove) >= 10 ||
+        abs(ucmd->upmove - client->level.cmd.upmove) >= 10 ||
+        abs(ucmd->sidemove - client->level.cmd.sidemove) >= 10 ||
+        (ucmd->buttons ^ client->level.cmd.buttons) & BUTTON_ATTACK) {
         client->resp.activity_framenum = level.framenum;
         if (client->pers.connected == CONN_SPAWNED) {
             level.activity_framenum = level.framenum;
         }
     }
+
+    client->level.cmd.framenum = level.framenum;
+    client->level.cmd.forwardmove = ucmd->forwardmove;
+    client->level.cmd.upmove = ucmd->upmove;
+    client->level.cmd.sidemove = ucmd->sidemove;
+    client->level.cmd.buttons = ucmd->buttons;
 
     if (level.intermission_framenum) {
         client->ps.pmove.pm_type = PM_FREEZE;
@@ -1906,10 +1914,28 @@ void ClientBeginServerFrame(edict_t *ent)
         }
 
         if (g_idle_time->value > 0) {
-            if (level.framenum - client->resp.activity_framenum > g_idle_time->value * HZ) {
+            int timeout = g_idle_time->value * HZ;
+            int penalty = 0;
+
+            if (level.framenum - client->level.cmd.framenum < 1 * HZ) {
+                if (abs(client->level.cmd.forwardmove) >= 10 ||
+                    abs(client->level.cmd.sidemove) >= 10)
+                    penalty++;
+
+                if (client->level.cmd.buttons & BUTTON_ATTACK)
+                    penalty++;
+            }
+
+            if (level.framenum - client->resp.activity_framenum > timeout >> penalty) {
+                int kick = (int)g_idle_kick->value;
+
                 gi.bprintf(PRINT_HIGH, "Removing %s from the game due to inactivity.\n",
                            client->pers.netname);
-                spectator_respawn(ent, CONN_SPECTATOR);
+
+                if ((kick > 0 && penalty) || kick > 1)
+                    gi.AddCommandString(va("kick %d\n", (int)(client - game.clients)));
+                else
+                    spectator_respawn(ent, CONN_SPECTATOR);
                 return;
             }
         }
