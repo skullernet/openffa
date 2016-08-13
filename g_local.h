@@ -887,8 +887,6 @@ void G_RunEntity(edict_t *ent);
 //
 // g_main.c
 //
-void SaveClientData(void);
-void FetchClientEntData(edict_t *ent);
 void G_ExitLevel(void);
 void G_StartSound(int index);
 void G_StuffText(edict_t *ent, const char *text);
