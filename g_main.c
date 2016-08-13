@@ -449,6 +449,9 @@ static void G_LoadMapList(void)
     if (!game.dir[0]) {
         return;
     }
+    if (!g_maps_file->string[0]) {
+        return;
+    }
     len = Q_concat(path, sizeof(path), game.dir, "/mapcfg/",
                    g_maps_file->string, ".txt", NULL);
     if (len >= sizeof(path)) {
@@ -538,6 +541,9 @@ static void G_LoadSkinList(void)
     int linenum, numskins, numdirs;
 
     if (!game.dir[0]) {
+        return;
+    }
+    if (!g_skins_file->string[0]) {
         return;
     }
     len = Q_concat(path, sizeof(path), game.dir, "/",
@@ -933,7 +939,7 @@ static void G_Shutdown(void)
     List_Init(&g_map_queue);
 }
 
-static void check_cvar(cvar_t *cv)
+void G_CheckFilenameVariable(cvar_t *cv)
 {
     if (strchr(cv->string, '/') || strstr(cv->string, "..")) {
         gi.dprintf("'%s' should be a single filename, not a path.\n", cv->name);
@@ -1079,21 +1085,17 @@ static void G_Init(void)
         game.dir[0] = 0;
     }
 
-    check_cvar(g_maps_file);
-    if (g_maps_file->string[0]) {
-        G_LoadMapList();
-    }
+    G_CheckFilenameVariable(g_maps_file);
+    G_CheckFilenameVariable(g_defaults_file);
+    G_CheckFilenameVariable(g_skins_file);
 
-    check_cvar(g_defaults_file);
+    G_LoadMapList();
+    G_LoadSkinList();
 
 #if USE_SQLITE
-    check_cvar(g_sql_database);
+    G_CheckFilenameVariable(g_sql_database);
 #endif
 
-    check_cvar(g_skins_file);
-    if (g_skins_file->string[0]) {
-        G_LoadSkinList();
-    }
 
     // obtain server features
     cv = gi.cvar("sv_features", NULL, 0);

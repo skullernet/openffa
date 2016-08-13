@@ -893,6 +893,7 @@ void G_StuffText(edict_t *ent, const char *text);
 void G_RunFrame(void);
 void G_LoadScores(void);
 map_entry_t *G_FindMap(const char *name);
+void G_CheckFilenameVariable(cvar_t *cv);
 
 //
 // g_spawn.c
