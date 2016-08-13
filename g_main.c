@@ -60,11 +60,6 @@ cvar_t  *g_log_stats;
 cvar_t  *g_skins_file;
 cvar_t  *dedicated;
 
-#if USE_SQLITE
-cvar_t  *g_sql_database;
-cvar_t  *g_sql_async;
-#endif
-
 cvar_t  *sv_maxvelocity;
 cvar_t  *sv_gravity;
 
@@ -910,6 +905,8 @@ void G_RunFrame(void)
             VectorCopy(ent->s.origin, ent->old_origin);
     }
 
+    G_RunDatabase();
+
     // advance for next frame
     level.framenum++;
     level.time = level.framenum * FRAMETIME;
@@ -920,12 +917,7 @@ static void G_Shutdown(void)
 {
     gi.dprintf("==== ShutdownGame ====\n");
 
-#if USE_SQLITE
-    if (game.clients) {
-        G_LogClients();
-    }
     G_CloseDatabase();
-#endif
 
     gi.FreeTags(TAG_LEVEL);
     gi.FreeTags(TAG_GAME);
@@ -1020,10 +1012,6 @@ static void G_Init(void)
     g_team_chat = gi.cvar("g_team_chat", "0", 0);
     g_mute_chat = gi.cvar("g_mute_chat", "0", 0);
     g_protection_time = gi.cvar("g_protection_time", "0", 0);
-#if USE_SQLITE
-    g_sql_database = gi.cvar("g_sql_database", "", 0);
-    g_sql_async = gi.cvar("g_sql_async", "0", 0);
-#endif
     g_skins_file = gi.cvar("g_skins_file", "", CVAR_LATCH);
 
     run_pitch = gi.cvar("run_pitch", "0.002", 0);
@@ -1091,11 +1079,7 @@ static void G_Init(void)
 
     G_LoadMapList();
     G_LoadSkinList();
-
-#if USE_SQLITE
-    G_CheckFilenameVariable(g_sql_database);
-#endif
-
+    G_OpenDatabase();
 
     // obtain server features
     cv = gi.cvar("sv_features", NULL, 0);

@@ -9,7 +9,7 @@ CREATE TABLE players(
 -- generic player stats
 CREATE TABLE records(
     player_id INT,  -- REFERENCES players(rowid)
-    clock INT,      -- UNIX time of this update
+    date INT,       -- UNIX time of this update
     time INT,       -- seconds in game
     score INT,
     deaths INT,
@@ -17,7 +17,7 @@ CREATE TABLE records(
     damage_recvd INT
 );
 
-CREATE INDEX records_idx ON records(player_id,clock);
+CREATE INDEX records_idx ON records(player_id,date);
 
 /*
 typedef enum {
@@ -47,7 +47,7 @@ typedef enum {
 -- weapons, suicides, etc
 CREATE TABLE frags(
     player_id INT,  -- REFERENCES players(rowid)
-    clock INT,      -- UNIX time of this update
+    date INT,       -- UNIX time of this update
     frag INT,       -- frag type (one of frag_t constants above)
     kills INT,
     deaths INT,
@@ -56,7 +56,7 @@ CREATE TABLE frags(
     hits INT        -- shots hit
 );
 
-CREATE INDEX frags_idx ON frags(player_id,clock);
+CREATE INDEX frags_idx ON frags(player_id,date,frag);
 
 /*
 typedef enum {
@@ -108,7 +108,7 @@ typedef enum {
 -- picked up items
 CREATE TABLE items(
     player_id INT,  -- REFERENCES players(rowid)
-    clock INT,      -- UNIX time of this update
+    date INT,       -- UNIX time of this update
     item INT,       -- item type (one of item_t constants above)
     pickups INT,    -- number of items of the given type this player picked up
     misses INT,     -- number of items of the given type other players picked up
@@ -116,6 +116,6 @@ CREATE TABLE items(
     kills INT       -- counted only for quad, pent, megahealth and (power)armor
 );
 
-CREATE INDEX items_idx ON items(player_id,clock);
+CREATE INDEX items_idx ON items(player_id,date,item);
 
 COMMIT;

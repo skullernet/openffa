@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -21,143 +21,184 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "g_local.h"
 #include <sqlite3.h>
 
+static unsigned long last_timestamp;
+static unsigned long norm_timestamp;
+
 static sqlite3 *db;
 
 static unsigned long long rowid;
-static unsigned long updated;
 static int numcols;
+static int errors;
 
-static int db_query_callback( void *user, int argc, char **argv, char **names ) {
-    if( argc > 0 ) {
-        rowid = strtoull( argv[0], NULL, 10 );
-        if( argc > 1 ) {
-            updated = strtoul( argv[1], NULL, 10 );
-        }
-    }
+static int db_query_callback(void *user, int argc, char **argv, char **names)
+{
+    if (argc > 0)
+        rowid = strtoull(argv[0], NULL, 10);
+
     numcols = argc;
-
     return 0;
 }
 
-static int db_query( const char *fmt, ... ) {
+static int db_query_execute(sqlite3_callback cb, const char *fmt, ...)
+{
     char *sql, *err;
     va_list argptr;
     int ret;
 
-    va_start( argptr, fmt );
-    sql = sqlite3_vmprintf( fmt, argptr );
-    va_end( argptr );
+    va_start(argptr, fmt);
+    sql = sqlite3_vmprintf(fmt, argptr);
+    va_end(argptr);
 
-    ret = sqlite3_exec( db, sql, db_query_callback, NULL, &err );
-    if( ret ) {
-        Com_EPrintf( "%s: %s\n", __func__, err );
-        sqlite3_free( err );
+    ret = sqlite3_exec(db, sql, cb, NULL, &err);
+    if (ret) {
+        gi.dprintf("%s\n", err);
+        sqlite3_free(err);
+        errors++;
     }
-    sqlite3_free( sql );
+
+    sqlite3_free(sql);
     return ret;
 }
 
-static int db_execute( const char *fmt, ... ) {
-    char *sql, *err;
-    va_list argptr;
-    int ret;
+#define db_query(...)   db_query_execute(db_query_callback, __VA_ARGS__)
+#define db_execute(...) db_query_execute(NULL, __VA_ARGS__)
 
-    va_start( argptr, fmt );
-    sql = sqlite3_vmprintf( fmt, argptr );
-    va_end( argptr );
-
-    ret = sqlite3_exec( db, sql, NULL, NULL, &err );
-    if( ret ) {
-        Com_EPrintf( "%s: %s\n", __func__, err );
-        sqlite3_free( err );
-    }
-    sqlite3_free( sql );
-    return ret;
-}
-
-void G_BeginLogging( void ) {
-    if( db ) {
-        db_execute( "BEGIN TRANSACTION" );
-    }
-}
-
-void G_EndLogging( void ) {
-    if( db ) {
-        db_execute( "COMMIT" );
-    }
-}
-
-void G_LogClient( gclient_t *c ) {
-    unsigned long clock;
+static void log_client(gclient_t *c)
+{
     fragstat_t *fs;
     itemstat_t *is;
-    int i, ret;
+    int i, time;
 
-    if( !db ) {
-        return;
-    }
-
-    clock = time( NULL );
-
+    errors = 0;
     numcols = 0;
-    ret = db_query( "SELECT rowid,updated FROM players WHERE netname=%Q", c->pers.netname );
-    if( ret ) {
+    if (db_query("SELECT rowid FROM players WHERE netname=%Q", c->pers.netname))
         return;
-    }
 
-    if( numcols > 1 ) {
-        if( clock <= updated ) {
+    if (!numcols) {
+        if (db_execute("INSERT INTO players VALUES(%Q,%lu,%lu)",
+                       c->pers.netname, last_timestamp, last_timestamp))
             return;
-        }
-        //gi.dprintf( "found player_id=%llu\n", rowid );
-    } else {
-        ret = db_execute( "INSERT INTO players VALUES(%Q,%lu,%lu)",
-            c->pers.netname, clock, clock );
-        if( ret ) {
-            return;
-        }
-        rowid = sqlite3_last_insert_rowid( db );
-        //gi.dprintf( "created player_id=%llu\n", rowid );
+        rowid = sqlite3_last_insert_rowid(db);
     }
 
-    // MapChange \current\%s\next\%s\players\%d
-    // PlayerBegin \name\%s\id\%s
-    // PlayerEnd \name\%s\id\%s
-    // PlayerStats \name\%s\id\%s\time\%d\frg\%d\dth\%d\dmg\%d\dmr\%d\w%d\%d,%d,%d,%d,%d\i%d\%d,%d,%d
-    db_execute( "INSERT INTO records VALUES(%llu,%lu,%d,%d,%d,%d,%d)",
-        rowid, clock, ( level.framenum - c->resp.enter_framenum ) / HZ,
-        c->resp.score, c->resp.deaths, c->resp.damage_given, c->resp.damage_recvd );
+    time = (level.framenum - c->resp.enter_framenum) / HZ;
 
-    for( i = 0; i < FRAG_TOTAL; i++ ) {
-        fs = &c->resp.frags[i];
-        if( fs->kills || fs->deaths || fs->suicides || fs->atts || fs->hits ) {
-            db_execute( "INSERT INTO frags VALUES(%llu,%lu,%d,%d,%d,%d,%d,%d)",
-                rowid, clock, i, fs->kills, fs->deaths, fs->suicides, fs->atts, fs->hits );
+    db_execute("UPDATE records SET "
+               "time=time+%d,"
+               "score=score+%d,"
+               "deaths=deaths+%d,"
+               "damage_given=damage_given+%d,"
+               "damage_recvd=damage_recvd+%d "
+               "WHERE player_id=%llu AND date=%lu",
+               time, c->resp.score, c->resp.deaths,
+               c->resp.damage_given, c->resp.damage_recvd,
+               rowid, norm_timestamp);
+
+    if (!sqlite3_changes(db)) {
+        db_execute("INSERT INTO records VALUES(%llu,%lu,%d,%d,%d,%d,%d)",
+                   rowid, norm_timestamp,
+                   time, c->resp.score, c->resp.deaths,
+                   c->resp.damage_given, c->resp.damage_recvd);
+    }
+
+    for (i = 0, fs = c->resp.frags; i < FRAG_TOTAL; i++, fs++) {
+        if (fs->kills || fs->deaths || fs->suicides || fs->atts || fs->hits) {
+            db_execute("UPDATE frags SET "
+                       "kills=kills+%d,"
+                       "deaths=deaths+%d,"
+                       "suicides=suicides+%d,"
+                       "atts=atts+%d,"
+                       "hits=hits+%d "
+                       "WHERE player_id=%llu AND date=%lu AND frag=%d",
+                       fs->kills, fs->deaths, fs->suicides, fs->atts, fs->hits,
+                       rowid, norm_timestamp, i);
+
+            if (!sqlite3_changes(db)) {
+                db_execute("INSERT INTO frags VALUES(%llu,%lu,%d,%d,%d,%d,%d,%d)",
+                           rowid, norm_timestamp, i,
+                           fs->kills, fs->deaths, fs->suicides, fs->atts, fs->hits);
+            }
         }
     }
 
-    for( i = 0; i < ITEM_TOTAL; i++ ) {
-        is = &c->resp.items[i];
-        if( is->pickups || is->misses || is->kills ) {
-            db_execute( "INSERT INTO items VALUES(%llu,%lu,%d,%d,%d,%d)",
-                rowid, clock, i, is->pickups, is->misses, is->kills );
+    for (i = 0, is = c->resp.items; i < ITEM_TOTAL; i++, is++) {
+        if (is->pickups || is->misses || is->kills) {
+            db_execute("UPDATE items SET "
+                       "pickups=pickups+%d,"
+                       "misses=misses+%d,"
+                       "kills=kills+%d "
+                       "WHERE player_id=%llu AND date=%lu AND item=%d",
+                       is->pickups, is->misses, is->kills,
+                       rowid, norm_timestamp, i);
+
+            if (!sqlite3_changes(db)) {
+                db_execute("INSERT INTO items VALUES(%llu,%lu,%d,%d,%d,%d)",
+                           rowid, norm_timestamp, i,
+                           is->pickups, is->misses, is->kills);
+            }
         }
     }
 
-    db_execute( "UPDATE players SET updated=%lu WHERE rowid=%llu", clock, rowid );
+    db_execute("UPDATE players SET updated=%lu WHERE rowid=%llu", last_timestamp, rowid);
 }
 
-void G_LogClients( void ) {
+static time_t normalize_timestamp(time_t t)
+{
+    struct tm   *tm;
+
+    if (!(tm = localtime(&t)))
+        return -1;
+
+    tm->tm_sec = tm->tm_min = tm->tm_hour = 0;
+    return mktime(tm);
+}
+
+void G_LogClient(gclient_t *c)
+{
+    if (!db)
+        return;
+
+    last_timestamp = time(NULL);
+    norm_timestamp = normalize_timestamp(last_timestamp);
+
+    if (db_execute("BEGIN TRANSACTION"))
+        return;
+
+    log_client(c);
+
+    db_execute(errors ? "ROLLBACK" : "COMMIT");
+}
+
+void G_LogClients(void)
+{
     gclient_t *c;
     int i;
 
-    G_BeginLogging();
-    for( i = 0, c = game.clients; i < game.maxclients; i++, c++ ) {
-        if( c->pers.connected == CONN_SPAWNED ) {
-            G_LogClient( c );
+    if (!db)
+        return;
+
+    if (!game.clients)
+        return;
+
+    last_timestamp = time(NULL);
+    norm_timestamp = normalize_timestamp(last_timestamp);
+
+    if (db_execute("BEGIN TRANSACTION"))
+        return;
+
+    for (i = 0, c = game.clients; i < game.maxclients; i++, c++) {
+        if (c->pers.connected != CONN_SPAWNED)
+            continue;
+
+        log_client(c);
+
+        if (errors) {
+            db_execute("ROLLBACK");
+            return;
         }
     }
-    G_EndLogging();
+
+    db_execute("COMMIT");
 }
 
 static const char schema[] =
@@ -171,7 +212,7 @@ static const char schema[] =
 
 "CREATE TABLE IF NOT EXISTS records(\n"
     "player_id INT,\n"
-    "clock INT,\n"
+    "date INT,\n"
     "time INT,\n"
     "score INT,\n"
     "deaths INT,\n"
@@ -179,11 +220,11 @@ static const char schema[] =
     "damage_recvd INT\n"
 ");\n"
 
-"CREATE INDEX IF NOT EXISTS records_idx ON records(player_id,clock);\n"
+"CREATE INDEX IF NOT EXISTS records_idx ON records(player_id,date);\n"
 
 "CREATE TABLE IF NOT EXISTS frags(\n"
     "player_id INT,\n"
-    "clock INT,\n"
+    "date INT,\n"
     "frag INT,\n"
     "kills INT,\n"
     "deaths INT,\n"
@@ -192,80 +233,75 @@ static const char schema[] =
     "hits INT\n"
 ");\n"
 
-"CREATE INDEX IF NOT EXISTS frags_idx ON frags(player_id,clock);\n"
+"CREATE INDEX IF NOT EXISTS frags_idx ON frags(player_id,date,frag);\n"
 
 "CREATE TABLE IF NOT EXISTS items(\n"
     "player_id INT,\n"
-    "clock INT,\n"
+    "date INT,\n"
     "item INT,\n"
     "pickups INT,\n"
     "misses INT,\n"
     "kills INT\n"
 ");\n"
 
-"CREATE INDEX IF NOT EXISTS items_idx ON items(player_id,clock);\n"
+"CREATE INDEX IF NOT EXISTS items_idx ON items(player_id,date,item);\n"
 
 "COMMIT;\n";
 
-qboolean G_OpenDatabase( void ) {
+void G_OpenDatabase(void)
+{
     char buffer[MAX_OSPATH];
-    size_t len;
-    char *err;
-    int ret;
+    char *err = NULL;
 
-    if( db ) {
-        return qtrue;
+    cvar_t *g_sql_database = gi.cvar("g_sql_database", "", CVAR_LATCH);
+    cvar_t *g_sql_async = gi.cvar("g_sql_async", "0", CVAR_LATCH);
+
+    G_CheckFilenameVariable(g_sql_database);
+
+    if (!game.dir[0] || !g_sql_database->string[0])
+        return;
+
+    if (Q_snprintf(buffer, sizeof(buffer), "%s/%s.db", game.dir, g_sql_database->string) >= sizeof(buffer)) {
+        gi.dprintf("SQLite database path too long\n");
+        return;
     }
 
-    if( !game.dir[0] ) {
-        return qfalse;
-    }
-
-    if( !g_sql_database->string[0] ) {
-        return qfalse;
-    }
-
-    len = Q_snprintf( buffer, sizeof( buffer ), "%s/%s.db",
-        game.dir, g_sql_database->string  );
-    if( len >= sizeof( buffer ) ) {
-        return qfalse;
-    }
-
-    ret = sqlite3_open( buffer, &db );
-    if( ret ) {
-        Com_EPrintf( "Couldn't open SQLite database: %s", sqlite3_errmsg( db ) );
+    if (sqlite3_open(buffer, &db)) {
+        gi.dprintf("Couldn't open SQLite database: %s\n", sqlite3_errmsg(db));
         goto fail;
     }
 
-    if( (int)g_sql_async->value ) {
-        ret = db_execute( "PRAGMA synchronous=OFF" );
-        if( ret ) {
-            goto fail;
-        }
-    }
-
-    ret = sqlite3_exec( db, schema, NULL, NULL, &err );
-    if( ret ) {
-        Com_EPrintf( "Couldn't create SQLite database schema: %s\n", err );
-        sqlite3_free( err );
+    if ((int)g_sql_async->value && sqlite3_exec(db, "PRAGMA synchronous=OFF", NULL, NULL, &err)) {
+        gi.dprintf("Couldn't make SQLite database asynchronous: %s\n", err);
         goto fail;
     }
 
-    gi.dprintf( "Logging to SQLite database '%s'\n", buffer );
+    if (sqlite3_exec(db, schema, NULL, NULL, &err)) {
+        gi.dprintf("Couldn't create SQLite database schema: %s\n", err);
+        goto fail;
+    }
 
-    return qtrue;
+    gi.dprintf("Logging to SQLite database '%s'\n", buffer);
+    return;
 
 fail:
-    sqlite3_close( db );
-    db = NULL;
-    return qfalse;
-}
-
-void G_CloseDatabase( void ) {
-    if( db ) {
-        gi.dprintf( "Closing SQLite database\n" );
-        sqlite3_close( db );
+    if (err)
+        sqlite3_free(err);
+    if (db) {
+        sqlite3_close(db);
         db = NULL;
     }
 }
 
+void G_CloseDatabase(void)
+{
+    if (db) {
+        gi.dprintf("Closing SQLite database\n");
+        sqlite3_close(db);
+        db = NULL;
+    }
+}
+
+void G_RunDatabase(void)
+{
+}

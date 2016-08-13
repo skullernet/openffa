@@ -543,10 +543,7 @@ void G_SpawnEntities(const char *mapname, const char *entities, const char *spaw
     char        *token;
     char        playerskin[MAX_QPATH];
 
-#if USE_SQLITE
-    G_OpenDatabase();
     G_LogClients();
-#endif
 
     gi.FreeTags(TAG_LEVEL);
 
@@ -620,9 +617,7 @@ void G_ResetLevel(void)
 
     gi.FreeTags(TAG_LEVEL);
 
-#if USE_SQLITE
     G_LogClients();
-#endif
 
     G_FinishVote();
 

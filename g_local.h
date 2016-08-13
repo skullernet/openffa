@@ -672,11 +672,6 @@ extern  cvar_t  *g_mute_chat;
 extern  cvar_t  *g_protection_time;
 extern  cvar_t  *dedicated;
 
-#if USE_SQLITE
-extern  cvar_t  *g_sql_database;
-extern  cvar_t  *g_sql_async;
-#endif
-
 extern  cvar_t  *sv_gravity;
 extern  cvar_t  *sv_maxvelocity;
 
@@ -1394,11 +1389,16 @@ void G_WriteIP_f(void);
 // g_sqlite.c
 //
 #if USE_SQLITE
-void G_BeginLogging(void);
-void G_EndLogging(void);
 void G_LogClient(gclient_t *c);
 void G_LogClients(void);
-qboolean G_OpenDatabase(void);
+void G_OpenDatabase(void);
 void G_CloseDatabase(void);
+void G_RunDatabase(void);
+#else
+#define G_LogClient(c)      (void)0
+#define G_LogClients()      (void)0
+#define G_OpenDatabase()    (void)0
+#define G_CloseDatabase()   (void)0
+#define G_RunDatabase()     (void)0
 #endif
 

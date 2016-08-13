@@ -1072,11 +1072,7 @@ void spectator_respawn(edict_t *ent, int connected)
 
         TossClientWeapon(ent);
 
-#if USE_SQLITE
-        G_BeginLogging();
         G_LogClient(ent->client);
-        G_EndLogging();
-#endif
 
         // clear client on respawn
         memset(&ent->client->resp, 0, sizeof(ent->client->resp));
@@ -1603,13 +1599,9 @@ void ClientDisconnect(edict_t *ent)
     ent->client->pers.connected = CONN_DISCONNECTED;
     ent->client->ps.stats[STAT_FRAGS] = 0;
 
-#if USE_SQLITE
     if (connected == CONN_SPAWNED) {
-        G_BeginLogging();
         G_LogClient(ent->client);
-        G_EndLogging();
     }
-#endif
 
     if (connected == CONN_SPAWNED && !level.intermission_framenum) {
         // send effect
