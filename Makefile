@@ -58,6 +58,11 @@ ifdef CONFIG_CURL
     OBJS += g_curl.o
 endif
 
+ifdef CONFIG_UDP
+    CFLAGS += -DUSE_UDP=1
+    OBJS += g_udp.o
+endif
+
 ifdef CONFIG_WINDOWS
     OBJS += openffa.o
     TARGET := game$(CPU).dll
