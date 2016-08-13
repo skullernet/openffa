@@ -50,6 +50,14 @@ ifdef CONFIG_SQLITE
     OBJS += g_sqlite.o
 endif
 
+ifdef CONFIG_CURL
+    CURL_CFLAGS ?= $(shell curl-config --cflags)
+    CURL_LIBS ?= $(shell curl-config --libs)
+    CFLAGS += -DUSE_CURL=1 $(CURL_CFLAGS)
+    LIBS += $(CURL_LIBS)
+    OBJS += g_curl.o
+endif
+
 ifdef CONFIG_WINDOWS
     OBJS += openffa.o
     TARGET := game$(CPU).dll

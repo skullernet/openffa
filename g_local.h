@@ -1386,9 +1386,9 @@ void G_ListIP_f(edict_t *ent);
 void G_WriteIP_f(void);
 
 //
-// g_sqlite.c
+// g_sqlite.c / g_curl.c
 //
-#if USE_SQLITE
+#if USE_SQLITE || USE_CURL
 void G_LogClient(gclient_t *c);
 void G_LogClients(void);
 void G_OpenDatabase(void);
