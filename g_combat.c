@@ -25,11 +25,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 ============
 CanDamage
 
-Returns qtrue if the inflictor can directly damage the target.  Used for
+Returns true if the inflictor can directly damage the target.  Used for
 explosions and melee attacks.
 ============
 */
-qboolean CanDamage(edict_t *targ, edict_t *inflictor)
+bool CanDamage(edict_t *targ, edict_t *inflictor)
 {
     vec3_t  dest;
     trace_t trace;
@@ -41,15 +41,15 @@ qboolean CanDamage(edict_t *targ, edict_t *inflictor)
         VectorScale(dest, 0.5, dest);
         trace = gi.trace(inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
         if (trace.fraction == 1.0)
-            return qtrue;
+            return true;
         if (trace.ent == targ)
-            return qtrue;
-        return qfalse;
+            return true;
+        return false;
     }
 
     trace = gi.trace(inflictor->s.origin, vec3_origin, vec3_origin, targ->s.origin, inflictor, MASK_SOLID);
     if (trace.fraction == 1.0)
-        return qtrue;
+        return true;
 
     if ((int)g_bugs->value < 1) {
         vec_t *bounds[] = { targ->absmin, targ->absmax };
@@ -61,7 +61,7 @@ qboolean CanDamage(edict_t *targ, edict_t *inflictor)
 
             trace = gi.trace(inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
             if (trace.fraction == 1.0)
-                return qtrue;
+                return true;
         }
     } else {
         dest[2] = targ->s.origin[2];
@@ -79,11 +79,11 @@ qboolean CanDamage(edict_t *targ, edict_t *inflictor)
 
             trace = gi.trace(inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
             if (trace.fraction == 1.0)
-                return qtrue;
+                return true;
         }
     }
 
-    return qfalse;
+    return false;
 }
 
 
@@ -247,11 +247,11 @@ static int CheckArmor(edict_t *ent, vec3_t point, vec3_t normal, int damage, int
     return save;
 }
 
-static qboolean CheckTeamDamage(edict_t *targ, edict_t *attacker)
+static bool CheckTeamDamage(edict_t *targ, edict_t *attacker)
 {
     //FIXME make the next line real and uncomment this block
     // if ((ability to damage a teammate == OFF) && (targ's team == attacker's team))
-    return qfalse;
+    return false;
 }
 
 void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod)

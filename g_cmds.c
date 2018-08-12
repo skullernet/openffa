@@ -109,17 +109,17 @@ void ValidateSelectedItem(edict_t *ent)
 
 //=================================================================================
 
-static qboolean CheckCheats(edict_t *ent)
+static bool CheckCheats(edict_t *ent)
 {
     if (!PLAYER_SPAWNED(ent)) {
-        return qfalse;
+        return false;
     }
     if ((int)sv_cheats->value == 0) {
         gi.cprintf(ent, PRINT_HIGH, "Cheats are disabled on this server.\n");
-        return qfalse;
+        return false;
     }
 
-    return qtrue;
+    return true;
 }
 
 /*
@@ -135,7 +135,7 @@ static void Cmd_Give_f(edict_t *ent)
     gitem_t     *it;
     int         index;
     int         i;
-    qboolean    give_all;
+    bool        give_all;
     edict_t     *it_ent;
 
     if (!CheckCheats(ent)) {
@@ -145,9 +145,9 @@ static void Cmd_Give_f(edict_t *ent)
     name = gi.args();
 
     if (Q_stricmp(name, "all") == 0)
-        give_all = qtrue;
+        give_all = true;
     else
-        give_all = qfalse;
+        give_all = false;
 
     if (give_all || Q_stricmp(gi.argv(1), "health") == 0) {
         if (gi.argc() == 3)
@@ -582,13 +582,13 @@ static void Cmd_PutAway_f(edict_t *ent)
     ent->client->layout = 0;
 }
 
-qboolean G_FloodProtect(edict_t *ent, flood_t *flood,
-                        const char *what, int msgs, float persecond, float delay)
+bool G_FloodProtect(edict_t *ent, flood_t *flood,
+                    const char *what, int msgs, float persecond, float delay)
 {
     int i, sec;
 
     if (msgs < 1) {
-        return qfalse;
+        return false;
     }
 
     if (level.framenum < flood->locktill) {
@@ -598,7 +598,7 @@ qboolean G_FloodProtect(edict_t *ent, flood_t *flood,
         }
         gi.cprintf(ent, PRINT_HIGH, "You can't %s for %d more second%s.\n",
                    what, sec, sec == 1 ? "" : "s");
-        return qtrue;
+        return true;
     }
 
     i = flood->whenhead - msgs + 1;
@@ -608,11 +608,11 @@ qboolean G_FloodProtect(edict_t *ent, flood_t *flood,
                    "Flood protection: You can't %s for %d seconds.\n", what, (int)delay);
         gi.dprintf("%s can't %s for %d seconds\n",
                    ent->client->pers.netname, what, (int)delay);
-        return qtrue;
+        return true;
     }
 
     flood->when[++flood->whenhead % FLOOD_MSGS] = level.framenum;
-    return qfalse;
+    return false;
 }
 
 
@@ -784,7 +784,7 @@ void Cmd_Players_f(edict_t *ent)
     gclient_t *c;
     int i, sec;
     char score[16], idle[16], time[16];
-    qboolean show_ips = !ent || ent->client->pers.admin;
+    bool show_ips = !ent || ent->client->pers.admin;
 
     gi.cprintf(ent, PRINT_HIGH,
                "id score ping time name            idle %s\n"
@@ -931,13 +931,13 @@ edict_t *G_SetVictim(edict_t *ent, int start)
 }
 
 
-static qboolean G_SpecRateLimited(edict_t *ent)
+static bool G_SpecRateLimited(edict_t *ent)
 {
     if (level.framenum - ent->client->resp.enter_framenum < 5 * HZ) {
         gi.cprintf(ent, PRINT_HIGH, "You may not change modes too soon.\n");
-        return qtrue;
+        return true;
     }
-    return qfalse;
+    return false;
 }
 
 static void Cmd_Observe_f(edict_t *ent)
@@ -1050,7 +1050,7 @@ static const char weapnames[WEAP_TOTAL][12] = {
     "R.Launcher",   "H.Blaster",    "Railgun",      "BFG10K"
 };
 
-void Cmd_Stats_f(edict_t *ent, qboolean check_other)
+void Cmd_Stats_f(edict_t *ent, bool check_other)
 {
     int i;
     fragstat_t *s;
@@ -1231,7 +1231,7 @@ static void Cmd_Admin_f(edict_t *ent)
     if (ent->client->pers.admin) {
         gi.bprintf(PRINT_HIGH, "%s is no longer an admin.\n",
                    ent->client->pers.netname);
-        ent->client->pers.admin = qfalse;
+        ent->client->pers.admin = false;
         return;
     }
     if (gi.argc() < 2) {
@@ -1248,14 +1248,14 @@ static void Cmd_Admin_f(edict_t *ent)
         return;
     }
 
-    ent->client->pers.admin = qtrue;
+    ent->client->pers.admin = true;
     gi.bprintf(PRINT_HIGH, "%s became an admin.\n",
                ent->client->pers.netname);
 
     G_CheckVote();
 }
 
-static void Cmd_Mute_f(edict_t *ent, qboolean muted)
+static void Cmd_Mute_f(edict_t *ent, bool muted)
 {
     edict_t *other;
 
@@ -1280,7 +1280,7 @@ static void Cmd_Mute_f(edict_t *ent, qboolean muted)
                other->client->pers.netname, muted ? "" : "un");
 }
 
-static void Cmd_MuteAll_f(edict_t *ent, qboolean muted)
+static void Cmd_MuteAll_f(edict_t *ent, bool muted)
 {
     if (!!(int)g_mute_chat->value == muted) {
         gi.cprintf(ent, PRINT_HIGH, "Players are already %smuted\n",
@@ -1293,7 +1293,7 @@ static void Cmd_MuteAll_f(edict_t *ent, qboolean muted)
                muted ? "no longer" : "now");
 }
 
-static void Cmd_Kick_f(edict_t *ent, qboolean ban)
+static void Cmd_Kick_f(edict_t *ent, bool ban)
 {
     edict_t *other;
 
@@ -1343,7 +1343,7 @@ static void Cmd_Commands_f(edict_t *ent)
               );
 }
 
-static qboolean become_spectator(edict_t *ent)
+static bool become_spectator(edict_t *ent)
 {
     switch (ent->client->pers.connected) {
     case CONN_PREGAME:
@@ -1351,18 +1351,18 @@ static qboolean become_spectator(edict_t *ent)
         break;
     case CONN_SPAWNED:
         if (G_SpecRateLimited(ent)) {
-            return qfalse;
+            return false;
         }
         spectator_respawn(ent, CONN_SPECTATOR);
         break;
     case CONN_SPECTATOR:
-        return qtrue;
+        return true;
     default:
-        return qfalse;
+        return false;
     }
 
     gi.cprintf(ent, PRINT_HIGH, "Changed to spectator mode.\n");
-    return qtrue;
+    return true;
 }
 
 static void select_test(edict_t *ent)
@@ -1482,7 +1482,7 @@ static void Cmd_Score_f(edict_t *ent)
     }
 
     ent->client->layout = LAYOUT_SCORES;
-    DeathmatchScoreboardMessage(ent, qtrue);
+    DeathmatchScoreboardMessage(ent, true);
 }
 
 static void Cmd_OldScore_f(edict_t *ent)
@@ -1501,7 +1501,7 @@ static void Cmd_OldScore_f(edict_t *ent)
 
     gi.WriteByte(svc_layout);
     gi.WriteString(game.oldscores);
-    gi.unicast(ent, qtrue);
+    gi.unicast(ent, true);
 }
 
 /*
@@ -1526,19 +1526,19 @@ void ClientCommand(edict_t *ent)
 
     if (ent->client->pers.admin) {
         if (Q_stricmp(cmd, "mute") == 0) {
-            Cmd_Mute_f(ent, qtrue);
+            Cmd_Mute_f(ent, true);
             return;
         }
         if (Q_stricmp(cmd, "unmute") == 0) {
-            Cmd_Mute_f(ent, qfalse);
+            Cmd_Mute_f(ent, false);
             return;
         }
         if (Q_stricmp(cmd, "muteall") == 0) {
-            Cmd_MuteAll_f(ent, qtrue);
+            Cmd_MuteAll_f(ent, true);
             return;
         }
         if (Q_stricmp(cmd, "unmuteall") == 0) {
-            Cmd_MuteAll_f(ent, qfalse);
+            Cmd_MuteAll_f(ent, false);
             return;
         }
         if (Q_stricmp(cmd, "ban") == 0) {
@@ -1554,11 +1554,11 @@ void ClientCommand(edict_t *ent)
             return;
         }
         if (Q_stricmp(cmd, "kick") == 0 || Q_stricmp(cmd, "boot") == 0) {
-            Cmd_Kick_f(ent, qfalse);
+            Cmd_Kick_f(ent, false);
             return;
         }
         if (Q_stricmp(cmd, "kickban") == 0) {
-            Cmd_Kick_f(ent, qtrue);
+            Cmd_Kick_f(ent, true);
             return;
         }
         if (Q_stricmp(cmd, "acommands") == 0) {
@@ -1584,7 +1584,7 @@ void ClientCommand(edict_t *ent)
         return;
     }
     if (Q_stricmp(cmd, "stats") == 0 || Q_stricmp(cmd, "accuracy") == 0) {
-        Cmd_Stats_f(ent, qtrue);
+        Cmd_Stats_f(ent, true);
         return;
     }
     if (Q_stricmp(cmd, "settings") == 0 || Q_stricmp(cmd, "matchinfo") == 0) {
@@ -1665,9 +1665,9 @@ void ClientCommand(edict_t *ent)
     else if (Q_stricmp(cmd, "vote") == 0 || Q_stricmp(cmd, "callvote") == 0)
         Cmd_Vote_f(ent);
     else if (Q_stricmp(cmd, "yes") == 0 && level.vote.proposal)
-        Cmd_CastVote_f(ent, qtrue);
+        Cmd_CastVote_f(ent, true);
     else if (Q_stricmp(cmd, "no") == 0 && level.vote.proposal)
-        Cmd_CastVote_f(ent, qfalse);
+        Cmd_CastVote_f(ent, false);
     else if (Q_stricmp(cmd, "menu") == 0)
         Cmd_Menu_f(ent);
     else    // anything that doesn't match a command will be a chat

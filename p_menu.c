@@ -29,7 +29,7 @@ static void PMenu_Write(edict_t *ent)
     int x;
     pmenu_t *menu = &ent->client->menu;
     const char *t;
-    qboolean alt;
+    bool alt;
 
     strcpy(string, "xv 32 yv 8 picn inventory ");
     total = strlen(string);
@@ -39,10 +39,10 @@ static void PMenu_Write(edict_t *ent)
             continue; // blank line
         t = p->text;
         if (*t == '*') {
-            alt = qtrue;
+            alt = true;
             t++;
         } else {
-            alt = qfalse;
+            alt = false;
         }
         if (p->align == PMENU_ALIGN_CENTER)
             x = 196 / 2 - strlen(t) * 4 + 64;
@@ -96,7 +96,7 @@ void PMenu_Open(edict_t *ent, const pmenu_entry_t *entries)
     }
 
     //ent->client->menu_framenum = 0;
-    ent->client->menu_dirty = qtrue;
+    ent->client->menu_dirty = true;
     ent->client->layout = LAYOUT_MENU;
 }
 
@@ -106,7 +106,7 @@ void PMenu_Close(edict_t *ent)
         return;
     }
     memset(&ent->client->menu, 0, sizeof(ent->client->menu));
-    ent->client->menu_dirty = qfalse;
+    ent->client->menu_dirty = false;
     ent->client->layout = LAYOUT_NONE;
 }
 
@@ -126,9 +126,9 @@ void PMenu_Update(edict_t *ent)
 
     // been a second or more since last update, update now
     PMenu_Write(ent);
-    gi.unicast(ent, qtrue);
+    gi.unicast(ent, true);
     //ent->client->menu_framenum = level.framenum;
-    ent->client->menu_dirty = qfalse;
+    ent->client->menu_dirty = false;
 }
 
 void PMenu_Next(edict_t *ent)
@@ -158,7 +158,7 @@ void PMenu_Next(edict_t *ent)
 
     menu->cur = i;
 
-    ent->client->menu_dirty = qtrue;
+    ent->client->menu_dirty = true;
 }
 
 void PMenu_Prev(edict_t *ent)
@@ -191,7 +191,7 @@ void PMenu_Prev(edict_t *ent)
 
     menu->cur = i;
 
-    ent->client->menu_dirty = qtrue;
+    ent->client->menu_dirty = true;
 }
 
 void PMenu_Select(edict_t *ent)

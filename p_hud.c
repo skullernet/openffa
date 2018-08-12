@@ -269,7 +269,7 @@ and unreliable (automatic). Note that it isn't that hard to overflow
 the 1024 chars layout size limit!
 ==================
 */
-void DeathmatchScoreboardMessage(edict_t *ent, qboolean reliable)
+void DeathmatchScoreboardMessage(edict_t *ent, bool reliable)
 {
     char buffer[MAX_STRING_CHARS];
 
@@ -331,11 +331,11 @@ void MoveClientToIntermission(edict_t *ent)
     gi.unlinkentity(ent);
 
     if (PLAYER_SPAWNED(ent) || ent->client->chase_target) {
-        Cmd_Stats_f(ent, qfalse);
+        Cmd_Stats_f(ent, false);
     }
 
     // add the layout
-    DeathmatchScoreboardMessage(ent, qtrue);
+    DeathmatchScoreboardMessage(ent, true);
 
     if (ent->client->pers.uf & UF_AUTOSCREENSHOT) {
         G_StuffText(ent, "wait; screenshot\n");
@@ -417,7 +417,7 @@ void G_PrivateString(edict_t *ent, int index, const char *string)
     gi.WriteByte(svc_configstring);
     gi.WriteShort(CS_PRIVATE + index);
     gi.WriteString(string);
-    gi.unicast(ent, qtrue);
+    gi.unicast(ent, true);
 
     // send it to chasecam clients too
     if (ent->client->chase_target) {
@@ -440,7 +440,7 @@ visible
 returns 1 if the entity is visible to self, even if not infront ()
 =============
 */
-static qboolean visible(edict_t *self, edict_t *other, int mask)
+static bool visible(edict_t *self, edict_t *other, int mask)
 {
     vec3_t  spot1;
     vec3_t  spot2;
@@ -457,7 +457,7 @@ static qboolean visible(edict_t *self, edict_t *other, int mask)
         trace = gi.trace(spot1, vec3_origin, vec3_origin, spot2, self, mask);
 
         if (trace.fraction == 1.0)
-            return qtrue;
+            return true;
 
         // entire move is inside water volume
         if (trace.allsolid && (trace.contents & MASK_WATER)) {
@@ -475,7 +475,7 @@ static qboolean visible(edict_t *self, edict_t *other, int mask)
 
         break;
     }
-    return qfalse;
+    return false;
 }
 
 /*

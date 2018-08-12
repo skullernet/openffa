@@ -123,15 +123,15 @@ void G_ScoreChanged(edict_t *ent)
     G_PrivateString(ent, PCS_FRAGS, buffer);
 }
 
-qboolean G_IsSameView(edict_t *ent, edict_t *other)
+bool G_IsSameView(edict_t *ent, edict_t *other)
 {
     if (ent == other) {
-        return qtrue;
+        return true;
     }
     if (ent->client->chase_target == other) {
-        return qtrue;
+        return true;
     }
-    return qfalse;
+    return false;
 }
 
 static const frag_t mod_to_frag[MOD_TOTAL] = {
@@ -194,13 +194,13 @@ static void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker)
     frag_t      frag;
     char        *message, *name;
     char        *message2, *name2;
-    qboolean    ff;
+    bool        ff;
     edict_t     *ent;
     char        buffer[MAX_NETNAME];
     int         i;
     int         level;
 
-    ff = meansOfDeath & MOD_FRIENDLY_FIRE;
+    ff = !!(meansOfDeath & MOD_FRIENDLY_FIRE);
     mod = meansOfDeath & ~MOD_FRIENDLY_FIRE;
     message = NULL;
     message2 = "";
@@ -496,7 +496,7 @@ static void TossClientWeapon(edict_t *self)
 {
     gitem_t     *item;
     edict_t     *drop;
-    qboolean    quad;
+    bool        quad;
     float       spread;
 
     item = self->client->weapon;
@@ -506,7 +506,7 @@ static void TossClientWeapon(edict_t *self)
         item = NULL;
 
     if (!DF(QUAD_DROP))
-        quad = qfalse;
+        quad = false;
     else
         quad = (self->client->quad_framenum > (level.framenum + 1 * HZ));
 
@@ -605,7 +605,7 @@ void player_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
         // show scores
         if (!self->client->layout) {
             self->client->layout = LAYOUT_SCORES;
-            DeathmatchScoreboardMessage(self, qfalse);
+            DeathmatchScoreboardMessage(self, false);
         }
 
         // clear inventory
@@ -1175,7 +1175,7 @@ void PutClientInServer(edict_t *ent)
     ent->takedamage = DAMAGE_AIM;
     ent->movetype = MOVETYPE_WALK;
     ent->viewheight = 22;
-    ent->inuse = qtrue;
+    ent->inuse = true;
     ent->classname = "player";
     ent->mass = 200;
     ent->solid = SOLID_BBOX;
@@ -1318,7 +1318,7 @@ void ClientBegin(edict_t *ent)
         int remaining = timelimit->value * 60 - level.time;
 
         G_WriteTime(remaining);
-        gi.unicast(ent, qtrue);
+        gi.unicast(ent, true);
     }
 
     if (ent->client->level.first_time) {
@@ -1331,9 +1331,9 @@ void ClientBegin(edict_t *ent)
         gi.WriteByte(svc_muzzleflash);
         gi.WriteShort(ent - g_edicts);
         gi.WriteByte(MZ_LOGIN);
-        gi.unicast(ent, qfalse);
+        gi.unicast(ent, false);
 
-        ent->client->level.first_time = qfalse;
+        ent->client->level.first_time = false;
     }
 
     // make sure all view stuff is valid
@@ -1353,24 +1353,24 @@ static skin_entry_t *find_skin(skin_entry_t *head, const char *name)
     return head; // use default
 }
 
-static qboolean validate_skin(const char *s)
+static bool validate_skin(const char *s)
 {
     if (!*s) {
         // empty skin is no good
-        return qfalse;
+        return false;
     }
 
     do {
         if (!Q_ispath(*s)) {
             // any non-path chars are bad also
-            return qfalse;
+            return false;
         }
     } while (*++s);
 
-    return qtrue;
+    return true;
 }
 
-static qboolean parse_skin(char *out, const char *in)
+static bool parse_skin(char *out, const char *in)
 {
     char *p;
     skin_entry_t *m, *s;
@@ -1402,7 +1402,7 @@ static qboolean parse_skin(char *out, const char *in)
 
         // fix slash and return original skin
         *p = '/';
-        return qfalse;
+        return false;
     }
 
     m = find_skin(game.skins, out);
@@ -1422,17 +1422,17 @@ static qboolean parse_skin(char *out, const char *in)
     if (len >= MAX_SKINNAME) {
         goto bad;
     }
-    return qtrue;
+    return true;
 
 bad:
     strcpy(out, "male/grunt");
-    return qtrue;
+    return true;
 }
 
-static qboolean forbid_name_change(edict_t *ent)
+static bool forbid_name_change(edict_t *ent)
 {
     if (!ent->client->pers.skin[0]) {
-        return qfalse; // allow the very first one
+        return false; // allow the very first one
     }
 
     return G_FloodProtect(ent, &ent->client->level.info_flood,
@@ -1457,7 +1457,7 @@ void ClientUserinfoChanged(edict_t *ent, char *userinfo)
     gclient_t *client = ent->client;
     char    name[MAX_NETNAME], skin[MAX_SKINNAME];
     char    playerskin[MAX_QPATH];
-    qboolean changed;
+    bool    changed;
 
     // check for malformed or illegal info strings
     if (!Info_Validate(userinfo)) {
@@ -1532,7 +1532,7 @@ void ClientUserinfoChanged(edict_t *ent, char *userinfo)
 ClientConnect
 
 Called when a player begins connecting to the server.
-The game can refuse entrance to a client by returning qfalse.
+The game can refuse entrance to a client by returning false.
 If the client is allowed, the connection process will continue
 and eventually get to ClientBegin()
 Changing levels will NOT cause this to be called again, but
@@ -1545,14 +1545,14 @@ qboolean ClientConnect(edict_t *ent, char *userinfo)
     ipaction_t action;
 
     if (!Info_Validate(userinfo)) {
-        return qfalse;
+        return false;
     }
 
     s = Info_ValueForKey(userinfo, "ip");
     action = G_CheckFilters(s);
     if (action == IPA_BAN) {
         strcpy(userinfo, "\\rejmsg\\You are banned from this server.");
-        return qfalse;
+        return false;
     }
 
     // they can connect
@@ -1561,7 +1561,7 @@ qboolean ClientConnect(edict_t *ent, char *userinfo)
     memset(ent->client, 0, sizeof(gclient_t));
     ent->client->edict = ent;
     ent->client->pers.connected = CONN_CONNECTED;
-    ent->client->level.first_time = qtrue;
+    ent->client->level.first_time = true;
     ent->client->pers.loopback = !strcmp(s, "loopback");
     ent->client->pers.muted = action == IPA_MUTE;
 
@@ -1571,12 +1571,12 @@ qboolean ClientConnect(edict_t *ent, char *userinfo)
     if (game.serverFeatures & GMF_MVDSPEC) {
         s = Info_ValueForKey(userinfo, "mvdspec");
         if (*s) {
-            ent->client->pers.mvdspec = qtrue;
-            ent->client->level.first_time = qfalse;
+            ent->client->pers.mvdspec = true;
+            ent->client->level.first_time = false;
         }
     }
 
-    return qtrue;
+    return true;
 }
 
 /*
@@ -1636,7 +1636,7 @@ void ClientDisconnect(edict_t *ent)
     ent->s.renderfx = 0;
     ent->s.solid = 0;
     ent->solid = SOLID_NOT;
-    ent->inuse = qfalse;
+    ent->inuse = false;
     ent->classname = "disconnected";
     ent->svflags = SVF_NOCLIENT;
 
@@ -1765,7 +1765,7 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
         }
 
         if (memcmp(&client->old_pmove, &pm.s, sizeof(pm.s))) {
-            pm.snapinitial = qtrue;
+            pm.snapinitial = true;
             //gi.dprintf("pmove changed!\n");
         }
 
@@ -1853,7 +1853,7 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
                 GetChaseTarget(ent, CHASE_NONE);
             }
         } else if (!client->weapon_thunk) {
-            client->weapon_thunk = qtrue;
+            client->weapon_thunk = true;
             Think_Weapon(ent);
         }
     }
@@ -1861,7 +1861,7 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
     if (client->pers.connected == CONN_SPECTATOR) {
         if (abs(ucmd->upmove) >= 10) {
             if (!client->level.jump_held) {
-                client->level.jump_held = qtrue;
+                client->level.jump_held = true;
                 if (client->chase_target) {
                     if (ucmd->upmove > 0) {
                         ChaseNext(ent);
@@ -1872,7 +1872,7 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
                 }
             }
         } else {
-            client->level.jump_held = qfalse;
+            client->level.jump_held = false;
         }
     }
 
@@ -1902,7 +1902,7 @@ void ClientBeginServerFrame(edict_t *ent)
             if (!client->weapon_thunk)
                 Think_Weapon(ent);
             else
-                client->weapon_thunk = qfalse;
+                client->weapon_thunk = false;
         }
 
         if (g_idle_time->value > 0) {

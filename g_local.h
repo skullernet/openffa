@@ -314,7 +314,7 @@ typedef struct {
 
 typedef struct gitem_s {
     char        *classname; // spawning name
-    qboolean    (*pickup)(struct edict_s *ent, struct edict_s *other);
+    bool        (*pickup)(struct edict_s *ent, struct edict_s *other);
     void        (*use)(struct edict_s *ent, struct gitem_s *item);
     void        (*drop)(struct edict_s *ent, struct gitem_s *item);
     void        (*weaponthink)(struct edict_s *ent);
@@ -723,13 +723,13 @@ extern  list_t  g_map_queue;
 //
 void Cmd_Players_f(edict_t *ent);
 void Cmd_HighScores_f(edict_t *ent);
-void Cmd_Stats_f(edict_t *ent, qboolean check_other);
+void Cmd_Stats_f(edict_t *ent, bool check_other);
 void Cmd_Settings_f(edict_t *ent);
 edict_t *G_SetPlayer(edict_t *ent, int arg);
 edict_t *G_SetVictim(edict_t *ent, int start);
 void ValidateSelectedItem(edict_t *ent);
-qboolean G_FloodProtect(edict_t *ent, struct flood_s *flood,
-                        const char *what, int msgs, float persecond, float delay);
+bool G_FloodProtect(edict_t *ent, struct flood_s *flood,
+                    const char *what, int msgs, float persecond, float delay);
 
 //
 // g_items.c
@@ -749,14 +749,14 @@ void SpawnItem(edict_t *ent, gitem_t *item);
 void Think_Weapon(edict_t *ent);
 int ArmorIndex(edict_t *ent);
 int PowerArmorIndex(edict_t *ent);
-qboolean Add_Ammo(edict_t *ent, gitem_t *item, int count);
+bool Add_Ammo(edict_t *ent, gitem_t *item, int count);
 void Touch_Item(edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf);
 void G_UpdateItemBans(void);
 
 //
 // g_utils.c
 //
-qboolean    G_KillBox(edict_t *ent);
+bool    G_KillBox(edict_t *ent);
 void    G_ProjectSource(vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result);
 edict_t *G_Find(edict_t *from, size_t fieldofs, char *match);
 edict_t *findradius(edict_t *from, vec3_t org, float rad);
@@ -787,8 +787,8 @@ void vectoangles(vec3_t vec, vec3_t angles);
 //
 // g_combat.c
 //
-qboolean OnSameTeam(edict_t *ent1, edict_t *ent2);
-qboolean CanDamage(edict_t *targ, edict_t *inflictor);
+bool OnSameTeam(edict_t *ent1, edict_t *ent2);
+bool CanDamage(edict_t *targ, edict_t *inflictor);
 void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod);
 void T_RadiusDamage(edict_t *inflictor, edict_t *attacker, float damage, edict_t *ignore, float radius, int mod);
 
@@ -819,12 +819,12 @@ void BecomeExplosion1(edict_t *self);
 //
 // g_weapon.c
 //
-qboolean fire_hit(edict_t *self, vec3_t aim, int damage, int kick);
+bool fire_hit(edict_t *self, vec3_t aim, int damage, int kick);
 void fire_bullet(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int mod);
 void fire_shotgun(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick, int hspread, int vspread, int count, int mod);
-void fire_blaster(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int effect, qboolean hyper);
+void fire_blaster(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int effect, bool hyper);
 void fire_grenade(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int timer, float damage_radius);
-void fire_grenade2(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int timer, float damage_radius, qboolean held);
+void fire_grenade2(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int timer, float damage_radius, bool held);
 void fire_rocket(edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius, int radius_damage);
 void fire_rail(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick);
 void fire_bfg(edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, float damage_radius);
@@ -871,7 +871,7 @@ void G_PrivateString(edict_t *ent, int index, const char *string);
 int G_GetPlayerIdView(edict_t *ent);
 void G_SetStats(edict_t *ent);
 int G_CalcRanks(gclient_t **ranks);
-void DeathmatchScoreboardMessage(edict_t *ent, qboolean reliable);
+void DeathmatchScoreboardMessage(edict_t *ent, bool reliable);
 void HighScoresMessage(void);
 
 //
@@ -1045,7 +1045,7 @@ typedef struct {
     gender_t    gender;
     int         uf;
     conn_t      connected;
-    qboolean    loopback: 1,
+    unsigned    loopback: 1,
                 mvdspec: 1,
                 admin: 1,
                 noviewid: 1,
@@ -1067,7 +1067,7 @@ typedef struct {
 // client data that stays across respawns,
 // but cleared on level changes
 typedef struct {
-    qboolean    first_time : 1,     // true when just connected
+    unsigned    first_time : 1,     // true when just connected
                 jump_held: 1;
     struct {
         vec3_t      angles;         // angles sent over in the last command
@@ -1080,7 +1080,7 @@ typedef struct {
     char        strings[PCS_TOTAL][MAX_NETNAME]; // private configstrings
     struct {
         int         index;
-        qboolean    accepted;
+        bool        accepted;
         int         count;
     } vote;
     flood_t     chat_flood, wave_flood, info_flood;
@@ -1108,7 +1108,7 @@ struct gclient_s {
 
     pmenu_t     menu;
 //  int         menu_framenum;
-    qboolean    menu_dirty;
+    bool        menu_dirty;
 
     int         ammo_index;
 
@@ -1116,7 +1116,7 @@ struct gclient_s {
     int         oldbuttons;
     int         latched_buttons;
 
-    qboolean    weapon_thunk;
+    bool        weapon_thunk;
 
     gitem_t     *newweapon;
 
@@ -1154,8 +1154,8 @@ struct gclient_s {
     int         anim_start;
     int         anim_end;
     int         anim_priority;
-    qboolean    anim_duck;
-    qboolean    anim_run;
+    bool        anim_duck;
+    bool        anim_run;
 
     // powerup timers
     int         quad_framenum;
@@ -1283,7 +1283,6 @@ struct edict_s {
     int         max_health;
     int         gib_health;
     int         deadflag;
-    qboolean    show_hostile;
 
     char        *map;           // target_changelevel
 
@@ -1355,7 +1354,7 @@ void PMenu_Select(edict_t *ent);
 void ChaseEndServerFrame(edict_t *ent);
 void ChaseNext(edict_t *ent);
 void ChasePrev(edict_t *ent);
-qboolean GetChaseTarget(edict_t *ent, chase_mode_t mode);
+bool GetChaseTarget(edict_t *ent, chase_mode_t mode);
 void SetChaseTarget(edict_t *ent, edict_t *targ);
 void UpdateChaseTargets(chase_mode_t mode, edict_t *targ);
 
@@ -1364,9 +1363,9 @@ void UpdateChaseTargets(chase_mode_t mode, edict_t *targ);
 //
 void G_FinishVote(void);
 void G_UpdateVote(void);
-qboolean G_CheckVote(void);
+bool G_CheckVote(void);
 void Cmd_Vote_f(edict_t *ent);
-void Cmd_CastVote_f(edict_t *ent, qboolean accepted);
+void Cmd_CastVote_f(edict_t *ent, bool accepted);
 
 //
 // g_bans.c

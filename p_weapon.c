@@ -23,11 +23,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "m_player.h"
 
 
-static qboolean is_quad;
+static bool     is_quad;
 static byte     is_silenced;
 
 
-static void weapon_grenade_fire(edict_t *ent, qboolean held);
+static void weapon_grenade_fire(edict_t *ent, bool held);
 
 
 static void P_ProjectSource(gclient_t *client, vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result)
@@ -42,7 +42,7 @@ static void P_ProjectSource(gclient_t *client, vec3_t point, vec3_t distance, ve
     G_ProjectSource(point, _distance, forward, right, result);
 }
 
-qboolean Pickup_Weapon(edict_t *ent, edict_t *other)
+bool Pickup_Weapon(edict_t *ent, edict_t *other)
 {
     int         index;
     gitem_t     *ammo;
@@ -51,7 +51,7 @@ qboolean Pickup_Weapon(edict_t *ent, edict_t *other)
 
     if (DF(WEAPONS_STAY) && other->client->inventory[index]) {
         if (!(ent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)))
-            return qfalse;  // leave the weapon for others to pickup
+            return false;   // leave the weapon for others to pickup
     }
 
     other->client->inventory[index]++;
@@ -78,7 +78,7 @@ qboolean Pickup_Weapon(edict_t *ent, edict_t *other)
         other->client->newweapon = ent->item;
     }
 
-    return qtrue;
+    return true;
 }
 
 
@@ -107,7 +107,7 @@ void ChangeWeapon(edict_t *ent)
                 is_quad = (ent->client->quad_framenum > level.framenum);
 
             ent->client->grenade_framenum = level.framenum;
-            weapon_grenade_fire(ent, qfalse);
+            weapon_grenade_fire(ent, false);
             ent->client->grenade_framenum = 0;
             ent->client->grenade_state = GRENADE_NONE;
         }
@@ -426,7 +426,7 @@ GRENADE
 #define GRENADE_MINSPEED    400
 #define GRENADE_MAXSPEED    800
 
-static void weapon_grenade_fire(edict_t *ent, qboolean held)
+static void weapon_grenade_fire(edict_t *ent, bool held)
 {
     vec3_t  offset;
     vec3_t  forward, right;
@@ -523,7 +523,7 @@ void Weapon_Grenade(edict_t *ent)
             // they waited too long, detonate it in their hand
             if (ent->client->grenade_state != GRENADE_BLEW_UP && level.framenum >= ent->client->grenade_framenum) {
                 ent->client->weapon_sound = 0;
-                weapon_grenade_fire(ent, qtrue);
+                weapon_grenade_fire(ent, true);
                 ent->client->grenade_state = GRENADE_BLEW_UP;
             }
 
@@ -542,7 +542,7 @@ void Weapon_Grenade(edict_t *ent)
 
         if (ent->client->weaponframe == 12) {
             ent->client->weapon_sound = 0;
-            weapon_grenade_fire(ent, qfalse);
+            weapon_grenade_fire(ent, false);
             ent->client->grenade_state = GRENADE_THROWN;
         }
 
@@ -681,7 +681,7 @@ BLASTER / HYPERBLASTER
 ======================================================================
 */
 
-static void blaster_fire(edict_t *ent, vec3_t g_offset, int damage, qboolean hyper, int effect)
+static void blaster_fire(edict_t *ent, vec3_t g_offset, int damage, bool hyper, int effect)
 {
     vec3_t  forward, right;
     vec3_t  start;
@@ -715,7 +715,7 @@ static void blaster_fire(edict_t *ent, vec3_t g_offset, int damage, qboolean hyp
 
 static void weapon_blaster_fire(edict_t *ent)
 {
-    blaster_fire(ent, vec3_origin, 15, qfalse, EF_BLASTER);
+    blaster_fire(ent, vec3_origin, 15, false, EF_BLASTER);
     ent->client->resp.frags[FRAG_BLASTER].atts++;
     ent->client->weaponframe++;
 }
@@ -752,7 +752,7 @@ static void weapon_hyperblaster_fire(edict_t *ent)
                 effect = EF_HYPERBLASTER;
             else
                 effect = 0;
-            blaster_fire(ent, offset, 15, qtrue, effect);
+            blaster_fire(ent, offset, 15, true, effect);
             if (!DF(INFINITE_AMMO))
                 ent->client->inventory[ent->client->ammo_index]--;
 

@@ -91,22 +91,22 @@ SV_RunThink
 Runs thinking code for this frame if necessary
 =============
 */
-static qboolean SV_RunThink(edict_t *ent)
+static bool SV_RunThink(edict_t *ent)
 {
     int     thinkframe;
 
     thinkframe = ent->nextthink;
     if (thinkframe <= 0)
-        return qtrue;
+        return true;
     if (thinkframe > level.framenum)
-        return qtrue;
+        return true;
 
     ent->nextthink = 0;
     if (!ent->think)
         gi.error("NULL ent->think");
     ent->think(ent);
 
-    return qfalse;
+    return false;
 }
 
 /*
@@ -252,7 +252,7 @@ Objects need to be moved back on a failed push,
 otherwise riders would continue to slide.
 ============
 */
-static qboolean SV_Push(edict_t *pusher, vec3_t move, vec3_t amove)
+static bool SV_Push(edict_t *pusher, vec3_t move, vec3_t amove)
 {
     int         i, e;
     edict_t     *check, *block;
@@ -390,7 +390,7 @@ static qboolean SV_Push(edict_t *pusher, vec3_t move, vec3_t amove)
 #endif
             gi.linkentity(p->ent);
         }
-        return qfalse;
+        return false;
     }
 
 //FIXME: is there a better way to handle this?
@@ -398,7 +398,7 @@ static qboolean SV_Push(edict_t *pusher, vec3_t move, vec3_t amove)
     for (p = pushed_p - 1; p >= pushed; p--)
         G_TouchTriggers(p->ent);
 
-    return qtrue;
+    return true;
 }
 
 /*
@@ -518,8 +518,8 @@ static void SV_Physics_Toss(edict_t *ent)
     vec3_t      move;
     float       backoff;
     edict_t     *slave;
-    qboolean    wasinwater;
-    qboolean    isinwater;
+    bool        wasinwater;
+    bool        isinwater;
     vec3_t      old_origin;
 
 // regular thinking
@@ -584,9 +584,9 @@ static void SV_Physics_Toss(edict_t *ent)
     }
 
 // check for water transition
-    wasinwater = (ent->watertype & MASK_WATER);
+    wasinwater = !!(ent->watertype & MASK_WATER);
     ent->watertype = gi.pointcontents(ent->s.origin);
-    isinwater = ent->watertype & MASK_WATER;
+    isinwater = !!(ent->watertype & MASK_WATER);
 
     if (isinwater)
         ent->waterlevel = 1;

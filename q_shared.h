@@ -34,6 +34,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <time.h>
@@ -47,7 +48,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define q_countof(a)        (sizeof(a) / sizeof(a[0]))
 
 typedef unsigned char byte;
-typedef enum { qfalse, qtrue } qboolean;
+typedef enum { qfalse, qtrue } qboolean;    // ABI compat only, don't use
 typedef int qhandle_t;
 typedef int qerror_t;
 
@@ -483,10 +484,10 @@ char *COM_FileExtension(const char *in);
 #define COM_CompareExtension(in, ext) \
     Q_strcasecmp(COM_FileExtension(in), ext)
 
-qboolean COM_IsFloat(const char *s);
-qboolean COM_IsUint(const char *s);
-qboolean COM_IsPath(const char *s);
-qboolean COM_IsWhite(const char *s);
+bool COM_IsFloat(const char *s);
+bool COM_IsUint(const char *s);
+bool COM_IsPath(const char *s);
+bool COM_IsWhite(const char *s);
 
 char *COM_Parse(const char **data_p);
 // data is an in/out parm, returns a parsed out token
@@ -587,8 +588,8 @@ static inline float FloatSwap(float f)
 
 char    *Info_ValueForKey(const char *s, const char *key);
 void    Info_RemoveKey(char *s, const char *key);
-qboolean    Info_SetValueForKey(char *s, const char *key, const char *value);
-qboolean    Info_Validate(const char *s);
+bool    Info_SetValueForKey(char *s, const char *key, const char *value);
+bool    Info_Validate(const char *s);
 size_t  Info_SubValidate(const char *s);
 void    Info_NextPair(const char **string, char *key, char *value);
 void    Info_Print(const char *infostring);
@@ -730,8 +731,8 @@ typedef struct csurface_s {
 
 // a trace is returned when a box is swept through the world
 typedef struct {
-    qboolean    allsolid;   // if qtrue, plane is not valid
-    qboolean    startsolid; // if qtrue, the initial point was in a solid area
+    qboolean    allsolid;   // if true, plane is not valid
+    qboolean    startsolid; // if true, the initial point was in a solid area
     float       fraction;   // time completed, 1.0 = didn't hit anything
     vec3_t      endpos;     // final position
     cplane_t    plane;      // surface normal at impact

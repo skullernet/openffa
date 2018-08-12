@@ -123,7 +123,7 @@ void G_ServerCommand(void)
     else if (!strcmp(cmd, "highscores"))
         Cmd_HighScores_f(NULL);
     else if (!strcmp(cmd, "stats") || !strcmp(cmd, "accuracy"))
-        Cmd_Stats_f(NULL, qtrue);
+        Cmd_Stats_f(NULL, true);
     else if (!strcmp(cmd, "settings") || !strcmp(cmd, "matchinfo"))
         Cmd_Settings_f(NULL);
     else

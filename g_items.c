@@ -20,7 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "g_local.h"
 
 
-qboolean    Pickup_Weapon(edict_t *ent, edict_t *other);
+bool        Pickup_Weapon(edict_t *ent, edict_t *other);
 void        Use_Weapon(edict_t *ent, gitem_t *inv);
 void        Drop_Weapon(edict_t *ent, gitem_t *inv);
 
@@ -46,7 +46,7 @@ static const gitem_armor_t bodyarmor_info   = {100, 200, .80, .60, ARMOR_BODY};
 void Use_Quad(edict_t *ent, gitem_t *item);
 static int  quad_drop_timeout_hack;
 
-static qboolean ItemBanned(edict_t *ent);
+static bool ItemBanned(edict_t *ent);
 
 //======================================================================
 
@@ -157,7 +157,7 @@ static void SetUnhide(edict_t *ent)
 
 //======================================================================
 
-qboolean Pickup_Powerup(edict_t *ent, edict_t *other)
+bool Pickup_Powerup(edict_t *ent, edict_t *other)
 {
     other->client->inventory[ITEM_INDEX(ent->item)]++;
 
@@ -169,7 +169,7 @@ qboolean Pickup_Powerup(edict_t *ent, edict_t *other)
         ent->item->use(other, ent->item);
     }
 
-    return qtrue;
+    return true;
 }
 
 void Drop_General(edict_t *ent, gitem_t *item)
@@ -182,7 +182,7 @@ void Drop_General(edict_t *ent, gitem_t *item)
 
 //======================================================================
 
-qboolean Pickup_Adrenaline(edict_t *ent, edict_t *other)
+bool Pickup_Adrenaline(edict_t *ent, edict_t *other)
 {
     if (other->health < other->max_health)
         other->health = other->max_health;
@@ -190,20 +190,20 @@ qboolean Pickup_Adrenaline(edict_t *ent, edict_t *other)
     if (!(ent->spawnflags & DROPPED_ITEM))
         SetRespawn(ent, ent->item->quantity);
 
-    return qtrue;
+    return true;
 }
 
-qboolean Pickup_AncientHead(edict_t *ent, edict_t *other)
+bool Pickup_AncientHead(edict_t *ent, edict_t *other)
 {
     other->max_health += 2;
 
     if (!(ent->spawnflags & DROPPED_ITEM))
         SetRespawn(ent, ent->item->quantity);
 
-    return qtrue;
+    return true;
 }
 
-qboolean Pickup_Bandolier(edict_t *ent, edict_t *other)
+bool Pickup_Bandolier(edict_t *ent, edict_t *other)
 {
     gitem_t *item;
     gclient_t *client = other->client;
@@ -230,10 +230,10 @@ qboolean Pickup_Bandolier(edict_t *ent, edict_t *other)
     if (!(ent->spawnflags & DROPPED_ITEM))
         SetRespawn(ent, ent->item->quantity);
 
-    return qtrue;
+    return true;
 }
 
-qboolean Pickup_Pack(edict_t *ent, edict_t *other)
+bool Pickup_Pack(edict_t *ent, edict_t *other)
 {
     gitem_t *item;
     gclient_t *client = other->client;
@@ -284,7 +284,7 @@ qboolean Pickup_Pack(edict_t *ent, edict_t *other)
     if (!(ent->spawnflags & DROPPED_ITEM))
         SetRespawn(ent, ent->item->quantity);
 
-    return qtrue;
+    return true;
 }
 
 //======================================================================
@@ -373,21 +373,21 @@ void Use_Silencer(edict_t *ent, gitem_t *item)
 
 //======================================================================
 
-qboolean Pickup_Key(edict_t *ent, edict_t *other)
+bool Pickup_Key(edict_t *ent, edict_t *other)
 {
     other->client->inventory[ITEM_INDEX(ent->item)]++;
-    return qtrue;
+    return true;
 }
 
 //======================================================================
 
-qboolean Add_Ammo(edict_t *ent, gitem_t *item, int count)
+bool Add_Ammo(edict_t *ent, gitem_t *item, int count)
 {
     int         index;
     int         max;
 
     if (!ent->client)
-        return qfalse;
+        return false;
 
     if (item->tag == AMMO_BULLETS)
         max = ent->client->max_bullets;
@@ -402,28 +402,28 @@ qboolean Add_Ammo(edict_t *ent, gitem_t *item, int count)
     else if (item->tag == AMMO_SLUGS)
         max = ent->client->max_slugs;
     else
-        return qfalse;
+        return false;
 
     index = ITEM_INDEX(item);
 
     if (ent->client->inventory[index] == max)
-        return qfalse;
+        return false;
 
     ent->client->inventory[index] += count;
 
     if (ent->client->inventory[index] > max)
         ent->client->inventory[index] = max;
 
-    return qtrue;
+    return true;
 }
 
-qboolean Pickup_Ammo(edict_t *ent, edict_t *other)
+bool Pickup_Ammo(edict_t *ent, edict_t *other)
 {
     int         oldcount;
     int         count;
-    qboolean    weapon;
+    bool        weapon;
 
-    weapon = (ent->item->flags & IT_WEAPON);
+    weapon = !!(ent->item->flags & IT_WEAPON);
     if (weapon && DF(INFINITE_AMMO))
         count = 1000;
     else if (ent->count)
@@ -434,7 +434,7 @@ qboolean Pickup_Ammo(edict_t *ent, edict_t *other)
     oldcount = other->client->inventory[ITEM_INDEX(ent->item)];
 
     if (!Add_Ammo(other, ent->item, count))
-        return qfalse;
+        return false;
 
     if (weapon && !oldcount) {
         if (other->client->weapon != ent->item && (other->client->weapon == FindItem("blaster")))
@@ -443,7 +443,7 @@ qboolean Pickup_Ammo(edict_t *ent, edict_t *other)
 
     if (!(ent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM)))
         SetRespawn(ent, 30);
-    return qtrue;
+    return true;
 }
 
 void Drop_Ammo(edict_t *ent, gitem_t *item)
@@ -489,11 +489,11 @@ void MegaHealth_think(edict_t *self)
         G_FreeEdict(self);
 }
 
-qboolean Pickup_Health(edict_t *ent, edict_t *other)
+bool Pickup_Health(edict_t *ent, edict_t *other)
 {
     if (!(ent->style & HEALTH_IGNORE_MAX))
         if (other->health >= other->max_health)
-            return qfalse;
+            return false;
 
     other->health += ent->count;
 
@@ -515,7 +515,7 @@ qboolean Pickup_Health(edict_t *ent, edict_t *other)
             SetRespawn(ent, 30);
     }
 
-    return qtrue;
+    return true;
 }
 
 //======================================================================
@@ -537,7 +537,7 @@ int ArmorIndex(edict_t *ent)
     return 0;
 }
 
-qboolean Pickup_Armor(edict_t *ent, edict_t *other)
+bool Pickup_Armor(edict_t *ent, edict_t *other)
 {
     int             old_armor_index;
     const gitem_armor_t *oldinfo;
@@ -595,7 +595,7 @@ qboolean Pickup_Armor(edict_t *ent, edict_t *other)
 
             // if we're already maxed out then we don't need the new armor
             if (other->client->inventory[old_armor_index] >= newcount)
-                return qfalse;
+                return false;
 
             // update current armor value
             other->client->inventory[old_armor_index] = newcount;
@@ -605,7 +605,7 @@ qboolean Pickup_Armor(edict_t *ent, edict_t *other)
     if (!(ent->spawnflags & DROPPED_ITEM))
         SetRespawn(ent, 20);
 
-    return qtrue;
+    return true;
 }
 
 //======================================================================
@@ -642,7 +642,7 @@ void Use_PowerArmor(edict_t *ent, gitem_t *item)
     }
 }
 
-qboolean Pickup_PowerArmor(edict_t *ent, edict_t *other)
+bool Pickup_PowerArmor(edict_t *ent, edict_t *other)
 {
     int     quantity;
 
@@ -656,7 +656,7 @@ qboolean Pickup_PowerArmor(edict_t *ent, edict_t *other)
     if (!quantity)
         ent->item->use(other, ent->item);
 
-    return qtrue;
+    return true;
 }
 
 void Drop_PowerArmor(edict_t *ent, gitem_t *item)
@@ -684,7 +684,7 @@ static void AccountItemPickup(edict_t *ent, edict_t *other)
 
     // ignore tossed / dropped weapons
     //if (ent->spawnflags & (DROPPED_ITEM | DROPPED_PLAYER_ITEM))
-    //    return qfalse;
+    //    return false;
 
     // ignore weapons if weapon stay is enabled
     if ((ent->item->flags & IT_WEAPON) && DF(WEAPONS_STAY))
@@ -712,7 +712,7 @@ Touch_Item
 */
 void Touch_Item(edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
-    qboolean    taken;
+    bool    taken;
 
     if (!other->client)
         return;
@@ -1042,7 +1042,7 @@ void SpawnItem(edict_t *ent, gitem_t *item)
         gi.modelindex(ent->model);
 }
 
-static qboolean ItemBanned(edict_t *ent)
+static bool ItemBanned(edict_t *ent)
 {
     int itb = (int)g_item_ban->value;
 
@@ -1061,7 +1061,7 @@ static qboolean ItemBanned(edict_t *ent)
         }
     }
 
-    return qfalse;
+    return false;
 }
 
 void G_UpdateItemBans(void)
@@ -1087,7 +1087,7 @@ void G_UpdateItemBans(void)
         }
     }
 
-    g_item_ban->modified = qfalse;
+    g_item_ban->modified = false;
 }
 
 

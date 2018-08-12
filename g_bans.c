@@ -80,7 +80,7 @@ static int      numipfilters;
 
 //extern cvar_t   *filterban;
 
-static qboolean parse_filter(const char *s, unsigned *mask, unsigned *compare)
+static bool parse_filter(const char *s, unsigned *mask, unsigned *compare)
 {
     int     i;
     byte    b[4] = { 0 };
@@ -90,7 +90,7 @@ static qboolean parse_filter(const char *s, unsigned *mask, unsigned *compare)
     for (i = 0; i < 4; i++) {
         b[i] = strtoul(s, &p, 10);
         if (s == p) {
-            return qfalse;
+            return false;
         }
 
         if (b[i] != 0)
@@ -104,7 +104,7 @@ static qboolean parse_filter(const char *s, unsigned *mask, unsigned *compare)
     *mask = *(unsigned *)m;
     *compare = *(unsigned *)b;
 
-    return qtrue;
+    return true;
 }
 
 static void remove_filter(ipfilter_t *ip)

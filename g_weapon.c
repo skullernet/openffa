@@ -35,7 +35,7 @@ static void fire_lead(edict_t *self, vec3_t start, vec3_t aimdir, int damage, in
     float       r;
     float       u;
     vec3_t      water_start;
-    qboolean    water = qfalse;
+    bool        water = false;
     int         content_mask = MASK_SHOT | MASK_WATER;
 
     tr = gi.trace(self->s.origin, NULL, NULL, start, self, MASK_SHOT);
@@ -50,7 +50,7 @@ static void fire_lead(edict_t *self, vec3_t start, vec3_t aimdir, int damage, in
         VectorMA(end, u, up, end);
 
         if (gi.pointcontents(start) & MASK_WATER) {
-            water = qtrue;
+            water = true;
             VectorCopy(start, water_start);
             content_mask &= ~MASK_WATER;
         }
@@ -61,7 +61,7 @@ static void fire_lead(edict_t *self, vec3_t start, vec3_t aimdir, int damage, in
         if (tr.contents & MASK_WATER) {
             int     color;
 
-            water = qtrue;
+            water = true;
             VectorCopy(tr.endpos, water_start);
 
             if (!VectorCompare(start, tr.endpos)) {
@@ -215,7 +215,7 @@ void blaster_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *s
     G_FreeEdict(self);
 }
 
-void fire_blaster(edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, int effect, qboolean hyper)
+void fire_blaster(edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, int effect, bool hyper)
 {
     edict_t *bolt;
     trace_t tr;
@@ -379,7 +379,7 @@ void fire_grenade(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int sp
     gi.linkentity(grenade);
 }
 
-void fire_grenade2(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int timer, float damage_radius, qboolean held)
+void fire_grenade2(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int timer, float damage_radius, bool held)
 {
     edict_t *grenade;
     vec3_t  dir;
@@ -510,20 +510,20 @@ void fire_rail(edict_t *self, vec3_t start, vec3_t aimdir, int damage, int kick)
     trace_t     tr;
     edict_t     *ignore;
     int         mask;
-    qboolean    water;
+    bool        water;
     int i;
 
     VectorMA(start, 8192, aimdir, end);
     VectorCopy(start, from);
     ignore = self;
-    water = qfalse;
+    water = false;
     mask = MASK_SHOT | CONTENTS_SLIME | CONTENTS_LAVA;
     for (i = 0; i < 100; i++) {
         tr = gi.trace(from, NULL, NULL, end, ignore, mask);
 
         if (tr.contents & (CONTENTS_SLIME | CONTENTS_LAVA)) {
             mask &= ~(CONTENTS_SLIME | CONTENTS_LAVA);
-            water = qtrue;
+            water = true;
         } else {
             //ZOID--added so rail goes through SOLID_BBOX entities (gibs, etc)
             if ((tr.ent->svflags & SVF_MONSTER) || (tr.ent->client) ||

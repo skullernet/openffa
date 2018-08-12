@@ -236,7 +236,7 @@ void ChasePrev(edict_t *ent)
     SetChaseTarget(ent, e);
 }
 
-qboolean GetChaseTarget(edict_t *ent, chase_mode_t mode)
+bool GetChaseTarget(edict_t *ent, chase_mode_t mode)
 {
     gclient_t *ranks[MAX_CLIENTS];
     edict_t *other;
@@ -278,12 +278,12 @@ qboolean GetChaseTarget(edict_t *ent, chase_mode_t mode)
 
 notfound:
     gi.cprintf(ent, PRINT_HIGH, "No players to chase.\n");
-    return qfalse;
+    return false;
 
 found:
     SetChaseTarget(ent, other);
     ent->client->chase_mode = mode;
-    return qtrue;
+    return true;
 }
 
 

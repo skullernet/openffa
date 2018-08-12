@@ -559,8 +559,8 @@ P_WorldEffects
 */
 static void P_WorldEffects(void)
 {
-    qboolean    breather;
-    qboolean    envirosuit;
+    bool        breather;
+    bool        envirosuit;
     int         waterlevel, old_waterlevel;
     int         r;
 
@@ -793,7 +793,7 @@ P_SetFrame
 static void P_SetFrame(edict_t *ent)
 {
     gclient_t   *client;
-    qboolean    duck, run;
+    bool        duck, run;
 
     if (ent->s.modelindex != 255)
         return;     // not in the player model
@@ -804,13 +804,13 @@ static void P_SetFrame(edict_t *ent)
     client = ent->client;
 
     if (client->ps.pmove.pm_flags & PMF_DUCKED)
-        duck = qtrue;
+        duck = true;
     else
-        duck = qfalse;
+        duck = false;
     if (xyspeed)
-        run = qtrue;
+        run = true;
     else
-        run = qfalse;
+        run = false;
 
     // check for stand/duck and stop/go transitions
     if (duck != client->anim_duck && client->anim_priority < ANIM_DEATH)

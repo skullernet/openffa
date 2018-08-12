@@ -141,7 +141,7 @@ static void ClientEndServerFrames(void)
 
         // if the scoreboard is up, update it
         if (c->layout == LAYOUT_SCORES && !(level.framenum % (3 * HZ))) {
-            DeathmatchScoreboardMessage(c->edict, qfalse);
+            DeathmatchScoreboardMessage(c->edict, false);
         }
 
         PMenu_Update(c->edict);
@@ -638,7 +638,7 @@ void G_StuffText(edict_t *ent, const char *text)
 {
     gi.WriteByte(svc_stufftext);
     gi.WriteString(text);
-    gi.unicast(ent, qtrue);
+    gi.unicast(ent, true);
 }
 
 static void G_SetTimeVar(int remaining)
@@ -665,12 +665,12 @@ static void CheckDMRules(void)
 
     if (g_vote_treshold->modified) {
         G_CheckVote();
-        g_vote_treshold->modified = qfalse;
+        g_vote_treshold->modified = false;
     }
 
     if (g_vote_flags->modified) {
         G_CheckVote();
-        g_vote_flags->modified = qfalse;
+        g_vote_flags->modified = false;
     }
 
     if (timelimit->value > 0) {
@@ -736,8 +736,8 @@ static void CheckDMRules(void)
     }
 
 
-    timelimit->modified = qfalse;
-    fraglimit->modified = qfalse;
+    timelimit->modified = false;
+    fraglimit->modified = false;
 }
 
 static void G_ResetSettings(void)
@@ -853,7 +853,7 @@ void G_RunFrame(void)
             } else {
                 for (i = 0, ent = &g_edicts[1]; i < game.maxclients; i++, ent++) {
                     if (ent->client->pers.connected > CONN_CONNECTED) {
-                        DeathmatchScoreboardMessage(ent, qtrue);
+                        DeathmatchScoreboardMessage(ent, true);
                     }
                 }
             }
