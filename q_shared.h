@@ -50,7 +50,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 typedef unsigned char byte;
 typedef enum { qfalse, qtrue } qboolean;    // ABI compat only, don't use
 typedef int qhandle_t;
-typedef int qerror_t;
 
 #ifndef NULL
 #define NULL ((void *)0)
@@ -157,26 +156,9 @@ struct cplane_s;
 
 extern vec3_t vec3_origin;
 
-#define nanmask (255<<23)
-
-#define IS_NAN(x) (((*(int *)&x)&nanmask)==nanmask)
-
-// microsoft's fabs seems to be ungodly slow...
-static inline float Q_fabs(float f)
-{
-    union {
-        uint32_t l;
-        float f;
-    } tmp;
-
-    tmp.f = f;
-    tmp.l &= 0x7FFFFFFF;
-    return tmp.f;
-}
-
-#define Q_ftol(f) ((long)(f))
-
 #define DEG2RAD(a) (a * M_PI) / 180.0F
+
+#define ALIGN(x, a)     (((x) + (a) - 1) & ~((a) - 1))
 
 #define DotProduct(x,y)         ((x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2])
 #define CrossProduct(v1,v2,cross) \
@@ -475,9 +457,7 @@ void *Q_memccpy(void *dst, const void *src, int c, size_t size);
 void Q_setenv(const char *name, const char *value);
 
 char *COM_SkipPath(const char *pathname);
-void COM_StripExtension(const char *in, char *out, size_t size);
-void COM_FileBase(char *in, char *out);
-void COM_FilePath(const char *in, char *out, size_t size);
+size_t COM_StripExtension(char *out, const char *in, size_t size);
 size_t COM_DefaultExtension(char *path, const char *ext, size_t size);
 char *COM_FileExtension(const char *in);
 
@@ -545,7 +525,7 @@ static inline float FloatSwap(float f)
 #define LittleShort(x)    ((uint16_t)(x))
 #define LittleLong(x)     ((uint32_t)(x))
 #define LittleFloat(x)    ((float)(x))
-#define MakeRawLong(b1,b2,b3,b4) (((b4)<<24)|((b3)<<16)|((b2)<<8)|(b1))
+#define MakeRawLong(b1,b2,b3,b4) (((unsigned)(b4)<<24)|((b3)<<16)|((b2)<<8)|(b1))
 #define MakeRawShort(b1,b2) (((b2)<<8)|(b1))
 #elif __BYTE_ORDER == __BIG_ENDIAN
 #define BigShort(x)     ((uint16_t)(x))
@@ -554,13 +534,13 @@ static inline float FloatSwap(float f)
 #define LittleShort ShortSwap
 #define LittleLong  LongSwap
 #define LittleFloat FloatSwap
-#define MakeRawLong(b1,b2,b3,b4) (((b1)<<24)|((b2)<<16)|((b3)<<8)|(b4))
+#define MakeRawLong(b1,b2,b3,b4) (((unsigned)(b1)<<24)|((b2)<<16)|((b3)<<8)|(b4))
 #define MakeRawShort(b1,b2) (((b1)<<8)|(b2))
 #else
 #error Unknown byte order
 #endif
 
-#define LittleLongMem(p) (((p)[3]<<24)|((p)[2]<<16)|((p)[1]<<8)|(p)[0])
+#define LittleLongMem(p) (((unsigned)(p)[3]<<24)|((p)[2]<<16)|((p)[1]<<8)|(p)[0])
 #define LittleShortMem(p) (((p)[1]<<8)|(p)[0])
 
 #define RawLongMem(p) MakeRawLong((p)[0],(p)[1],(p)[2],(p)[3])

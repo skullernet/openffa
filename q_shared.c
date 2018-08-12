@@ -101,22 +101,19 @@ void AddPointToBounds(const vec3_t v, vec3_t mins, vec3_t maxs)
 
     for (i = 0; i < 3; i++) {
         val = v[i];
-        if (val < mins[i])
-            mins[i] = val;
-        if (val > maxs[i])
-            maxs[i] = val;
+        mins[i] = min(mins[i], val);
+        maxs[i] = max(maxs[i], val);
     }
 }
 
 void UnionBounds(vec3_t a[2], vec3_t b[2], vec3_t c[2])
 {
-    c[0][0] = b[0][0] < a[0][0] ? b[0][0] : a[0][0];
-    c[0][1] = b[0][1] < a[0][1] ? b[0][1] : a[0][1];
-    c[0][2] = b[0][2] < a[0][2] ? b[0][2] : a[0][2];
+    int        i;
 
-    c[1][0] = b[1][0] > a[1][0] ? b[1][0] : a[1][0];
-    c[1][1] = b[1][1] > a[1][1] ? b[1][1] : a[1][1];
-    c[1][2] = b[1][2] > a[1][2] ? b[1][2] : a[1][2];
+    for (i = 0; i < 3; i++) {
+        c[0][i] = min(a[0][i], b[0][i]);
+        c[1][i] = max(a[1][i], b[1][i]);
+    }
 }
 
 /*
@@ -131,9 +128,9 @@ vec_t RadiusFromBounds(const vec3_t mins, const vec3_t maxs)
     vec_t   a, b;
 
     for (i = 0; i < 3; i++) {
-        a = Q_fabs(mins[i]);
-        b = Q_fabs(maxs[i]);
-        corner[i] = a > b ? a : b;
+        a = fabsf(mins[i]);
+        b = fabsf(maxs[i]);
+        corner[i] = max(a, b);
     }
 
     return VectorLength(corner);
@@ -168,24 +165,17 @@ char *COM_SkipPath(const char *pathname)
 COM_StripExtension
 ============
 */
-void COM_StripExtension(const char *in, char *out, size_t size)
+size_t COM_StripExtension(char *out, const char *in, size_t size)
 {
-    char *s;
+    size_t ret = COM_FileExtension(in) - in;
 
-    Q_strlcpy(out, in, size);
-
-    s = out + strlen(out);
-
-    while (s != out) {
-        if (*s == '/') {
-            break;
-        }
-        if (*s == '.') {
-            *s = 0;
-            break;
-        }
-        s--;
+    if (size) {
+        size_t len = min(ret, size - 1);
+        memcpy(out, in, len);
+        out[len] = 0;
     }
+
+    return ret;
 }
 
 /*
@@ -195,75 +185,23 @@ COM_FileExtension
 */
 char *COM_FileExtension(const char *in)
 {
-    const char *s;
-    const char *last;
+    const char *last, *s;
 
     if (!in) {
         Com_Error(ERR_FATAL, "%s: NULL", __func__);
     }
 
-    s = in + strlen(in);
-    last = s;
-
-    while (s != in) {
+    for (last = s = in + strlen(in); s != in; s--) {
         if (*s == '/') {
             break;
         }
         if (*s == '.') {
             return (char *)s;
         }
-        s--;
     }
 
     return (char *)last;
 }
-
-/*
-============
-COM_FileBase
-============
-*/
-void COM_FileBase(char *in, char *out)
-{
-    char *s, *s2;
-
-    s = in + strlen(in) - 1;
-
-    while (s != in && *s != '.')
-        s--;
-
-    for (s2 = s; s2 != in && *s2 != '/'; s2--)
-        ;
-
-    if (s - s2 < 2)
-        out[0] = 0;
-    else {
-        s--;
-        strncpy(out, s2 + 1, s - s2);
-        out[s - s2] = 0;
-    }
-}
-
-/*
-============
-COM_FilePath
-
-Returns the path up to, but not including the last /
-============
-*/
-void COM_FilePath(const char *in, char *out, size_t size)
-{
-    char *s;
-
-    Q_strlcpy(out, in, size);
-    s = strrchr(out, '/');
-    if (s) {
-        *s = 0;
-    } else {
-        *out = 0;
-    }
-}
-
 
 /*
 ==================
@@ -275,22 +213,10 @@ if path doesn't have .EXT, append extension
 */
 size_t COM_DefaultExtension(char *path, const char *ext, size_t size)
 {
-    char    *src;
-    size_t  len;
-
-    if (*path) {
-        len = strlen(path);
-        src = path + len - 1;
-
-        while (*src != '/' && src != path) {
-            if (*src == '.')
-                return len;                 // it has an extension
-            src--;
-        }
-    }
-
-    len = Q_strlcat(path, ext, size);
-    return len;
+    if (*COM_FileExtension(path))
+        return strlen(path);
+    else
+        return Q_strlcat(path, ext, size);
 }
 
 /*
@@ -714,7 +640,7 @@ size_t Q_strlcpy(char *dst, const char *src, size_t size)
     size_t ret = strlen(src);
 
     if (size) {
-        size_t len = ret >= size ? size - 1 : ret;
+        size_t len = min(ret, size - 1);
         memcpy(dst, src, len);
         dst[len] = 0;
     }
@@ -731,16 +657,13 @@ Returns length of the source and destinations strings combined.
 */
 size_t Q_strlcat(char *dst, const char *src, size_t size)
 {
-    size_t ret, len = strlen(dst);
+    size_t len = strlen(dst);
 
     if (len >= size) {
         Com_Error(ERR_FATAL, "%s: already overflowed", __func__);
     }
 
-    ret = Q_strlcpy(dst + len, src, size - len);
-    ret += len;
-
-    return ret;
+    return len + Q_strlcpy(dst + len, src, size - len);
 }
 
 /*
@@ -804,8 +727,7 @@ size_t Q_vsnprintf(char *dest, size_t size, const char *fmt, va_list argptr)
     ret = vsnprintf(dest, size, fmt, argptr);
 #endif
 
-    // exploit the fact -1 becomes SIZE_MAX > size
-    return (size_t)ret;
+    return ret;
 }
 
 /*
@@ -819,16 +741,12 @@ and returns 0.
 */
 size_t Q_vscnprintf(char *dest, size_t size, const char *fmt, va_list argptr)
 {
-    size_t ret;
+    if (size) {
+        size_t ret = Q_vsnprintf(dest, size, fmt, argptr);
+        return min(ret, size - 1);
+    }
 
-    if (!size)
-        return 0;
-
-    ret = Q_vsnprintf(dest, size, fmt, argptr);
-    if (ret < size)
-        return ret;
-
-    return size - 1;
+    return 0;
 }
 
 /*
