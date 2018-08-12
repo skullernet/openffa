@@ -790,4 +790,3 @@ void G_SetStats(edict_t *ent)
         ent->client->ps.stats[STAT_VOTE_COUNT] = 0;
     }
 }
-

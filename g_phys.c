@@ -638,4 +638,3 @@ void G_RunEntity(edict_t *ent)
         gi.error("%s: bad movetype %i", __func__, ent->movetype);
     }
 }
-

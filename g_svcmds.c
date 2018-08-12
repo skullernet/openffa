@@ -129,4 +129,3 @@ void G_ServerCommand(void)
     else
         Com_Printf("Unknown server command \"%s\"\n", cmd);
 }
-

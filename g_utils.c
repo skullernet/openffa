@@ -591,4 +591,3 @@ bool G_KillBox(edict_t *ent)
 
     return true;        // all clear
 }
-

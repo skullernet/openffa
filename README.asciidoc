@@ -272,4 +272,3 @@ flood_perinfo::
 flood_infodelay::
     Time, in seconds, for name or skin changes to be disabled once flood
     protection is triggered. Default value is 60.
-

@@ -422,4 +422,3 @@ void G_WriteIP_f(void)
 
     fclose(f);
 }
-

@@ -1948,4 +1948,3 @@ void ClientBeginServerFrame(edict_t *ent)
 
     client->latched_buttons = 0;
 }
-

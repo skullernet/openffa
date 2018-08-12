@@ -1012,4 +1012,3 @@ void ClientEndServerFrame(edict_t *ent)
     VectorClear(ent->client->kick_origin);
     VectorClear(ent->client->kick_angles);
 }
-

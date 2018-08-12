@@ -107,4 +107,3 @@ clean:
 strip: $(TARGET)
 	$(E) [STRIP]
 	$(Q)$(STRIP) $(TARGET)
-

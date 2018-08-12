@@ -31,4 +31,3 @@ scout
 sniper
 viper
 grunt
-

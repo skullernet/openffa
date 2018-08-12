@@ -1934,4 +1934,3 @@ void SetItemNames(void)
         gi.configstring(CS_ITEMS + i, it->pickup_name);
     }
 }
-

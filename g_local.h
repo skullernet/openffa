@@ -1400,4 +1400,3 @@ void G_RunDatabase(void);
 #define G_CloseDatabase()   (void)0
 #define G_RunDatabase()     (void)0
 #endif
-

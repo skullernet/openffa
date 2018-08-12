@@ -718,4 +718,3 @@ void Cmd_Vote_f(edict_t *ent)
         gi.bprintf(PRINT_MEDIUM, "Type 'yes' in the console to accept or 'no' to deny.\n");
     }
 }
-

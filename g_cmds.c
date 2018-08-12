@@ -1673,4 +1673,3 @@ void ClientCommand(edict_t *ent)
     else    // anything that doesn't match a command will be a chat
         Cmd_Say_f(ent, CHAT_MISC);
 }
-

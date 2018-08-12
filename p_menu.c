@@ -213,4 +213,3 @@ void PMenu_Select(edict_t *ent)
     if (p->select)
         p->select(ent);
 }
-
