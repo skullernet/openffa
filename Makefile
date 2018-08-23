@@ -7,7 +7,7 @@ ifndef CPU
 endif
 
 ifndef REV
-    REV := $(shell git rev-list HEAD | wc -l)
+    REV := $(shell git rev-list --count HEAD)
 endif
 
 ifndef VER
