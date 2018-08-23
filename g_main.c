@@ -780,7 +780,7 @@ void G_ExitLevel(void)
         map->num_out += level.players_out;
     }
 
-    if (!level.nextmap || !strcmp(level.nextmap, level.mapname)) {
+    if (!level.nextmap[0] || !strcmp(level.nextmap, level.mapname)) {
         G_ResetLevel();
         return;
     }
