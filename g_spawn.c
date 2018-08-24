@@ -41,7 +41,7 @@ typedef enum {
 
 typedef struct {
     char        *name;
-    size_t      ofs;
+    unsigned    ofs;
     fieldtype_t type;
 } field_t;
 
