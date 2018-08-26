@@ -47,7 +47,7 @@ static float P_CalcRoll(vec3_t angles, vec3_t velocity)
 
     side = DotProduct(velocity, right);
     sign = side < 0 ? -1 : 1;
-    side = fabs(side);
+    side = fabsf(side);
 
     value = sv_rollangle->value;
 
@@ -887,7 +887,7 @@ static void P_CalcBob(edict_t *ent)
     if (!FRAMESYNC)
         return;
 
-    xyspeed = sqrt(ent->velocity[0] * ent->velocity[0] + ent->velocity[1] * ent->velocity[1]);
+    xyspeed = sqrtf(ent->velocity[0] * ent->velocity[0] + ent->velocity[1] * ent->velocity[1]);
 
     if (xyspeed < 5) {
         bobmove = 0;
@@ -909,7 +909,7 @@ static void P_CalcBob(edict_t *ent)
         bobtime *= 4;
 
     bobcycle = (int)bobtime;
-    bobfracsin = fabs(sin(bobtime * M_PI));
+    bobfracsin = fabsf(sin(bobtime * M_PI));
 }
 
 void IntermissionEndServerFrame(edict_t *ent)
