@@ -156,7 +156,8 @@ struct cplane_s;
 
 extern vec3_t vec3_origin;
 
-#define DEG2RAD(a) (a * M_PI) / 180.0F
+#define DEG2RAD(a)      ((a) * (M_PI / 180))
+#define RAD2DEG(a)      ((a) * (180 / M_PI))
 
 #define ALIGN(x, a)     (((x) + (a) - 1) & ~((a) - 1))
 

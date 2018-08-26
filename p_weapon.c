@@ -743,7 +743,7 @@ static void weapon_hyperblaster_fire(edict_t *ent)
         if (! ent->client->inventory[ent->client->ammo_index]) {
             NoAmmoWeaponChange(ent);
         } else {
-            rotation = (ent->client->weaponframe - 5) * 2 * M_PI / 6;
+            rotation = (ent->client->weaponframe - 5) * (M_PI / 3);
             offset[0] = -4 * sin(rotation);
             offset[1] = 0;
             offset[2] = 4 * cos(rotation);
