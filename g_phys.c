@@ -139,7 +139,7 @@ Slide off of the impacting object
 returns the blocked flags (1 = floor, 2 = step / wall)
 ==================
 */
-#define STOP_EPSILON    0.1
+#define STOP_EPSILON    0.1f
 
 static int ClipVelocity(vec3_t in, vec3_t normal, vec3_t out, float overbounce)
 {
@@ -212,7 +212,7 @@ retry:
     VectorCopy(trace.endpos, ent->s.origin);
     gi.linkentity(ent);
 
-    if (trace.fraction != 1.0 || (trace.allsolid && (int)g_bugs->value < 2)) {
+    if (trace.fraction != 1.0f || (trace.allsolid && (int)g_bugs->value < 2)) {
         SV_Impact(ent, &trace);
 
         // if the pushed entity went away and the pusher is still there
@@ -264,8 +264,8 @@ static bool SV_Push(edict_t *pusher, vec3_t move, vec3_t amove)
     // be accurate for client side prediction
     for (i = 0; i < 3; i++) {
         float   temp;
-        temp = move[i] * 8.0;
-        move[i] = 0.125 * Q_rint(temp);
+        temp = move[i] * 8.0f;
+        move[i] = 0.125f * Q_rint(temp);
     }
 
     // find the bounding box
@@ -563,14 +563,14 @@ static void SV_Physics_Toss(edict_t *ent)
 
     if (trace.fraction < 1) {
         if (ent->movetype == MOVETYPE_BOUNCE)
-            backoff = 1.5;
+            backoff = 1.5f;
         else
             backoff = 1;
 
         ClipVelocity(ent->velocity, trace.plane.normal, ent->velocity, backoff);
 
         // stop if on ground
-        if (trace.plane.normal[2] > 0.7) {
+        if (trace.plane.normal[2] > 0.7f) {
             if (ent->velocity[2] < 60 || ent->movetype != MOVETYPE_BOUNCE) {
                 ent->groundentity = trace.ent;
                 ent->groundentity_linkcount = trace.ent->linkcount;

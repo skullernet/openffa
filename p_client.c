@@ -511,9 +511,9 @@ static void TossClientWeapon(edict_t *self)
         quad = (self->client->quad_framenum > (level.framenum + 1 * HZ));
 
     if (item && quad)
-        spread = 22.5;
+        spread = 22.5f;
     else
-        spread = 0.0;
+        spread = 0.0f;
 
     if (item) {
         self->client->v_angle[YAW] -= spread;
@@ -1782,8 +1782,8 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
         client->old_pmove = pm.s;
 
         for (i = 0; i < 3; i++) {
-            ent->s.origin[i] = pm.s.origin[i] * 0.125;
-            ent->velocity[i] = pm.s.velocity[i] * 0.125;
+            ent->s.origin[i] = pm.s.origin[i] * 0.125f;
+            ent->velocity[i] = pm.s.velocity[i] * 0.125f;
         }
 
         VectorCopy(pm.mins, ent->mins);

@@ -57,14 +57,14 @@ Misc functions
 */
 static void VelocityForDamage(int damage, vec3_t v)
 {
-    v[0] = 100.0 * crandom();
-    v[1] = 100.0 * crandom();
-    v[2] = 200.0 + 100.0 * random();
+    v[0] = 100.0f * crandom();
+    v[1] = 100.0f * crandom();
+    v[2] = 200.0f + 100.0f * random();
 
     if (damage < 50)
-        VectorScale(v, 0.7, v);
+        VectorScale(v, 0.7f, v);
     else
-        VectorScale(v, 1.2, v);
+        VectorScale(v, 1.2f, v);
 }
 
 static void ClipGibVelocity(edict_t *ent)
@@ -138,7 +138,7 @@ void ThrowGib(edict_t *self, int modelindex, int damage, int type)
 
     gib = G_Spawn();
 
-    VectorScale(self->size, 0.5, size);
+    VectorScale(self->size, 0.5f, size);
     VectorAdd(self->absmin, size, origin);
     gib->s.origin[0] = origin[0] + crandom() * size[0];
     gib->s.origin[1] = origin[1] + crandom() * size[1];
@@ -155,10 +155,10 @@ void ThrowGib(edict_t *self, int modelindex, int damage, int type)
     if (type == GIB_ORGANIC) {
         gib->movetype = MOVETYPE_TOSS;
         gib->touch = gib_touch;
-        vscale = 0.5;
+        vscale = 0.5f;
     } else {
         gib->movetype = MOVETYPE_BOUNCE;
-        vscale = 1.0;
+        vscale = 1.0f;
     }
 
     VelocityForDamage(damage, vd);
@@ -198,10 +198,10 @@ void ThrowHead(edict_t *self, int modelindex, int damage, int type)
     if (type == GIB_ORGANIC) {
         self->movetype = MOVETYPE_TOSS;
         self->touch = gib_touch;
-        vscale = 0.5;
+        vscale = 0.5f;
     } else {
         self->movetype = MOVETYPE_BOUNCE;
-        vscale = 1.0;
+        vscale = 1.0f;
     }
 
     VelocityForDamage(damage, vd);
@@ -375,7 +375,7 @@ void SP_viewthing(edict_t *ent)
     VectorSet(ent->maxs, 16, 16, 32);
     ent->s.modelindex = gi.modelindex("models/objects/banner/tris.md2");
     gi.linkentity(ent);
-    ent->nextthink = KEYFRAME(0.5 * HZ);
+    ent->nextthink = KEYFRAME(0.5f * HZ);
     ent->think = TH_viewthing;
     return;
 }
@@ -480,7 +480,7 @@ static void func_object_touch(edict_t *self, edict_t *other, cplane_t *plane, cs
     // only squash thing we fall on top of
     if (!plane)
         return;
-    if (plane->normal[2] < 1.0)
+    if (plane->normal[2] < 1.0f)
         return;
     if (other->takedamage == DAMAGE_NO)
         return;
@@ -803,10 +803,10 @@ static void misc_viper_bomb_prethink(edict_t *self)
     self->groundentity = NULL;
 
     diff = self->timestamp - level.time;
-    if (diff < -1.0)
-        diff = -1.0;
+    if (diff < -1.0f)
+        diff = -1.0f;
 
-    VectorScale(self->moveinfo.dir, 1.0 + diff, v);
+    VectorScale(self->moveinfo.dir, 1.0f + diff, v);
     v[2] = diff;
 
     diff = self->s.angles[2];

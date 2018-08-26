@@ -64,8 +64,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MATCH_STATE_WAITEXIT 7
 
 // view pitching times
-#define DAMAGE_TIME     0.5
-#define FALL_TIME       0.3
+#define DAMAGE_TIME     0.5f
+#define FALL_TIME       0.3f
 
 
 // edict->spawnflags
@@ -641,7 +641,7 @@ extern  edict_t     *g_edicts;
 #define STOFS(x)    q_offsetof(spawn_temp_t, x)
 
 #define random()    ((rand () & 0x7fff) / ((float)0x7fff))
-#define crandom()   (2.0 * (random() - 0.5))
+#define crandom()   (2.0f * (random() - 0.5f))
 
 #define DF(x)       (((int)dmflags->value & DF_##x) != 0)
 

@@ -586,7 +586,7 @@ static void weapon_grenadelauncher_fire(edict_t *ent)
     VectorScale(forward, -2, ent->client->kick_origin);
     ent->client->kick_angles[0] = -1;
 
-    fire_grenade(ent, start, forward, damage, 600, 2.5 * HZ, radius);
+    fire_grenade(ent, start, forward, damage, 600, 2.5f * HZ, radius);
 
     gi.WriteByte(svc_muzzleflash);
     gi.WriteShort(ent - g_edicts);
@@ -629,7 +629,7 @@ static void weapon_rocketlauncher_fire(edict_t *ent)
     float   damage_radius;
     int     radius_damage;
 
-    damage = 100 + (int)(random() * 20.0);
+    damage = 100 + (int)(random() * 20.0f);
     radius_damage = 120;
     damage_radius = 120;
     if (is_quad) {
@@ -829,11 +829,11 @@ static void weapon_machinegun_fire(edict_t *ent)
     }
 
     for (i = 1; i < 3; i++) {
-        ent->client->kick_origin[i] = crandom() * 0.35;
-        ent->client->kick_angles[i] = crandom() * 0.7;
+        ent->client->kick_origin[i] = crandom() * 0.35f;
+        ent->client->kick_angles[i] = crandom() * 0.7f;
     }
-    ent->client->kick_origin[0] = crandom() * 0.35;
-    ent->client->kick_angles[0] = ent->client->machinegun_shots * -1.5;
+    ent->client->kick_origin[0] = crandom() * 0.35f;
+    ent->client->kick_angles[0] = ent->client->machinegun_shots * -1.5f;
 
     // get start / end positions
     VectorAdd(ent->client->v_angle, ent->client->kick_angles, angles);
@@ -860,10 +860,10 @@ static void weapon_machinegun_fire(edict_t *ent)
 
     ent->client->anim_priority = ANIM_ATTACK;
     if (ent->client->ps.pmove.pm_flags & PMF_DUCKED) {
-        ent->client->anim_start = FRAME_crattak1 + 1 - (int)(random() + 0.25);
+        ent->client->anim_start = FRAME_crattak1 + 1 - (int)(random() + 0.25f);
         ent->client->anim_end = FRAME_crattak9;
     } else {
-        ent->client->anim_start = FRAME_attack1 + 1 - (int)(random() + 0.25);
+        ent->client->anim_start = FRAME_attack1 + 1 - (int)(random() + 0.25f);
         ent->client->anim_end = FRAME_attack8;
     }
 }
@@ -941,8 +941,8 @@ static void weapon_chaingun_fire(edict_t *ent)
     }
 
     for (i = 0; i < 3; i++) {
-        ent->client->kick_origin[i] = crandom() * 0.35;
-        ent->client->kick_angles[i] = crandom() * 0.7;
+        ent->client->kick_origin[i] = crandom() * 0.35f;
+        ent->client->kick_angles[i] = crandom() * 0.7f;
     }
 
     G_BeginDamage();

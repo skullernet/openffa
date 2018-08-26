@@ -38,9 +38,9 @@ bool CanDamage(edict_t *targ, edict_t *inflictor)
 // bmodels need special checking because their origin is 0,0,0
     if (targ->movetype == MOVETYPE_PUSH) {
         VectorAdd(targ->absmin, targ->absmax, dest);
-        VectorScale(dest, 0.5, dest);
+        VectorScale(dest, 0.5f, dest);
         trace = gi.trace(inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
-        if (trace.fraction == 1.0)
+        if (trace.fraction == 1.0f)
             return true;
         if (trace.ent == targ)
             return true;
@@ -48,7 +48,7 @@ bool CanDamage(edict_t *targ, edict_t *inflictor)
     }
 
     trace = gi.trace(inflictor->s.origin, vec3_origin, vec3_origin, targ->s.origin, inflictor, MASK_SOLID);
-    if (trace.fraction == 1.0)
+    if (trace.fraction == 1.0f)
         return true;
 
     if ((int)g_bugs->value < 1) {
@@ -60,7 +60,7 @@ bool CanDamage(edict_t *targ, edict_t *inflictor)
             dest[2] = bounds[(i >> 2) & 1][2];
 
             trace = gi.trace(inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
-            if (trace.fraction == 1.0)
+            if (trace.fraction == 1.0f)
                 return true;
         }
     } else {
@@ -78,7 +78,7 @@ bool CanDamage(edict_t *targ, edict_t *inflictor)
             }
 
             trace = gi.trace(inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
-            if (trace.fraction == 1.0)
+            if (trace.fraction == 1.0f)
                 return true;
         }
     }
@@ -180,7 +180,7 @@ static int CheckPowerArmor(edict_t *ent, vec3_t point, vec3_t normal, int damage
         VectorSubtract(point, ent->s.origin, vec);
         VectorNormalize(vec);
         dot = DotProduct(vec, forward);
-        if (dot <= 0.3)
+        if (dot <= 0.3f)
             return 0;
 
         damagePerCell = 1;
@@ -199,7 +199,7 @@ static int CheckPowerArmor(edict_t *ent, vec3_t point, vec3_t normal, int damage
         save = damage;
 
     SpawnDamage(pa_te_type, point, normal);
-    client->powerarmor_framenum = level.framenum + 0.2 * HZ;
+    client->powerarmor_framenum = level.framenum + 0.2f * HZ;
 
     power_used = save / damagePerCell;
 
@@ -413,11 +413,11 @@ void T_RadiusDamage(edict_t *inflictor, edict_t *attacker, float damage, edict_t
             continue;
 
         VectorAdd(ent->mins, ent->maxs, v);
-        VectorMA(ent->s.origin, 0.5, v, v);
+        VectorMA(ent->s.origin, 0.5f, v, v);
         VectorSubtract(inflictor->s.origin, v, v);
-        points = damage - 0.5 * VectorLength(v);
+        points = damage - 0.5f * VectorLength(v);
         if (ent == attacker)
-            points = points * 0.5;
+            points = points * 0.5f;
         if (points > 0) {
             if (CanDamage(ent, inflictor)) {
                 VectorSubtract(ent->s.origin, inflictor->s.origin, dir);

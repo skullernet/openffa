@@ -456,7 +456,7 @@ static bool visible(edict_t *self, edict_t *other, int mask)
     for (i = 0; i < 10; i++) {
         trace = gi.trace(spot1, vec3_origin, vec3_origin, spot2, self, mask);
 
-        if (trace.fraction == 1.0)
+        if (trace.fraction == 1.0f)
             return true;
 
         // entire move is inside water volume
