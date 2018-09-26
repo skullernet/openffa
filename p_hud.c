@@ -32,19 +32,12 @@ static int G_PlayerCmp(const void *p1, const void *p2)
     gclient_t *a = *(gclient_t * const *)p1;
     gclient_t *b = *(gclient_t * const *)p2;
 
-    if (a->resp.score > b->resp.score) {
-        return -1;
-    }
-    if (a->resp.score < b->resp.score) {
-        return 1;
-    }
-    if (a->resp.deaths < b->resp.deaths) {
-        return -1;
-    }
-    if (a->resp.deaths > b->resp.deaths) {
-        return 1;
-    }
-    return 0;
+    int r = b->resp.score - a->resp.score;
+    if (!r)
+        r = a->resp.deaths - b->resp.deaths;
+    if (!r)
+        r = (byte *)a - (byte *)b;
+    return r;
 }
 
 int G_CalcRanks(gclient_t **ranks)
