@@ -71,12 +71,20 @@ Used to update per-client scoreboard and build
 global oldscores (client is NULL in the latter case).
 ==================
 */
-static size_t BuildDeathmatchScoreboard(char *buffer, gclient_t *client)
+
+#define APPEND(...) do {                            \
+        len = Q_snprintf(text, size, __VA_ARGS__);  \
+        if (len >= size)                            \
+            goto done;                              \
+        text += len;                                \
+        size -= len;                                \
+    } while (0)
+
+static void BuildDeathmatchScoreboard(char *text, gclient_t *client)
 {
-    char    entry[MAX_STRING_CHARS];
     char    status[MAX_QPATH];
-    char    timebuf[16];
-    size_t  total, len;
+    size_t  size = MAX_STRING_CHARS;
+    size_t  len;
     int     i, j, numranks;
     int     y, sec, eff;
     gclient_t   *ranks[MAX_CLIENTS];
@@ -84,27 +92,25 @@ static size_t BuildDeathmatchScoreboard(char *buffer, gclient_t *client)
     time_t      t;
     struct tm   *tm;
 
-    if (!client) {
-        Q_snprintf(entry, sizeof(entry),
-                   "yv 10 cstring2 \"Old scoreboard from %s\"", level.mapname);
-    } else {
-        entry[0] = 0;
-    }
+    APPEND("xv 0 ");
+
+    if (!client)
+        APPEND("yv 10 cstring2 \"Old scoreboard from %s\"", level.mapname);
 
     t = time(NULL);
     tm = localtime(&t);
-    len = strftime(status, sizeof(status), "[%Y-%m-%d %H:%M]", tm);
+    len = 0;
+    if (tm)
+        len = strftime(status, sizeof(status), "[%Y-%m-%d %H:%M]", tm);
     if (len < 1)
         strcpy(status, "???");
 
-    total = Q_scnprintf(buffer, MAX_STRING_CHARS,
-                        "xv 0 %s"
-                        "yv 18 "
-                        "cstring \"%s\""
-                        "xv -16 "
-                        "yv 26 "
-                        "string \"Player          Frg Dth Eff%% FPH Time Ping\""
-                        "xv -40 ", entry, status);
+    APPEND("yv 18 "
+           "cstring \"%s\""
+           "xv -16 "
+           "yv 26 "
+           "string \"Player          Frg Dth Eff%% FPH Time Ping\""
+           "xv -40 ", status);
 
     numranks = G_CalcRanks(ranks);
 
@@ -126,28 +132,20 @@ static size_t BuildDeathmatchScoreboard(char *buffer, gclient_t *client)
         }
 
         if (level.framenum < 10 * 60 * HZ) {
-            sprintf(timebuf, "%d:%02d", sec / 60, sec % 60);
+            Q_snprintf(status, sizeof(status), "%d:%02d", sec / 60, sec % 60);
         } else {
-            sprintf(timebuf, "%d", sec / 60);
+            Q_snprintf(status, sizeof(status), "%d", sec / 60);
         }
 
-        len = Q_snprintf(entry, sizeof(entry),
-                         "yv %d string%s \"%2d %-15s %3d %3d %3d %4d %4s %4d\"",
-                         y, c == client ? "" : "2", i + 1,
-                         c->pers.netname, c->resp.score, c->resp.deaths, eff,
-                         c->resp.score * 3600 / sec, timebuf, c->ping);
-        if (len >= sizeof(entry)) {
-            continue;
-        }
-        if (total + len >= MAX_STRING_CHARS)
-            break;
-        memcpy(buffer + total, entry, len);
-        total += len;
+        APPEND("yv %d string%s \"%2d %-15s %3d %3d %3d %4d %4s %4d\"",
+               y, c == client ? "" : "2", i + 1,
+               c->pers.netname, c->resp.score, c->resp.deaths, eff,
+               c->resp.score * 3600 / sec, status, c->ping);
         y += 8;
     }
 
     // add spectators in fixed order
-    for (i = 0, j = 0; i < game.maxclients; i++) {
+    for (i = 0; i < game.maxclients; i++) {
         c = &game.clients[i];
         if (c->pers.connected != CONN_PREGAME && c->pers.connected != CONN_SPECTATOR) {
             continue;
@@ -162,40 +160,26 @@ static size_t BuildDeathmatchScoreboard(char *buffer, gclient_t *client)
         }
 
         if (c->chase_target) {
-            Q_snprintf(status, sizeof(status), "(-> %.13s)",
-                       c->chase_target->client->pers.netname);
+            char *s = c->chase_target->client->pers.netname;
+            while (*s && *s == 32)
+                s++;
+            Q_snprintf(status, sizeof(status), "(-> %.13s)", s);
         } else {
             strcpy(status, "(observing)");
         }
 
-        len = Q_snprintf(entry, sizeof(entry),
-                         "yv %d string%s \"   %-15s %-18s%3d %4d\"",
-                         y, c == client ? "" : "2",
-                         c->pers.netname, status, sec / 60, c->ping);
-        if (len >= sizeof(entry)) {
-            continue;
-        }
-        if (total + len >= MAX_STRING_CHARS)
-            break;
-        memcpy(buffer + total, entry, len);
-        total += len;
+        APPEND("yv %d string%s \"   %-15s %-18s%3d %4d\"",
+               y, c == client ? "" : "2",
+               c->pers.netname, status, sec / 60, c->ping);
         y += 8;
-        j++;
     }
 
     // add server info
-    if (sv_hostname && sv_hostname->string[0]) {
-        len = Q_scnprintf(entry, sizeof(entry), "xl 8 yb -37 string2 \"%s\"",
-                          sv_hostname->string);
-        if (total + len < MAX_STRING_CHARS) {
-            memcpy(buffer + total, entry, len);
-            total += len;
-        }
-    }
+    if (sv_hostname && sv_hostname->string[0])
+        APPEND("xl 8 yb -37 string2 \"%s\"", sv_hostname->string);
 
-    buffer[total] = 0;
-
-    return total;
+done:
+    *text = 0;
 }
 
 /*
@@ -207,46 +191,42 @@ Sent to all clients during intermission.
 */
 void HighScoresMessage(void)
 {
-    char    entry[MAX_STRING_CHARS];
     char    string[MAX_STRING_CHARS];
     char    date[MAX_QPATH];
     struct tm   *tm;
     score_t *s;
-    size_t  total, len;
+    char    *text = string;
+    size_t  size = sizeof(string);
+    size_t  len;
     int     i;
     int     y;
 
-    total = Q_snprintf(string, sizeof(string),
-                       "xv 0 "
-                       "yv 0 "
-                       "cstring \"High Scores for %s\""
-                       "yv 16 "
-                       "cstring2 \"  # Name             FPH Date      \"",
-                       level.mapname);
+    APPEND("xv 0 "
+           "yv 0 "
+           "cstring \"High Scores for %s\""
+           "yv 16 "
+           "cstring2 \"  # Name             FPH Date      \"",
+           level.mapname);
 
     y = 24;
     for (i = 0; i < level.numscores; i++) {
         s = &level.scores[i];
 
         tm = localtime(&s->time);
-        len = strftime(date, sizeof(date), "%Y-%m-%d", tm);
-        if (len < 1) {
+        len = 0;
+        if (tm)
+            len = strftime(date, sizeof(date), "%Y-%m-%d", tm);
+        if (len < 1)
             strcpy(date, "???");
-        }
-        len = Q_snprintf(entry, sizeof(entry),
-                         "yv %d cstring \"%c%2d %-15.15s %4d %-10s\"",
-                         y, s->time == level.record ? '*' : ' ',
-                         i + 1, s->name, s->score, date);
-        if (len >= sizeof(entry)) {
-            continue;
-        }
-        if (total + len >= MAX_STRING_CHARS)
-            break;
-        memcpy(string + total, entry, len);
-        total += len;
+
+        APPEND("yv %d cstring \"%c%2d %-15.15s %4d %-10s\"",
+               y, s->time == level.record ? '*' : ' ',
+               i + 1, s->name, s->score, date);
         y += 8;
     }
-    string[total] = 0;
+
+done:
+    *text = 0;
 
     gi.WriteByte(svc_layout);
     gi.WriteString(string);
