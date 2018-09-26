@@ -134,7 +134,7 @@ bool G_IsSameView(edict_t *ent, edict_t *other)
     return false;
 }
 
-static const frag_t mod_to_frag[MOD_TOTAL] = {
+static const byte mod_to_frag[MOD_TOTAL] = {
     FRAG_UNKNOWN,
     FRAG_BLASTER,
     FRAG_SHOTGUN,
