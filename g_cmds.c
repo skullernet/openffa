@@ -1107,18 +1107,18 @@ void Cmd_Stats_f(edict_t *ent, bool check_other)
             sprintf(acc, "%3i%%", s->hits * 100 / s->atts);
             sprintf(hits, "%4d/%-4d", s->hits, s->atts);
         } else {
-            strcpy(acc, "    ");
-            strcpy(hits, "         ");
+            sprintf(acc, "%4s", "");
+            sprintf(hits, "%9s", "");
         }
         if (s->kills) {
             sprintf(frgs, "%4d", s->kills);
         } else {
-            strcpy(frgs, "    ");
+            sprintf(frgs, "%4s", "");
         }
         if (s->deaths) {
             sprintf(dths, "%4d", s->deaths);
         } else {
-            strcpy(dths, "    ");
+            sprintf(dths, "%4s", "");
         }
 
         gi.cprintf(ent, PRINT_HIGH,
