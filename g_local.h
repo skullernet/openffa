@@ -776,6 +776,7 @@ void    G_ShuffleArray(void *base, size_t n);
 size_t  G_HighlightStr(char *dst, const char *src, size_t size);
 
 #define G_Malloc(x) gi.TagMalloc(x, TAG_GAME)
+#define G_Free(x)   gi.TagFree(x)
 char    *G_CopyString(const char *in);
 
 float   *tv(float x, float y, float z);

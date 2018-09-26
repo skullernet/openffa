@@ -380,7 +380,7 @@ static int G_RebuildMapQueue(void)
     }
 
 done:
-    gi.TagFree(pool);
+    G_Free(pool);
     return count;
 }
 

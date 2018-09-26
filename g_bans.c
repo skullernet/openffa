@@ -110,7 +110,7 @@ static bool parse_filter(const char *s, unsigned *mask, unsigned *compare)
 static void remove_filter(ipfilter_t *ip)
 {
     List_Remove(&ip->list);
-    gi.TagFree(ip);
+    G_Free(ip);
     numipfilters--;
 }
 
