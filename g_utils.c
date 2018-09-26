@@ -522,9 +522,8 @@ size_t G_HighlightStr(char *dst, const char *src, size_t size)
     size_t ret = strlen(src);
 
     if (size) {
-        size_t i, len = ret >= size ? size - 1 : ret;
-
-        for (i = 0; i < len; i++)
+        size_t i;
+        for (i = 0; i < min(ret, size - 1); i++)
             dst[i] = src[i] | 0x80;
         dst[i] = 0;
     }
