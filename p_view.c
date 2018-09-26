@@ -909,7 +909,7 @@ static void P_CalcBob(edict_t *ent)
         bobtime *= 4;
 
     bobcycle = (int)bobtime;
-    bobfracsin = fabsf(sin(bobtime * M_PI));
+    bobfracsin = fabs(sin(bobtime * M_PI));
 }
 
 void IntermissionEndServerFrame(edict_t *ent)
