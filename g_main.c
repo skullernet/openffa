@@ -108,8 +108,6 @@ void ClientCommand(edict_t *ent);
 /*
 =================
 ClientEndServerFrames
-
-Return number of connected cliets
 =================
 */
 static void ClientEndServerFrames(void)
