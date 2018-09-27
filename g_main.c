@@ -59,6 +59,7 @@ cvar_t  *g_mute_chat;
 cvar_t  *g_protection_time;
 cvar_t  *g_log_stats;
 cvar_t  *g_skins_file;
+cvar_t  *g_motd_file;
 cvar_t  *dedicated;
 
 cvar_t  *sv_maxvelocity;
@@ -134,6 +135,17 @@ static void ClientEndServerFrames(void)
         if (c->pers.connected <= CONN_CONNECTED) {
             continue;
         }
+
+        if (c->pers.connected == CONN_PREGAME && game.motd[0]) {
+            int delta = level.framenum - c->resp.enter_framenum;
+
+            if (c->layout == LAYOUT_NONE && delta == 1.5f * HZ) {
+                Cmd_Motd_f(c->edict);
+            } else if (c->layout == LAYOUT_MOTD && delta == 15 * HZ) {
+                c->layout = 0;
+            }
+        }
+
         if (!c->chase_target) {
             ClientEndServerFrame(c->edict);
         }
@@ -635,6 +647,145 @@ static void G_LoadSkinList(void)
     G_FreeFile(f);
 }
 
+static int seqlen(const char *s, int ch)
+{
+    int len = 0;
+    while (*s++ == ch)
+        len++;
+    return len;
+}
+
+static void makeframe(load_file_t *f, int num, const char *seq, int ch)
+{
+    char *data = f->lines[num];
+    char *p, *s, *scan = data;
+    int i, j, pos, len;
+
+    while (1) {
+        p = strstr(scan, seq);
+        if (!p)
+            break;
+
+        pos = p - data;
+        len = seqlen(p, *seq);
+        for (i = num + 1, j = -1; i < f->nb_lines; i++) {
+            s = f->lines[i];
+            if (strlen(s) > pos && (!pos || s[pos - 1] != *seq) && seqlen(s + pos, *seq) == len) {
+                j = i;
+                break;
+            }
+        }
+
+        if (j > 0) {
+            p[0] = 0x01 + ch;
+            for (i = 1; i < len - 1; i++)
+                p[i] = 0x02 + ch;
+            p[i] = 0x03 + ch;
+
+            for (i = num + 1; i < j; i++) {
+                s = f->lines[i];
+                if (strlen(s) > pos && s[pos] == '|')
+                    s[pos] = 0x04 + ch;
+                if (strlen(s) > pos + len - 1 && s[pos + len - 1] == '|')
+                    s[pos + len - 1] = 0x06 + ch;
+            }
+
+            s = f->lines[j] + pos;
+            s[0] = 0x07 + ch;
+            for (i = 1; i < len - 1; i++)
+                s[i] = 0x08 + ch;
+            s[i] = 0x09 + ch;
+        }
+
+        scan = p + len;
+    }
+}
+
+static void makebar(char *data, const char *seq, int ch)
+{
+    while (1) {
+        char *p = strstr(data, seq);
+        if (!p)
+            break;
+
+        int len = seqlen(p, *seq);
+        int i;
+
+        p[0] = ch;
+        for (i = 1; i < len - 1; i++)
+            p[i] = ch + 1;
+        p[i] = ch + 2;
+
+        data = p + len;
+    }
+}
+
+static void makecolor(char *data)
+{
+    while (1) {
+        char *p = strchr(data, '*');
+        if (!p)
+            break;
+        char *q = strchr(p + 1, '*');
+        if (!q)
+            break;
+        if (q > p + 1) {
+            *p++ = *q = ' ';
+            while (p < q)
+                *p++ ^= 0x80;
+        }
+        data = q + 1;
+    }
+}
+
+static char *transform(load_file_t *f, int num)
+{
+    char *data = f->lines[num];
+
+    makeframe(f, num, "===", 0);
+    makeframe(f, num, "~~~", 0x11);
+
+    makebar(data, "---", 0x1d);
+    makebar(data, "^^^", 0x80);
+
+    makecolor(data);
+    return data;
+}
+
+static void G_LoadMotd(void)
+{
+    char  *text = game.motd;
+    size_t size = sizeof(game.motd);
+
+    load_file_t *f = G_LoadFile("motd", g_motd_file->string);
+    if (!f)
+        return;
+
+    size_t len = Q_strlcpy(text, "xl 8 ", size);
+    text += len;
+    size -= len;
+
+    for (int i = 0; i < f->nb_lines; i++) {
+        char *data = transform(f, i);
+        if (!*data)
+            continue;
+        len = Q_snprintf(text, size, "yb %d string \"%s\"",
+                         -32 - (f->nb_lines - i - 1) * 8, data);
+        if (len >= size) {
+            gi.dprintf("Oversize motd in %s\n", f->path);
+            break;
+        }
+        text += len;
+        size -= len;
+    }
+
+    *text = 0;
+    if (len < size)
+        gi.dprintf("Loaded motd from %s\n", f->path);
+
+    G_FreeFile(f);
+}
+
 /*
 =================
 EndDMLevel
@@ -1046,6 +1197,7 @@ static void G_Init(void)
     g_mute_chat = gi.cvar("g_mute_chat", "0", 0);
     g_protection_time = gi.cvar("g_protection_time", "0", 0);
     g_skins_file = gi.cvar("g_skins_file", "", CVAR_LATCH);
+    g_motd_file = gi.cvar("g_motd_file", "", CVAR_LATCH);
 
     run_pitch = gi.cvar("run_pitch", "0.002", 0);
     run_roll = gi.cvar("run_roll", "0.005", 0);
@@ -1109,9 +1261,11 @@ static void G_Init(void)
     G_CheckFilenameVariable(g_maps_file);
     G_CheckFilenameVariable(g_defaults_file);
     G_CheckFilenameVariable(g_skins_file);
+    G_CheckFilenameVariable(g_motd_file);
 
     G_LoadMapList();
     G_LoadSkinList();
+    G_LoadMotd();
     G_OpenDatabase();
 
     // obtain server features

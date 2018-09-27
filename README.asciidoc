@@ -149,6 +149,10 @@ It is highly recommended that a skin list is set up to prevent players from
 specifying random skins, causing unwanted skin download attempts.
 *****************
 
+g_motd_file::
+    Specifies name of the file to load MOTD from. Should not include any
+    extenstion part or slashes. Default value is empty (no MOTD set).
+
 g_bugs::
     Specifies whether some known Quake 2 gameplay bugs are enabled or not.
     Default value is 0.

@@ -1504,6 +1504,25 @@ static void Cmd_OldScore_f(edict_t *ent)
     gi.unicast(ent, true);
 }
 
+void Cmd_Motd_f(edict_t *ent)
+{
+    if (ent->client->layout == LAYOUT_MOTD) {
+        ent->client->layout = 0;
+        return;
+    }
+
+    if (!game.motd[0]) {
+        gi.cprintf(ent, PRINT_HIGH, "There is no motd.\n");
+        return;
+    }
+
+    ent->client->layout = LAYOUT_MOTD;
+
+    gi.WriteByte(svc_layout);
+    gi.WriteString(game.motd);
+    gi.unicast(ent, true);
+}
+
 /*
 =================
 ClientCommand
@@ -1612,6 +1631,8 @@ void ClientCommand(edict_t *ent)
     else if (Q_stricmp(cmd, "oldscore") == 0 || Q_stricmp(cmd, "oldscores") == 0 ||
              Q_stricmp(cmd, "lastscore") == 0 || Q_stricmp(cmd, "lastscores") == 0)
         Cmd_OldScore_f(ent);
+    else if (Q_stricmp(cmd, "motd") == 0)
+        Cmd_Motd_f(ent);
     else if (Q_stricmp(cmd, "use") == 0)
         Cmd_Use_f(ent);
     else if (Q_stricmp(cmd, "drop") == 0)

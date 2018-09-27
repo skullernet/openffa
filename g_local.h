@@ -376,6 +376,8 @@ typedef struct {
     // allowed skins list
     skin_entry_t    *skins;
 
+    char        motd[MAX_STRING_CHARS];
+
     char        dir[MAX_OSPATH]; // where variable data is stored
 } game_locals_t;
 
@@ -725,6 +727,7 @@ void Cmd_Players_f(edict_t *ent);
 void Cmd_HighScores_f(edict_t *ent);
 void Cmd_Stats_f(edict_t *ent, bool check_other);
 void Cmd_Settings_f(edict_t *ent);
+void Cmd_Motd_f(edict_t *ent);
 edict_t *G_SetPlayer(edict_t *ent, int arg);
 edict_t *G_SetVictim(edict_t *ent, int start);
 void ValidateSelectedItem(edict_t *ent);
@@ -989,7 +992,8 @@ typedef enum {
     LAYOUT_NONE,
     LAYOUT_SCORES,
     LAYOUT_OLDSCORES,
-    LAYOUT_MENU
+    LAYOUT_MENU,
+    LAYOUT_MOTD
 } layout_t;
 
 typedef enum {
