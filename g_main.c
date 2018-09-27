@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "g_local.h"
+#include <errno.h>
 
 game_locals_t   game;
 level_locals_t  level;
@@ -156,6 +157,101 @@ static void ClientEndServerFrames(void)
     }
 }
 
+typedef struct {
+    int nb_lines;
+    char **lines;
+    char path[1];
+} load_file_t;
+
+static load_file_t *G_LoadFile(const char *dir, const char *name)
+{
+    int err = 0;
+
+    if (!game.dir[0] || !*name)
+        return NULL;
+
+    char *path = dir ? va("%s/%s/%s.txt", game.dir, dir, name) :
+                       va("%s/%s.txt",    game.dir,      name);
+    size_t pathlen = strlen(path);
+    if (pathlen >= MAX_OSPATH) {
+        err = ENAMETOOLONG;
+        goto fail0;
+    }
+
+    FILE *fp = fopen(path, "rb");
+    if (!fp) {
+        err = errno;
+        goto fail0;
+    }
+
+    Q_STATBUF st;
+    if (os_fstat(os_fileno(fp), &st)) {
+        err = errno;
+        goto fail1;
+    }
+
+    if (st.st_size >= INT_MAX / sizeof(char *)) {
+        err = EFBIG;
+        goto fail1;
+    }
+
+    char *buf = G_Malloc(st.st_size + 1);
+
+    if (!fread(buf, st.st_size, 1, fp)) {
+        err = EIO;
+        goto fail2;
+    }
+
+    buf[st.st_size] = 0;
+
+    load_file_t *f = G_Malloc(sizeof(*f) + pathlen);
+    f->nb_lines = 0;
+    f->lines = NULL;
+    memcpy(f->path, path, pathlen + 1);
+
+    int max_lines = 0;
+    while (1) {
+        char *p = strchr(buf, '\n');
+        if (p) {
+            if (p > buf && *(p - 1) == '\r')
+                *(p - 1) = 0;
+            *p = 0;
+        }
+
+        if (f->nb_lines == max_lines) {
+            void *tmp = f->lines;
+            f->lines = G_Malloc(sizeof(char *) * (max_lines += 32));
+            if (tmp) {
+                memcpy(f->lines, tmp, sizeof(char *) * f->nb_lines);
+                G_Free(tmp);
+            }
+        }
+        f->lines[f->nb_lines++] = buf;
+
+        if (!p)
+            break;
+        buf = p + 1;
+    }
+
+    fclose(fp);
+    return f;
+
+fail2:
+    G_Free(buf);
+fail1:
+    fclose(fp);
+fail0:
+    gi.dprintf("Couldn't load '%s': %s\n", path, strerror(err));
+    return NULL;
+}
+
+static void G_FreeFile(load_file_t *f)
+{
+    G_Free(f->lines[0]);
+    G_Free(f->lines);
+    G_Free(f);
+}
+
 static int ScoreCmp(const void *p1, const void *p2)
 {
     score_t *a = (score_t *)p1;
@@ -266,33 +362,19 @@ static void G_RegisterScore(void)
 
 void G_LoadScores(void)
 {
-    char path[MAX_OSPATH];
-    char buffer[MAX_STRING_CHARS];
     char *token;
     const char *data;
     score_t *s;
-    FILE *fp;
-    size_t len;
+    load_file_t *f;
+    int i;
 
-    if (!game.dir[0]) {
-        return;
-    }
-    len = Q_concat(path, sizeof(path), game.dir, "/highscores/",
-                   level.mapname, ".txt", NULL);
-    if (len >= sizeof(path)) {
+    f = G_LoadFile("highscores", level.mapname);
+    if (!f) {
         return;
     }
 
-    fp = fopen(path, "r");
-    if (!fp) {
-        return;
-    }
-
-    do {
-        data = fgets(buffer, sizeof(buffer), fp);
-        if (!data) {
-            break;
-        }
+    for (i = 0; i < f->nb_lines && level.numscores < MAX_SCORES; i++) {
+        data = f->lines[i];
 
         if (data[0] == '#' || data[0] == '/') {
             continue;
@@ -311,14 +393,13 @@ void G_LoadScores(void)
 
         token = COM_Parse(&data);
         s->time = strtoul(token, NULL, 10);
-    } while (level.numscores < MAX_SCORES);
-
-    fclose(fp);
+    }
 
     qsort(level.scores, level.numscores, sizeof(score_t), ScoreCmp);
 
-    gi.dprintf("Loaded %d scores from '%s'\n",
-               level.numscores, path);
+    gi.dprintf("Loaded %d scores from '%s'\n", level.numscores, f->path);
+
+    G_FreeFile(f);
 }
 
 map_entry_t *G_FindMap(const char *name)
@@ -430,41 +511,20 @@ static void G_PickNextMap(void)
 
 static void G_LoadMapList(void)
 {
-    char path[MAX_OSPATH];
-    char buffer[MAX_STRING_CHARS];
     char *token;
     const char *data;
     map_entry_t *map;
-    FILE *fp;
+    load_file_t *f;
     size_t len;
-    int linenum, nummaps;
+    int i, nummaps;
 
-    if (!game.dir[0]) {
-        return;
-    }
-    if (!g_maps_file->string[0]) {
-        return;
-    }
-    len = Q_concat(path, sizeof(path), game.dir, "/mapcfg/",
-                   g_maps_file->string, ".txt", NULL);
-    if (len >= sizeof(path)) {
+    f = G_LoadFile("mapcfg", g_maps_file->string);
+    if (!f) {
         return;
     }
 
-    fp = fopen(path, "r");
-    if (!fp) {
-        gi.dprintf("Couldn't load '%s'\n", path);
-        return;
-    }
-
-    linenum = nummaps = 0;
-    while (1) {
-        data = fgets(buffer, sizeof(buffer), fp);
-        if (!data) {
-            break;
-        }
-
-        linenum++;
+    for (i = nummaps = 0; i < f->nb_lines; i++) {
+        data = f->lines[i];
 
         if (data[0] == '#' || data[0] == '/') {
             continue;
@@ -477,8 +537,7 @@ static void G_LoadMapList(void)
 
         len = strlen(token);
         if (len >= MAX_QPATH) {
-            gi.dprintf("%s: oversize mapname at line %d\n",
-                       __func__, linenum);
+            gi.dprintf("Oversize mapname at line %d in %s\n", i, f->path);
             continue;
         }
 
@@ -516,49 +575,27 @@ static void G_LoadMapList(void)
         nummaps++;
     }
 
-    fclose(fp);
+    gi.dprintf("Loaded %d maps from '%s'\n", nummaps, f->path);
 
-    gi.dprintf("Loaded %d maps from '%s'\n",
-               nummaps, path);
+    G_FreeFile(f);
 }
 
 static void G_LoadSkinList(void)
 {
-    char path[MAX_OSPATH];
-    char buffer[MAX_STRING_CHARS];
     char *token;
     const char *data;
     skin_entry_t *skin;
-    FILE *fp;
+    load_file_t *f;
     size_t len;
-    int linenum, numskins, numdirs;
+    int i, numskins, numdirs;
 
-    if (!game.dir[0]) {
-        return;
-    }
-    if (!g_skins_file->string[0]) {
-        return;
-    }
-    len = Q_concat(path, sizeof(path), game.dir, "/",
-                   g_skins_file->string, ".txt", NULL);
-    if (len >= sizeof(path)) {
+    f = G_LoadFile(NULL, g_skins_file->string);
+    if (!f) {
         return;
     }
 
-    fp = fopen(path, "r");
-    if (!fp) {
-        gi.dprintf("Couldn't load '%s'\n", path);
-        return;
-    }
-
-    linenum = numskins = numdirs = 0;
-    while (1) {
-        data = fgets(buffer, sizeof(buffer), fp);
-        if (!data) {
-            break;
-        }
-
-        linenum++;
+    for (i = numskins = numdirs = 0; i < f->nb_lines; i++) {
+        data = f->lines[i];
 
         if (data[0] == '#' || data[0] == '/') {
             continue;
@@ -571,8 +608,7 @@ static void G_LoadSkinList(void)
 
         len = strlen(token);
         if (len >= MAX_SKINNAME) {
-            gi.dprintf("%s: oversize skinname at line %d\n",
-                       __func__, linenum);
+            gi.dprintf("Oversize skinname at line %d in %s\n", i, f->path);
             continue;
         }
 
@@ -589,15 +625,14 @@ static void G_LoadSkinList(void)
             game.skins->down = skin;
             numskins++;
         } else {
-            gi.dprintf("%s: skinname before directory at line %d\n",
-                       __func__, linenum);
+            gi.dprintf("Skinname before directory at line %d in %s\n", i, f->path);
         }
     }
 
-    fclose(fp);
-
     gi.dprintf("Loaded %d skins in %d dirs from '%s'\n",
-               numskins, numdirs, path);
+               numskins, numdirs, f->path);
+
+    G_FreeFile(f);
 }
 
 /*
