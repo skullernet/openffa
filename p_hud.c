@@ -102,10 +102,7 @@ static void BuildDeathmatchScoreboard(char *text, gclient_t *client)
 
     t = time(NULL);
     tm = localtime(&t);
-    len = 0;
-    if (tm)
-        len = strftime(status, sizeof(status), "[%Y-%m-%d %H:%M]", tm);
-    if (len < 1)
+    if (!tm || !strftime(status, sizeof(status), "[%Y-%m-%d %H:%M]", tm))
         strcpy(status, "???");
 
     APPEND("yv 18 "
@@ -216,10 +213,7 @@ void HighScoresMessage(void)
         s = &level.scores[i];
 
         tm = localtime(&s->time);
-        len = 0;
-        if (tm)
-            len = strftime(date, sizeof(date), "%Y-%m-%d", tm);
-        if (len < 1)
+        if (!tm || !strftime(date, sizeof(date), "%Y-%m-%d", tm))
             strcpy(date, "???");
 
         APPEND("yv %d cstring \"%c%2d %-15.15s %4d %-10s\"",
