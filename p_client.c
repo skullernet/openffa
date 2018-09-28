@@ -1541,8 +1541,13 @@ loadgames will.
 */
 qboolean ClientConnect(edict_t *ent, char *userinfo)
 {
-    char *s;
+    char *s, *userinfo_base = userinfo;
     ipaction_t action;
+
+    // skip to extra userinfo if supported
+    if (game.serverFeatures & GMF_EXTRA_USERINFO) {
+        userinfo += strlen(userinfo) + 1;
+    }
 
     if (!Info_Validate(userinfo)) {
         return false;
@@ -1551,7 +1556,7 @@ qboolean ClientConnect(edict_t *ent, char *userinfo)
     s = Info_ValueForKey(userinfo, "ip");
     action = G_CheckFilters(s);
     if (action == IPA_BAN) {
-        strcpy(userinfo, "\\rejmsg\\You are banned from this server.");
+        strcpy(userinfo_base, "\\rejmsg\\You are banned from this server.");
         return false;
     }
 
@@ -1574,6 +1579,13 @@ qboolean ClientConnect(edict_t *ent, char *userinfo)
             ent->client->pers.mvdspec = true;
             ent->client->level.first_time = false;
         }
+    }
+
+    if (game.serverFeatures & GMF_EXTRA_USERINFO) {
+        int major = atoi(Info_ValueForKey(userinfo, "major"));
+        int minor = atoi(Info_ValueForKey(userinfo, "minor"));
+        int zlib  = atoi(Info_ValueForKey(userinfo, "zlib"));
+        ent->client->pers.extended_layout = major == 36 && minor >= 1020 && zlib > 0;
     }
 
     return true;

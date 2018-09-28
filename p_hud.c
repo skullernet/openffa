@@ -92,6 +92,9 @@ static void BuildDeathmatchScoreboard(char *text, gclient_t *client)
     time_t      t;
     struct tm   *tm;
 
+    if (client && client->pers.extended_layout && (client->pers.uf & UF_EXTENDED_LAYOUT))
+        size = MAX_NET_STRING;
+
     APPEND("xv 0 ");
 
     if (!client)
@@ -244,7 +247,7 @@ the 1024 chars layout size limit!
 */
 void DeathmatchScoreboardMessage(edict_t *ent, bool reliable)
 {
-    char buffer[MAX_STRING_CHARS];
+    char buffer[MAX_NET_STRING];
 
     BuildDeathmatchScoreboard(buffer, ent->client);
 

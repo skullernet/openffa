@@ -39,7 +39,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // features this game supports
 #define G_FEATURES  (GMF_CLIENTNUM | GMF_PROPERINUSE | GMF_MVDSPEC | \
-                     GMF_WANT_ALL_DISCONNECTS | G_GMF_VARIABLE_FPS)
+                     GMF_WANT_ALL_DISCONNECTS | G_GMF_VARIABLE_FPS | \
+                     GMF_EXTRA_USERINFO)
 
 // the "gameversion" client command will print this plus compile date
 #define GAMEVERSION "OpenFFA"
@@ -1054,7 +1055,8 @@ typedef struct {
                 mvdspec: 1,
                 admin: 1,
                 noviewid: 1,
-                muted: 1;
+                muted: 1,
+                extended_layout: 1;
 } client_persistant_t;
 
 // client data that stays across deathmatch respawns,
