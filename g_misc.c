@@ -221,8 +221,7 @@ void ThrowClientHead(edict_t *self, int damage)
 {
     vec3_t  vd;
 
-    if (rand_byte() & 1) {
-
+    if (Q_rand() & 1) {
         self->s.modelindex = level.models.head;
         self->s.skinnum = 1;        // second skin is player
     } else {
@@ -719,7 +718,7 @@ void SP_misc_banner(edict_t *ent)
     ent->movetype = MOVETYPE_NONE;
     ent->solid = SOLID_NOT;
     ent->s.modelindex = gi.modelindex("models/objects/banner/tris.md2");
-    ent->s.frame = rand_byte() % 16;
+    ent->s.frame = Q_rand() % 16;
     gi.linkentity(ent);
 
     NEXT_KEYFRAME(ent, misc_banner_think);

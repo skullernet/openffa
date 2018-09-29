@@ -383,7 +383,7 @@ static void Weapon_Generic(edict_t *ent, int FRAME_ACTIVATE_LAST, int FRAME_FIRE
             if (pause_frames) {
                 for (n = 0; pause_frames[n]; n++) {
                     if (ent->client->weaponframe == pause_frames[n]) {
-                        if (rand_byte() & 15)
+                        if (Q_rand() & 15)
                             return;
                     }
                 }
@@ -501,7 +501,7 @@ void Weapon_Grenade(edict_t *ent)
         }
 
         if ((ent->client->weaponframe == 29) || (ent->client->weaponframe == 34) || (ent->client->weaponframe == 39) || (ent->client->weaponframe == 48)) {
-            if (rand_byte() & 15)
+            if (Q_rand() & 15)
                 return;
         }
 

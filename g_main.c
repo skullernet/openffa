@@ -1023,7 +1023,7 @@ void G_RunFrame(void)
 
         delta = level.framenum - level.intermission_framenum;
         if (delta == 1 * HZ) {
-            if (rand_byte() > 127) {
+            if (Q_rand() & 1) {
                 G_StartSound(level.sounds.xian);
             } else {
                 G_StartSound(level.sounds.makron);
@@ -1137,9 +1137,9 @@ static void G_Init(void)
     cvar_t *cv;
     size_t len;
 
-    //srand(time(NULL));
-
     gi.dprintf("==== InitGame ====\n");
+
+    Q_srand(time(NULL));
 
     gun_x = gi.cvar("gun_x", "0", 0);
     gun_y = gi.cvar("gun_y", "0", 0);

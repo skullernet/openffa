@@ -658,7 +658,7 @@ void player_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
                     break;
                 }
             }
-            r = rand_byte() & 3;
+            r = Q_rand() & 3;
             gi.sound(self, CHAN_VOICE, level.sounds.death[r], 1, ATTN_NORM, 0);
         }
     }
@@ -684,7 +684,7 @@ static edict_t *SelectRandomDeathmatchSpawnPoint(void)
     edict_t *spot;
     int selection;
 
-    selection = rand_byte() % level.numspawns;
+    selection = Q_rand() % level.numspawns;
     spot = level.spawns[selection];
 
     return spot;
@@ -789,7 +789,7 @@ static edict_t *SelectRandomDeathmatchSpawnPointAvoidingTwoClosest(void)
     }
 
     do {
-        selection = rand_byte() % level.numspawns;
+        selection = Q_rand() % level.numspawns;
         spot = level.spawns[selection];
     } while (spot == spot1 || spot == spot2);
 
@@ -828,7 +828,7 @@ static edict_t *SelectRandomDeathmatchSpawnPointAvoidingTwoClosestBugged(void)
     }
 
     do {
-        selection = rand_byte() % level.numspawns;
+        selection = Q_rand() % level.numspawns;
         spot = level.spawns[selection];
     } while (spot == spot1 || spot == spot2);
 

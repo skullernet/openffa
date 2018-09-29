@@ -643,8 +643,8 @@ extern  edict_t     *g_edicts;
 #define FOFS(x)     q_offsetof(edict_t, x)
 #define STOFS(x)    q_offsetof(spawn_temp_t, x)
 
-#define random()    ((rand () & 0x7fff) / ((float)0x7fff))
-#define crandom()   (2.0f * (random() - 0.5f))
+#define random()    frand()
+#define crandom()   crand()
 
 #define DF(x)       (((int)dmflags->value & DF_##x) != 0)
 

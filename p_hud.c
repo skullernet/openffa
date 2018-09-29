@@ -344,7 +344,7 @@ void BeginIntermission(void)
             ent = G_Find(NULL, FOFS(classname), "info_player_deathmatch");
     } else {
         // chose one of four spots
-        i = rand_byte() & 3;
+        i = Q_rand() & 3;
         while (i--) {
             ent = G_Find(ent, FOFS(classname), "info_player_intermission");
             if (!ent)    // wrap around the list

@@ -138,7 +138,7 @@ edict_t *G_PickTarget(char *targetname)
         return NULL;
     }
 
-    return choice[rand_byte() % num_choices];
+    return choice[Q_rand() % num_choices];
 }
 
 
@@ -510,7 +510,7 @@ void G_ShuffleArray(void *base, size_t n)
 
     array = base;
     for (i = n - 1; i > 0; i--) {
-        j = rand_byte() % (i + 1);
+        j = Q_rand() % (i + 1);
         temp = array[j];
         array[j] = array[i];
         array[i] = temp;

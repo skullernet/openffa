@@ -128,7 +128,7 @@ static void P_DamageFeedback(edict_t *player)
 
     // play an apropriate pain sound
     if ((level.framenum > player->pain_debounce_framenum) && !(player->flags & FL_GODMODE) && (client->invincible_framenum <= level.framenum)) {
-        r = rand_byte() & 1;
+        r = Q_rand() & 1;
         player->pain_debounce_framenum = level.framenum + 0.7f * HZ;
         if (player->health < 25)
             l = 0;
@@ -649,7 +649,7 @@ static void P_WorldEffects(void)
                 if (current_player->health <= current_player->dmg) {
                     gi.sound(current_player, CHAN_VOICE, level.sounds.drown, 1, ATTN_NORM, 0);
                 } else {
-                    r = rand_byte() & 1;
+                    r = Q_rand() & 1;
                     gi.sound(current_player, CHAN_VOICE, level.sounds.gurp[r], 1, ATTN_NORM, 0);
                 }
 
@@ -671,7 +671,7 @@ static void P_WorldEffects(void)
             if (current_player->health > 0
                 && current_player->pain_debounce_framenum <= level.framenum
                 && current_client->invincible_framenum < level.framenum) {
-                r = rand_byte() & 1;
+                r = Q_rand() & 1;
                 gi.sound(current_player, CHAN_VOICE, level.sounds.burn[r], 1, ATTN_NORM, 0);
                 current_player->pain_debounce_framenum = level.framenum + 1 * HZ;
             }
