@@ -1284,8 +1284,9 @@ static void G_Init(void)
             gi.error("GMF_VARIABLE_FPS exported but no 'sv_fps' cvar");
 
         framediv = (int)cv->value / BASE_FRAMERATE;
-
-        clamp(framediv, 1, MAX_FRAMEDIV);
+        if (framediv < 1 || framediv > MAX_FRAMEDIV
+            || framediv * BASE_FRAMERATE != (int)cv->value)
+            gi.error("Invalid value '%s' for 'sv_fps' cvar", cv->string);
 
         game.framerate = framediv * BASE_FRAMERATE;
         game.frametime = BASE_FRAMETIME_1000 / framediv;
