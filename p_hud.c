@@ -745,7 +745,7 @@ void G_SetStats(edict_t *ent)
                 ent->client->ps.stats[STAT_SPECTATOR] = CS_PREGAME;
             }
         }
-        if (ent->client->pers.noviewid) {
+        if (ent->client->pers.noviewid || ent->client->layout == LAYOUT_MOTD) {
             ent->client->ps.stats[STAT_VIEWID] = 0;
         } else {
             ent->client->ps.stats[STAT_VIEWID] = G_GetPlayerIdView(ent);
