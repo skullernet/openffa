@@ -681,7 +681,7 @@ void player_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 
 static edict_t *SelectRandomDeathmatchSpawnPoint(void)
 {
-    return level.spawns[Q_rand() % level.numspawns];
+    return level.spawns[Q_rand_uniform(level.numspawns)];
 }
 
 /*

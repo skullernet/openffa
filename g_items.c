@@ -114,7 +114,7 @@ static edict_t *PickMate(edict_t *ent)
         return ent;
     }
 
-    e = edicts[Q_rand() % count];
+    e = edicts[Q_rand_uniform(count)];
     return e;
 }
 
