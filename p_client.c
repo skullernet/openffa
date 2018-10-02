@@ -681,13 +681,7 @@ void player_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 
 static edict_t *SelectRandomDeathmatchSpawnPoint(void)
 {
-    edict_t *spot;
-    int selection;
-
-    selection = Q_rand() % level.numspawns;
-    spot = level.spawns[selection];
-
-    return spot;
+    return level.spawns[Q_rand() % level.numspawns];
 }
 
 /*
@@ -757,7 +751,6 @@ static edict_t *SelectRandomDeathmatchSpawnPointAvoidingTelefrag(void)
 static edict_t *SelectRandomDeathmatchSpawnPointAvoidingTwoClosest(void)
 {
     edict_t *spot, *spot1, *spot2;
-    int     selection;
     float   range, range1, range2;
     int     i;
 
@@ -789,8 +782,7 @@ static edict_t *SelectRandomDeathmatchSpawnPointAvoidingTwoClosest(void)
     }
 
     do {
-        selection = Q_rand() % level.numspawns;
-        spot = level.spawns[selection];
+        spot = SelectRandomDeathmatchSpawnPoint();
     } while (spot == spot1 || spot == spot2);
 
     return spot;
@@ -798,16 +790,18 @@ static edict_t *SelectRandomDeathmatchSpawnPointAvoidingTwoClosest(void)
 
 /*
 ================
-SelectRandomDeathmatchSpawnPoint
+SelectRandomDeathmatchSpawnPointAvoidingTwoClosestBugged
 
 go to a random point, but NOT the two points closest
 to other players
+
+original bugged version: if points are in decreasing
+range order, spot2 will never be set
 ================
 */
 static edict_t *SelectRandomDeathmatchSpawnPointAvoidingTwoClosestBugged(void)
 {
     edict_t *spot, *spot1, *spot2;
-    int     selection;
     float   range, range1, range2;
     int     i;
 
@@ -828,8 +822,7 @@ static edict_t *SelectRandomDeathmatchSpawnPointAvoidingTwoClosestBugged(void)
     }
 
     do {
-        selection = Q_rand() % level.numspawns;
-        spot = level.spawns[selection];
+        spot = SelectRandomDeathmatchSpawnPoint();
     } while (spot == spot1 || spot == spot2);
 
     return spot;
@@ -848,13 +841,11 @@ static edict_t *SelectFarthestDeathmatchSpawnPoint(void)
     edict_t *spot;
     int     i;
 
-    spot = NULL;
     bestspot = NULL;
     bestdistance = 0;
     for (i = 0; i < level.numspawns; i++) {
         spot = level.spawns[i];
         bestplayerdistance = PlayersRangeFromSpot(spot);
-
         if (bestplayerdistance > bestdistance) {
             bestspot = spot;
             bestdistance = bestplayerdistance;
@@ -867,9 +858,7 @@ static edict_t *SelectFarthestDeathmatchSpawnPoint(void)
 
     // if there is a player just spawned on each and every start spot
     // we have no choice to turn one into a telefrag meltdown
-    spot = level.spawns[0];
-
-    return spot;
+    return level.spawns[0];
 }
 
 static edict_t *SelectDeathmatchSpawnPoint(void)
