@@ -167,7 +167,6 @@ void SetChaseTarget(edict_t *ent, edict_t *targ)
         }
         ChaseEndServerFrame(ent);
     }
-
 }
 
 void UpdateChaseTargets(chase_mode_t mode, edict_t *targ)
@@ -175,8 +174,8 @@ void UpdateChaseTargets(chase_mode_t mode, edict_t *targ)
     edict_t *other;
     int i;
 
-    for (i = 0; i < game.maxclients; i++) {
-        other = &g_edicts[ i + 1 ];
+    for (i = 1; i <= game.maxclients; i++) {
+        other = &g_edicts[i];
         if (!other->inuse) {
             continue;
         }
@@ -192,13 +191,13 @@ void UpdateChaseTargets(chase_mode_t mode, edict_t *targ)
     }
 }
 
-void ChaseNext(edict_t *ent)
+bool ChaseNext(edict_t *ent)
 {
     int i;
     edict_t *e, *targ = ent->client->chase_target;
 
     if (!targ)
-        return;
+        return false;
 
     i = targ - g_edicts;
     do {
@@ -206,21 +205,21 @@ void ChaseNext(edict_t *ent)
         if (i > game.maxclients)
             i = 1;
         e = g_edicts + i;
-        if (e == targ) {
-            return;
-        }
+        if (e == targ)
+            return false;
     } while (e->client->pers.connected != CONN_SPAWNED);
 
     SetChaseTarget(ent, e);
+    return true;
 }
 
-void ChasePrev(edict_t *ent)
+bool ChasePrev(edict_t *ent)
 {
     int i;
     edict_t *e, *targ = ent->client->chase_target;
 
     if (!targ)
-        return;
+        return false;
 
     i = targ - g_edicts;
     do {
@@ -228,64 +227,49 @@ void ChasePrev(edict_t *ent)
         if (i < 1)
             i = game.maxclients;
         e = g_edicts + i;
-        if (e == targ) {
-            return;
-        }
+        if (e == targ)
+            return false;
     } while (e->client->pers.connected != CONN_SPAWNED);
 
     SetChaseTarget(ent, e);
+    return true;
 }
 
 bool GetChaseTarget(edict_t *ent, chase_mode_t mode)
 {
     gclient_t *ranks[MAX_CLIENTS];
-    edict_t *other;
+    edict_t *other, *found = NULL;
     int i;
 
     if (mode == CHASE_LEADER) {
         if (G_CalcRanks(ranks)) {
-            other = ranks[0]->edict;
-            goto found;
+            found = ranks[0]->edict;
         }
-        goto notfound;
-    }
-
-    for (i = 0; i < game.maxclients; i++) {
-        other = &g_edicts[ i + 1 ];
+    } else for (i = 1; i <= game.maxclients; i++) {
+        other = &g_edicts[i];
         if (!other->inuse) {
             continue;
         }
         if (!PLAYER_SPAWNED(other)) {
             continue;
         }
-        switch (mode) {
-        case CHASE_NONE:
-            goto found;
-        case CHASE_QUAD:
-            if (other->client->quad_framenum > level.framenum) {
-                goto found;
-            }
-            break;
-        case CHASE_INVU:
-            if (other->client->invincible_framenum > level.framenum) {
-                goto found;
-            }
-            break;
-        default:
+        if (mode == CHASE_NONE
+            || (mode == CHASE_QUAD && other->client->quad_framenum > level.framenum)
+            || (mode == CHASE_INVU && other->client->invincible_framenum > level.framenum)) {
+            found = other;
             break;
         }
     }
 
-notfound:
-    gi.cprintf(ent, PRINT_HIGH, "No players to chase.\n");
-    return false;
+    if (!found) {
+        gi.cprintf(ent, PRINT_HIGH, "No players to chase.\n");
+        return false;
+    }
 
-found:
-    SetChaseTarget(ent, other);
+    SetChaseTarget(ent, found);
     ent->client->chase_mode = mode;
     return true;
 }
-
 
 void ChaseEndServerFrame(edict_t *ent)
 {
@@ -297,9 +281,7 @@ void ChaseEndServerFrame(edict_t *ent)
 
     // is our chase target gone?
     if (c->chase_target->client->pers.connected != CONN_SPAWNED) {
-        edict_t *old = c->chase_target;
-        ChaseNext(ent);
-        if (c->chase_target == old) {
+        if (!ChaseNext(ent)) {
             SetChaseTarget(ent, NULL);
             return;
         }

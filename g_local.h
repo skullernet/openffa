@@ -1359,8 +1359,8 @@ void PMenu_Select(edict_t *ent);
 // g_chase.c
 //
 void ChaseEndServerFrame(edict_t *ent);
-void ChaseNext(edict_t *ent);
-void ChasePrev(edict_t *ent);
+bool ChaseNext(edict_t *ent);
+bool ChasePrev(edict_t *ent);
 bool GetChaseTarget(edict_t *ent, chase_mode_t mode);
 void SetChaseTarget(edict_t *ent, edict_t *targ);
 void UpdateChaseTargets(chase_mode_t mode, edict_t *targ);
