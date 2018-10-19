@@ -207,7 +207,7 @@ bool ChaseNext(edict_t *ent)
         e = g_edicts + i;
         if (e == targ)
             return false;
-    } while (e->client->pers.connected != CONN_SPAWNED);
+    } while (!PlayerSpawned(e));
 
     SetChaseTarget(ent, e);
     return true;
@@ -229,7 +229,7 @@ bool ChasePrev(edict_t *ent)
         e = g_edicts + i;
         if (e == targ)
             return false;
-    } while (e->client->pers.connected != CONN_SPAWNED);
+    } while (!PlayerSpawned(e));
 
     SetChaseTarget(ent, e);
     return true;
@@ -250,7 +250,7 @@ bool GetChaseTarget(edict_t *ent, chase_mode_t mode)
         if (!other->inuse) {
             continue;
         }
-        if (!PLAYER_SPAWNED(other)) {
+        if (!PlayerSpawned(other)) {
             continue;
         }
         if (mode == CHASE_NONE
@@ -280,7 +280,7 @@ void ChaseEndServerFrame(edict_t *ent)
     }
 
     // is our chase target gone?
-    if (c->chase_target->client->pers.connected != CONN_SPAWNED) {
+    if (!PlayerSpawned(c->chase_target)) {
         if (!ChaseNext(ent)) {
             SetChaseTarget(ent, NULL);
             return;

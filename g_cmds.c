@@ -111,7 +111,7 @@ void ValidateSelectedItem(edict_t *ent)
 
 static bool CheckCheats(edict_t *ent)
 {
-    if (!PLAYER_SPAWNED(ent)) {
+    if (!PlayerSpawned(ent)) {
         return false;
     }
     if ((int)sv_cheats->value == 0) {
@@ -562,7 +562,7 @@ Cmd_Kill_f
 */
 static void Cmd_Kill_f(edict_t *ent)
 {
-    if (!PLAYER_SPAWNED(ent))
+    if (!PlayerSpawned(ent))
         return;
     if (level.framenum - ent->client->respawn_framenum < 5 * HZ)
         return;
@@ -626,7 +626,7 @@ static void Cmd_Wave_f(edict_t *ent)
     int     i;
 
     // spectators can't wave!
-    if (!PLAYER_SPAWNED(ent)) {
+    if (!PlayerSpawned(ent)) {
         return;
     }
 
@@ -731,7 +731,7 @@ static void Cmd_Say_f(edict_t *ent, chat_t chat)
         return;
 
     // don't flood protect team chat to self
-    if (chat == CHAT_TEAM && (int)g_team_chat->value == 0 && PLAYER_SPAWNED(ent)) {
+    if (chat == CHAT_TEAM && (int)g_team_chat->value == 0 && PlayerSpawned(ent)) {
         build_chat(cl->pers.netname, chat, start, text);
         gi.cprintf(ent, PRINT_CHAT, "%s\n", text);
         return;
@@ -744,7 +744,7 @@ static void Cmd_Say_f(edict_t *ent, chat_t chat)
             return;
         }
         if ((int)g_mute_chat->value) {
-            if (PLAYER_SPAWNED(ent)) {
+            if (PlayerSpawned(ent)) {
                 gi.cprintf(ent, PRINT_HIGH, "Players can't talk during the match.\n");
                 return;
             }
@@ -772,7 +772,7 @@ static void Cmd_Say_f(edict_t *ent, chat_t chat)
             continue;
         if (!other->client)
             continue;
-        if (chat == CHAT_TEAM && PLAYER_SPAWNED(ent) != PLAYER_SPAWNED(other)) {
+        if (chat == CHAT_TEAM && PlayerSpawned(ent) != PlayerSpawned(other)) {
             continue;
         }
         gi.cprintf(other, PRINT_CHAT, "%s\n", text);
@@ -1000,7 +1000,7 @@ static void Cmd_Chase_f(edict_t *ent)
             if (!target) {
                 return;
             }
-            if (!PLAYER_SPAWNED(target)) {
+            if (!PlayerSpawned(target)) {
                 gi.cprintf(ent, PRINT_HIGH,
                            "Player '%s' is not in the game.\n",
                            target->client->pers.netname);

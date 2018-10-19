@@ -300,7 +300,7 @@ void MoveClientToIntermission(edict_t *ent)
     ent->svflags = SVF_NOCLIENT;
     gi.unlinkentity(ent);
 
-    if (PLAYER_SPAWNED(ent) || ent->client->chase_target) {
+    if (PlayerSpawned(ent) || ent->client->chase_target) {
         Cmd_Stats_f(ent, false);
     }
 
@@ -529,7 +529,7 @@ static edict_t *find_by_angles(edict_t *ent)
     for (who = g_edicts + 1; who <= g_edicts + game.maxclients; who++) {
         if (!who->inuse)
             continue;
-        if (!PLAYER_SPAWNED(who))
+        if (!PlayerSpawned(who))
             continue;
         if (who->health <= 0)
             continue;
@@ -731,7 +731,7 @@ void G_SetStats(edict_t *ent)
         } else {
             ent->client->ps.stats[STAT_TIME_STRING] = 0;
         }
-        if (ent->client->pers.connected == CONN_SPAWNED) {
+        if (PlayerSpawned(ent)) {
             ent->client->ps.stats[STAT_FRAGS_STRING] = CS_PRIVATE + PCS_FRAGS;
             ent->client->ps.stats[STAT_DELTA_STRING] = CS_PRIVATE + PCS_DELTA;
             ent->client->ps.stats[STAT_RANK_STRING] = CS_PRIVATE + PCS_RANK;
