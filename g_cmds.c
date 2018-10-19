@@ -938,11 +938,34 @@ static bool G_SpecRateLimited(edict_t *ent)
     return false;
 }
 
+static bool become_spectator(edict_t *ent)
+{
+    switch (ent->client->pers.connected) {
+    case CONN_PREGAME:
+        ent->client->pers.connected = CONN_SPECTATOR;
+        if (ent->client->layout == LAYOUT_MOTD)
+            ent->client->layout = 0;
+        gi.cprintf(ent, PRINT_HIGH, "Changed to spectator mode.\n");
+        return true;
+
+    case CONN_SPAWNED:
+        if (G_SpecRateLimited(ent))
+            return false;
+        spectator_respawn(ent, CONN_SPECTATOR);
+        return true;
+
+    case CONN_SPECTATOR:
+        return true;
+
+    default:
+        return false;
+    }
+}
+
 static void Cmd_Observe_f(edict_t *ent)
 {
     if (ent->client->pers.connected == CONN_PREGAME) {
-        ent->client->pers.connected = CONN_SPECTATOR;
-        gi.cprintf(ent, PRINT_HIGH, "Changed to spectator mode.\n");
+        become_spectator(ent);
         return;
     }
     if (G_SpecRateLimited(ent)) {
@@ -986,25 +1009,8 @@ static void Cmd_Chase_f(edict_t *ent)
         }
     }
 
-    // changing from pregame mode into spectator
-    if (ent->client->pers.connected == CONN_PREGAME) {
-        ent->client->pers.connected = CONN_SPECTATOR;
-        gi.cprintf(ent, PRINT_HIGH, "Changed to spectator mode.\n");
-        if (target) {
-            SetChaseTarget(ent, target);
-            ent->client->chase_mode = CHASE_NONE;
-        } else {
-            GetChaseTarget(ent, mode);
-        }
+    if (!become_spectator(ent)) {
         return;
-    }
-
-    // respawn the spectator
-    if (ent->client->pers.connected != CONN_SPECTATOR) {
-        if (G_SpecRateLimited(ent)) {
-            return;
-        }
-        spectator_respawn(ent, CONN_SPECTATOR);
     }
 
     if (target) {
@@ -1339,28 +1345,6 @@ static void Cmd_Commands_f(edict_t *ent)
                "highscores Show the best results on map\n"
                "id         Toggle player ID display\n"
               );
-}
-
-static bool become_spectator(edict_t *ent)
-{
-    switch (ent->client->pers.connected) {
-    case CONN_PREGAME:
-        ent->client->pers.connected = CONN_SPECTATOR;
-        break;
-    case CONN_SPAWNED:
-        if (G_SpecRateLimited(ent)) {
-            return false;
-        }
-        spectator_respawn(ent, CONN_SPECTATOR);
-        break;
-    case CONN_SPECTATOR:
-        return true;
-    default:
-        return false;
-    }
-
-    gi.cprintf(ent, PRINT_HIGH, "Changed to spectator mode.\n");
-    return true;
 }
 
 static void select_test(edict_t *ent)
