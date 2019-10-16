@@ -109,7 +109,7 @@ endif
 
 $(TARGET): $(OBJS)
 	$(E) [LD] $@
-	$(Q)$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+	$(Q)$(CC) $(LDFLAGS) -shared -o $@ $^ $(LIBS)
 
 clean:
 	$(E) [CLEAN]
