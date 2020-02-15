@@ -35,10 +35,10 @@ endif
 
 ifndef CONFIG_X86_NO_SSE_MATH
     ifeq ($(CPU),x86)
-        CFLAGS += -msse -mfpmath=sse
+        CFLAGS += -msse2 -mfpmath=sse
     endif
     ifeq ($(CPU),i386)
-        CFLAGS += -msse -mfpmath=sse
+        CFLAGS += -msse2 -mfpmath=sse
     endif
 endif
 
