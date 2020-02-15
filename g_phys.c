@@ -584,14 +584,10 @@ static void SV_Physics_Toss(edict_t *ent)
     }
 
 // check for water transition
-    wasinwater = !!(ent->watertype & MASK_WATER);
+    wasinwater = (ent->watertype & MASK_WATER);
     ent->watertype = gi.pointcontents(ent->s.origin);
-    isinwater = !!(ent->watertype & MASK_WATER);
-
-    if (isinwater)
-        ent->waterlevel = 1;
-    else
-        ent->waterlevel = 0;
+    isinwater = (ent->watertype & MASK_WATER);
+    ent->waterlevel = isinwater;
 
     if (!wasinwater && isinwater)
         gi.positioned_sound(old_origin, g_edicts, CHAN_AUTO, gi.soundindex("misc/h2ohit1.wav"), 1, 1, 0);

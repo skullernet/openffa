@@ -206,7 +206,7 @@ static void start_upload(void)
         curl_easy = curl_easy_init();
 
     curl_easy_setopt(curl_easy, CURLOPT_NOPROGRESS, 1);
-    curl_easy_setopt(curl_easy, CURLOPT_VERBOSE, !!g_http_debug->value);
+    curl_easy_setopt(curl_easy, CURLOPT_VERBOSE, (bool)(int)g_http_debug->value);
     curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, NULL);
     curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, recv_func);
     curl_easy_setopt(curl_easy, CURLOPT_READDATA, NULL);

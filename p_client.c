@@ -200,7 +200,7 @@ static void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker)
     int         i;
     int         level;
 
-    ff = !!(meansOfDeath & MOD_FRIENDLY_FIRE);
+    ff = meansOfDeath & MOD_FRIENDLY_FIRE;
     mod = meansOfDeath & ~MOD_FRIENDLY_FIRE;
     message = NULL;
     message2 = "";

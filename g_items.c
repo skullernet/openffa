@@ -423,7 +423,7 @@ bool Pickup_Ammo(edict_t *ent, edict_t *other)
     int         count;
     bool        weapon;
 
-    weapon = !!(ent->item->flags & IT_WEAPON);
+    weapon = (ent->item->flags & IT_WEAPON);
     if (weapon && DF(INFINITE_AMMO))
         count = 1000;
     else if (ent->count)
@@ -1048,16 +1048,16 @@ static bool ItemBanned(edict_t *ent)
 
     if (ent->item) {
         if (ent->item->use == Use_Quad) {
-            return !!(itb & ITB_QUAD);
+            return (itb & ITB_QUAD);
         }
         if (ent->item->use == Use_Invulnerability) {
-            return !!(itb & ITB_INVUL);
+            return (itb & ITB_INVUL);
         }
         if (ent->item->weapmodel == WEAP_BFG) {
-            return !!(itb & ITB_BFG);
+            return (itb & ITB_BFG);
         }
         if (ent->item->use == Use_PowerArmor) {
-            return !!(itb & ITB_PS);
+            return (itb & ITB_PS);
         }
     }
 

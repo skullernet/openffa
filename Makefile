@@ -21,7 +21,7 @@ WINDRES ?= windres
 STRIP ?= strip
 RM ?= rm -f
 
-CFLAGS ?= -O2 -fno-strict-aliasing -g -Wall -MMD $(INCLUDES)
+CFLAGS ?= -std=gnu99 -O2 -fno-strict-aliasing -g -Wall -MMD $(INCLUDES)
 LDFLAGS ?= -shared
 LIBS ?=
 

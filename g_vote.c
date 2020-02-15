@@ -496,7 +496,7 @@ static bool vote_telemode(edict_t *ent)
         return false;
     }
 
-    if (!!(int)g_teleporter_nofreeze->value == v) {
+    if ((bool)(int)g_teleporter_nofreeze->value == v) {
         gi.cprintf(ent, PRINT_HIGH, "Teleporter mode is already set to %s.\n", v ? "NOFREEZE" : "NORMAL");
         return false;
     }

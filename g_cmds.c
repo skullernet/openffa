@@ -1286,7 +1286,7 @@ static void Cmd_Mute_f(edict_t *ent, bool muted)
 
 static void Cmd_MuteAll_f(edict_t *ent, bool muted)
 {
-    if (!!(int)g_mute_chat->value == muted) {
+    if ((bool)(int)g_mute_chat->value == muted) {
         gi.cprintf(ent, PRINT_HIGH, "Players are already %smuted\n",
                    muted ? "" : "un");
         return;

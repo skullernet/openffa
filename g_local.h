@@ -1051,12 +1051,12 @@ typedef struct {
     gender_t    gender;
     int         uf;
     conn_t      connected;
-    unsigned    loopback: 1,
-                mvdspec: 1,
-                admin: 1,
-                noviewid: 1,
-                muted: 1,
-                extended_layout: 1;
+    bool        loopback: 1;
+    bool        mvdspec: 1;
+    bool        admin: 1;
+    bool        noviewid: 1;
+    bool        muted: 1;
+    bool        extended_layout: 1;
 } client_persistant_t;
 
 // client data that stays across deathmatch respawns,
@@ -1074,8 +1074,8 @@ typedef struct {
 // client data that stays across respawns,
 // but cleared on level changes
 typedef struct {
-    unsigned    first_time : 1,     // true when just connected
-                jump_held: 1;
+    bool        first_time: 1;      // true when just connected
+    bool        jump_held: 1;
     struct {
         vec3_t      angles;         // angles sent over in the last command
         int         framenum;
