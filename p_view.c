@@ -946,8 +946,8 @@ void ClientEndServerFrame(edict_t *ent)
     // behind the body position when pushed -- "sinking into plats"
     //
     for (i = 0; i < 3; i++) {
-        ent->client->ps.pmove.origin[i] = ent->s.origin[i] * 8.0f;
-        ent->client->ps.pmove.velocity[i] = ent->velocity[i] * 8.0f;
+        ent->client->ps.pmove.origin[i] = COORD2SHORT(ent->s.origin[i]);
+        ent->client->ps.pmove.velocity[i] = COORD2SHORT(ent->velocity[i]);
     }
 
     AngleVectors(ent->client->v_angle, forward, right, up);
