@@ -40,7 +40,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // features this game supports
 #define G_FEATURES  (GMF_CLIENTNUM | GMF_PROPERINUSE | GMF_MVDSPEC | \
                      GMF_WANT_ALL_DISCONNECTS | G_GMF_VARIABLE_FPS | \
-                     GMF_EXTRA_USERINFO)
+                     GMF_EXTRA_USERINFO | GMF_IPV6_ADDRESS_AWARE)
 
 // the "gameversion" client command will print this plus compile date
 #define GAMEVERSION "OpenFFA"
@@ -134,6 +134,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define MAX_NETNAME     16
 #define MAX_SKINNAME    24
+#define MAX_IPSTR       64
 
 typedef enum {
     DAMAGE_NO,
@@ -1045,7 +1046,7 @@ typedef struct flood_s {
 typedef struct {
     char        netname[MAX_NETNAME];
     char        skin[MAX_SKINNAME];
-    char        ip[32];
+    char        ip[MAX_IPSTR];
     int         hand;
     float       fov;
     gender_t    gender;
@@ -1381,10 +1382,11 @@ void Cmd_CastVote_f(edict_t *ent, bool accepted);
 typedef enum {
     IPA_NONE,
     IPA_BAN,
-    IPA_MUTE
+    IPA_MUTE,
+    IPA_ALLOW
 } ipaction_t;
 
-ipaction_t G_CheckFilters(char *s);
+ipaction_t G_CheckFilters(const char *s);
 void G_AddIP_f(edict_t *ent);
 void G_BanEdict(edict_t *victim, edict_t *initiator);
 void G_RemoveIP_f(edict_t *ent);

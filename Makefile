@@ -21,11 +21,12 @@ WINDRES ?= windres
 STRIP ?= strip
 RM ?= rm -f
 
-CFLAGS ?= -std=gnu99 -O2 -fno-strict-aliasing -g -Wall -MMD $(INCLUDES)
+CFLAGS ?= -std=gnu99 -O2 -g -Wall -MMD $(INCLUDES)
 LDFLAGS ?= -shared
 LIBS ?=
 
 ifdef CONFIG_WINDOWS
+    CFLAGS += -D_WIN32_WINNT=0x0600
     LDFLAGS += -mconsole
     LDFLAGS += -Wl,--nxcompat,--dynamicbase
 else
@@ -76,6 +77,7 @@ endif
 
 ifdef CONFIG_WINDOWS
     OBJS += openffa.o
+    LIBS += -lws2_32
     TARGET := game$(CPU).dll
 else
     LIBS += -lm

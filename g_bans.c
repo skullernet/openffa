@@ -21,50 +21,28 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "g_local.h"
 
-/*
-==============================================================================
+#ifdef _WIN32
+#include <ws2tcpip.h>
+#else
+#include <arpa/inet.h>
+#endif
 
-PACKET FILTERING
-
-
-You can add or remove addresses from the filter list with:
-
-addip <ip>
-removeip <ip>
-
-The ip address is specified in dot format, and any unspecified digits will match
-any value, so you can specify an entire class C network with "addip 192.246.40".
-
-Removeip will only remove an address specified exactly the same way.  You cannot
-addip a subnet, then removeip a single host.
-
-listip
-Prints the current list of filters.
-
-writeip
-Dumps "addip <ip>" commands to listip.cfg so it can be execed at a later date.
-The filter lists are not saved and restored by default, because I beleive
-it would cause too much confusion.
-
-filterban <0 or 1>
-
-If 1 (the default), then ip addresses matching the current list will be prohibited
-from entering the game.  This is the default setting.
-
-If 0, then only addresses matching the list will be allowed.  This lets you easily
-set up a private game, or a game that only allows players from your local network.
-
-
-==============================================================================
-*/
+typedef union {
+    uint8_t     u8[16];
+    uint16_t    u16[8];
+    uint32_t    u32[4];
+    uint64_t    u64[2];
+} ipaddr_t;
 
 typedef struct {
     list_t      list;
     ipaction_t  action;
-    unsigned    mask, compare;
+    int         family;
+    ipaddr_t    addr;
+    ipaddr_t    mask;
     time_t      added;
-    unsigned    duration;
-    char        adder[32];
+    time_t      duration;
+    char        *adder;
 } ipfilter_t;
 
 #define MAX_IPFILTERS   1024
@@ -75,67 +53,116 @@ typedef struct {
 #define FOR_EACH_IPFILTER_SAFE(f, n) \
     LIST_FOR_EACH_SAFE(ipfilter_t, f, n, &ipfilters, list)
 
+#define ADDR_BITS(family)   ((family) == AF_INET6 ? 128 : 32)
+#define ADDR_SIZE(family)   ((family) == AF_INET6 ?  16 :  4)
+
 static LIST_DECL(ipfilters);
-static int      numipfilters;
+static int  numipfilters;
 
-//extern cvar_t   *filterban;
-
-static bool parse_filter(const char *s, unsigned *mask, unsigned *compare)
+static void make_mask(ipaddr_t *mask, int bits)
 {
-    int     i;
-    byte    b[4] = { 0 };
-    byte    m[4] = { 0 };
-    char    *p;
+    memset(mask, 0, sizeof(*mask));
+    memset(mask->u8, 0xff, bits >> 3);
+    if (bits & 7) {
+        mask->u8[bits >> 3] = 0xff << (-bits & 7);
+    }
+}
 
-    for (i = 0; i < 4; i++) {
-        b[i] = strtoul(s, &p, 10);
-        if (s == p) {
-            return false;
-        }
+static int parse_filter(const char *s, ipaddr_t *addr, ipaddr_t *mask)
+{
+    int bits, family;
+    char *p, copy[MAX_IPSTR];
 
-        if (b[i] != 0)
-            m[i] = 255;
+    if (Q_strlcpy(copy, s, sizeof(copy)) >= sizeof(copy))
+        return 0;
 
-        if (!*p)
-            break;
-        s = p + 1;
+    s = copy;
+    p = strchr(s, '/');
+    if (p) {
+        *p++ = 0;
+        if (*p == 0)
+            return 0;
+        bits = atoi(p);
+    } else {
+        bits = -1;
     }
 
-    *mask = *(unsigned *)m;
-    *compare = *(unsigned *)b;
+    if (inet_pton(AF_INET, s, addr) == 1) {
+        family = AF_INET;
+    } else if (inet_pton(AF_INET6, s, addr) == 1) {
+        family = AF_INET6;
+    } else {
+        return 0;
+    }
 
-    return true;
+    if (bits == -1) {
+        bits = ADDR_BITS(family);
+    } else {
+        if (bits < 0 || bits > ADDR_BITS(family))
+            return 0;
+    }
+
+    make_mask(mask, bits);
+
+    return family;
 }
 
 static void remove_filter(ipfilter_t *ip)
 {
     List_Remove(&ip->list);
+    if (ip->adder) {
+        G_Free(ip->adder);
+    }
     G_Free(ip);
     numipfilters--;
 }
 
-static void add_filter(ipaction_t action, unsigned mask, unsigned compare, unsigned duration, edict_t *ent)
+static void add_filter(ipaction_t action, int family, ipaddr_t *addr,
+                       ipaddr_t *mask, time_t duration, edict_t *ent)
 {
     ipfilter_t *ip;
-    char *s;
 
     ip = G_Malloc(sizeof(*ip));
     ip->action = action;
-    ip->mask = mask;
-    ip->compare = compare;
+    ip->family = family;
+    memcpy(&ip->addr, addr, ADDR_SIZE(family));
+    memcpy(&ip->mask, mask, ADDR_SIZE(family));
     ip->added = time(NULL);
     ip->duration = duration;
     if (ent) {
-        strcpy(ip->adder, ent->client->pers.ip);
-        s = strchr(ip->adder, ':');
-        if (s) {
-            *s = 0;
-        }
+        ip->adder = G_CopyString(ent->client->pers.ip);
     } else {
-        strcpy(ip->adder, "console");
+        ip->adder = NULL;
     }
     List_Append(&ipfilters, &ip->list);
     numipfilters++;
+}
+
+static int parse_addr(ipaddr_t *addr, const char *s)
+{
+    char *p, copy[MAX_IPSTR];
+
+    if (Q_strlcpy(copy, s, sizeof(copy)) >= sizeof(copy))
+        return 0;
+
+    s = copy;
+    if (*s == '[') {
+        s++;
+        p = strchr(s, ']');
+        if (!p)
+            return 0;
+        *p = 0;
+        if (inet_pton(AF_INET6, s, addr) == 1)
+            return AF_INET6;
+    } else {
+        p = strchr(s, ':');
+        if (p)
+            *p = 0;
+        if (inet_pton(AF_INET, s, addr) == 1)
+            return AF_INET;
+    }
+
+    return 0;
 }
 
 /*
@@ -143,51 +170,65 @@ static void add_filter(ipaction_t action, unsigned mask, unsigned compare, unsig
 G_CheckFilters
 =================
 */
-ipaction_t G_CheckFilters(char *s)
+ipaction_t G_CheckFilters(const char *s)
 {
-    int         i;
-    unsigned    in;
-    byte        m[4] = { 0 };
-    char        *p;
+    int         family;
+    ipaddr_t    addr;
     time_t      now;
     ipfilter_t  *ip, *next;
 
-    for (i = 0; i < 4; i++) {
-        m[i] = strtoul(s, &p, 10);
-        if (s == p || !*p || *p == ':')
-            break;
-        s = p + 1;
+    family = parse_addr(&addr, s);
+    if (!family) {
+        return IPA_NONE;
     }
-
-    in = *(unsigned *)m;
 
     now = time(NULL);
 
     FOR_EACH_IPFILTER_SAFE(ip, next) {
-        if (ip->duration && now - ip->added > ip->duration) {
-            remove_filter(ip);
+        if (ip->duration) {
+            if (ip->added > now) {
+                ip->added = now;
+            }
+            if (now - ip->added > ip->duration) {
+                remove_filter(ip);
+                continue;
+            }
+        }
+        if (ip->family != family) {
             continue;
         }
-        if ((in & ip->mask) == ip->compare) {
-            return ip->action; //(int)filterban->value ? ip->action : IPA_NONE;
+        if (ip->family == AF_INET6) {
+            if (!(((addr.u64[0] ^ ip->addr.u64[0]) & ip->mask.u64[0]) |
+                  ((addr.u64[1] ^ ip->addr.u64[1]) & ip->mask.u64[1]))) {
+                return ip->action;
+            }
+        } else {
+            if (!((addr.u32[0] ^ ip->addr.u32[0]) & ip->mask.u32[0])) {
+                return ip->action;
+            }
         }
     }
 
-    return IPA_NONE; //(int)filterban->value ? IPA_NONE : IPA_BAN;
+    return IPA_NONE;
 }
 
-static unsigned parse_duration(const char *s)
+static time_t parse_duration(const char *s)
 {
-    unsigned sec;
+    time_t sec;
     char *p;
 
     sec = strtoul(s, &p, 10);
+    if (p == s) {
+        return -1;
+    }
     if (*p == 0 || *p == 'm' || *p == 'M') {
         sec *= 60; // minutes are default
     } else if (*p == 'h' || *p == 'H') {
         sec *= 60 * 60;
     } else if (*p == 'd' || *p == 'D') {
         sec *= 60 * 60 * 24;
+    } else {
+        return -1;
     }
 
     return sec;
@@ -195,13 +236,20 @@ static unsigned parse_duration(const char *s)
 
 static ipaction_t parse_action(const char *s)
 {
-    if (!Q_stricmp(s, "ban")) {
-        return IPA_BAN;
-    }
-    if (!Q_stricmp(s, "mute")) {
-        return IPA_MUTE;
-    }
+    if (!Q_stricmp(s, "ban")) return IPA_BAN;
+    if (!Q_stricmp(s, "mute")) return IPA_MUTE;
+    if (!Q_stricmp(s, "allow")) return IPA_ALLOW;
     return IPA_NONE;
+}
+
+static char *action_to_string(ipaction_t action)
+{
+    switch (action) {
+        default: return NULL;
+        case IPA_BAN: return "ban";
+        case IPA_MUTE: return "mute";
+        case IPA_ALLOW: return "allow";
+    }
 }
 
 #define DEF_DURATION    (1 * 3600)
@@ -214,17 +262,17 @@ G_AddIP_f
 */
 void G_AddIP_f(edict_t *ent)
 {
-    unsigned mask, compare;
-    unsigned duration;
+    ipaddr_t addr, mask;
     ipaction_t action;
-    int start, argc;
+    time_t duration;
+    int i, start, argc, family;
     char *s;
 
     start = ent ? 0 : 1;
     argc = gi.argc() - start;
 
     if (argc < 2) {
-        gi.cprintf(ent, PRINT_HIGH, "Usage: %s <ip-mask> [duration] [action]\n", gi.argv(start));
+        gi.cprintf(ent, PRINT_HIGH, "Usage: %s <ip/mask> [action] [duration]\n", gi.argv(start));
         return;
     }
 
@@ -234,50 +282,77 @@ void G_AddIP_f(edict_t *ent)
     }
 
     s = gi.argv(start + 1);
-    if (!parse_filter(s, &mask, &compare)) {
+    family = parse_filter(s, &addr, &mask);
+    if (!family) {
         gi.cprintf(ent, PRINT_HIGH, "Bad filter address: %s\n", s);
         return;
     }
 
-    duration = ent ? DEF_DURATION : 0;
     action = IPA_BAN;
-    if (argc > 2) {
-        s = gi.argv(start + 2);
-        duration = parse_duration(s);
-        if (ent) {
-            if (!duration) {
-                gi.cprintf(ent, PRINT_HIGH, "You may not add permanent bans.\n");
-                return;
-            }
-            if (duration > MAX_DURATION) {
-                duration = MAX_DURATION;
-            }
+    duration = ent ? DEF_DURATION : 0;
+
+    for (i = 2; i < argc; i++) {
+        ipaction_t new_act;
+        time_t new_dur;
+
+        s = gi.argv(start + i);
+        new_act = parse_action(s);
+        if (new_act != IPA_NONE) {
+            action = new_act;
+            continue;
         }
-        if (argc > 3) {
-            s = gi.argv(start + 3);
-            action = parse_action(s);
-            if (action == IPA_NONE) {
-                gi.cprintf(ent, PRINT_HIGH, "Bad action specifier: %s\n", s);
-                return;
-            }
+        new_dur = parse_duration(s);
+        if (new_dur >= 0) {
+            duration = new_dur;
+            continue;
+        }
+        gi.cprintf(ent, PRINT_HIGH, "Invalid argument: %s\n", s);
+        return;
+    }
+
+    if (ent) {
+        if (!duration) {
+            gi.cprintf(ent, PRINT_HIGH, "You may not add permanent bans.\n");
+            return;
+        }
+        if (duration > MAX_DURATION) {
+            duration = MAX_DURATION;
         }
     }
 
-    add_filter(action, mask, compare, duration, ent);
+    add_filter(action, family, &addr, &mask, duration, ent);
 }
 
+/*
+=================
+G_BanEdict
+=================
+*/
 void G_BanEdict(edict_t *victim, edict_t *initiator)
 {
-    unsigned mask, compare;
+    ipaddr_t addr, mask;
+    int family;
 
     if (numipfilters == MAX_IPFILTERS) {
         return;
     }
-    if (!parse_filter(victim->client->pers.ip, &mask, &compare)) {
+
+    family = parse_addr(&addr, victim->client->pers.ip);
+    if (!family) {
         return;
     }
 
-    add_filter(IPA_BAN, mask, compare, DEF_DURATION, initiator);
+    make_mask(&mask, family == AF_INET6 ? 64 : 32);
+
+    add_filter(IPA_BAN, family, &addr, &mask, DEF_DURATION, initiator);
+}
+
+static char *filter_to_string(int family, ipaddr_t *addr, ipaddr_t *mask)
+{
+    int i;
+    for (i = 0; i < ADDR_BITS(family) && mask->u8[i >> 3] & (1 << (7 - (i & 7))); i++)
+        ;
+    return va("%s/%d", inet_ntop(family, addr, (char [MAX_IPSTR]){}, MAX_IPSTR), i);
 }
 
 /*
@@ -287,56 +362,59 @@ G_RemoveIP_f
 */
 void G_RemoveIP_f(edict_t *ent)
 {
-    unsigned    mask, compare;
+    ipaddr_t    addr, mask;
     char        *s;
     ipfilter_t  *ip;
-    int         start, argc;
+    int         start, argc, family;
 
     start = ent ? 0 : 1;
     argc = gi.argc() - start;
 
     if (argc < 2) {
-        gi.cprintf(ent, PRINT_HIGH, "Usage: %s <ip-mask>\n", gi.argv(start));
+        gi.cprintf(ent, PRINT_HIGH, "Usage: %s <ip/mask>\n", gi.argv(start));
         return;
     }
 
     s = gi.argv(start + 1);
-    if (!parse_filter(s, &mask, &compare)) {
+    family = parse_filter(s, &addr, &mask);
+    if (!family) {
         gi.cprintf(ent, PRINT_HIGH, "Bad filter address: %s\n", s);
         return;
     }
 
     FOR_EACH_IPFILTER(ip) {
-        if (ip->mask == mask && ip->compare == compare) {
-            if (ent && !ip->duration) {
-                gi.cprintf(ent, PRINT_HIGH, "You may not remove permanent bans.\n");
-                return;
-            }
-            remove_filter(ip);
-            gi.cprintf(ent, PRINT_HIGH, "Removed.\n");
+        if (ip->family != family ||
+            memcmp(&ip->addr, &addr, ADDR_SIZE(family)) ||
+            memcmp(&ip->mask, &mask, ADDR_SIZE(family))) {
+            continue;
+        }
+        if (ent && !ip->duration) {
+            gi.cprintf(ent, PRINT_HIGH, "You may not remove permanent bans.\n");
             return;
         }
+        remove_filter(ip);
+        gi.cprintf(ent, PRINT_HIGH, "Removed.\n");
+        return;
     }
 
-    gi.cprintf(ent, PRINT_HIGH, "Didn't find %s.\n", s);
+    gi.cprintf(ent, PRINT_HIGH, "Didn't find %s.\n", filter_to_string(family, &addr, &mask));
 }
 
-static size_t Com_FormatTime(char *buffer, size_t size, time_t t)
+static char *duration_to_string(time_t t)
 {
-    int     sec, min, hour, day;
+    int sec, min, hour, day;
 
-    sec = (int)t;
-    min = sec / 60; sec %= 60;
+    min = t / 60; sec = t % 60;
     hour = min / 60; min %= 60;
     day = hour / 24; hour %= 24;
 
     if (day) {
-        return Q_scnprintf(buffer, size, "%d+%d:%02d.%02d", day, hour, min, sec);
+        return va("%d+%d:%02d.%02d", day, hour, min, sec);
     }
     if (hour) {
-        return Q_scnprintf(buffer, size, "%d:%02d.%02d", hour, min, sec);
+        return va("%d:%02d.%02d", hour, min, sec);
     }
-    return Q_scnprintf(buffer, size, "%02d.%02d", min, sec);
+    return va("%02d.%02d", min, sec);
 }
 
 /*
@@ -346,38 +424,36 @@ G_ListIP_f
 */
 void G_ListIP_f(edict_t *ent)
 {
-    byte b[4];
     ipfilter_t *ip, *next;
-    char address[32], expires[32];
-    time_t now, diff;
+    time_t now;
+
+    now = time(NULL);
+
+    FOR_EACH_IPFILTER_SAFE(ip, next) {
+        if (ip->duration) {
+            if (ip->added > now) {
+                ip->added = now;
+            }
+            if (now - ip->added > ip->duration) {
+                remove_filter(ip);
+            }
+        }
+    }
 
     if (LIST_EMPTY(&ipfilters)) {
         gi.cprintf(ent, PRINT_HIGH, "Filter list is empty.\n");
         return;
     }
 
-    now = time(NULL);
-
     gi.cprintf(ent, PRINT_HIGH,
-               "address         expires in action added by\n"
-               "--------------- ---------- ------ ---------------\n");
-    FOR_EACH_IPFILTER_SAFE(ip, next) {
-        *(unsigned *)b = ip->compare;
-        Q_snprintf(address, sizeof(address), "%d.%d.%d.%d", b[0], b[1], b[2], b[3]);
-
-        if (ip->duration) {
-            diff = now - ip->added;
-            if (diff > ip->duration) {
-                remove_filter(ip);
-                continue;
-            }
-            Com_FormatTime(expires, sizeof(expires), ip->duration - diff);
-        } else {
-            strcpy(expires, "permanent");
-        }
-
-        gi.cprintf(ent, PRINT_HIGH, "%-15s %10s %6s %s\n",
-                   address, expires, ip->action == IPA_MUTE ? "mute" : "ban", ip->adder);
+               "address            action expires in added by\n"
+               "------------------ ------ ---------- ---------------\n");
+    FOR_EACH_IPFILTER(ip) {
+        gi.cprintf(ent, PRINT_HIGH, "%-18s %6s %10s %s\n",
+                   filter_to_string(ip->family, &ip->addr, &ip->mask),
+                   action_to_string(ip->action),
+                   ip->duration ? duration_to_string(ip->duration - (now - ip->added)) : "permanent",
+                   ip->adder ? ip->adder : "console");
     }
 }
 
@@ -390,20 +466,21 @@ void G_WriteIP_f(void)
 {
     FILE    *f;
     char    name[MAX_OSPATH];
-    byte    b[4];
     size_t  len;
     ipfilter_t  *ip;
 
     if (!game.dir[0]) {
+        gi.cprintf(NULL, PRINT_HIGH, "No gamedir set\n");
         return;
     }
 
     len = Q_snprintf(name, sizeof(name), "%s/listip.cfg", game.dir);
     if (len >= sizeof(name)) {
+        gi.cprintf(NULL, PRINT_HIGH, "Oversize gamedir\n");
         return;
     }
 
-    f = fopen(name, "wb");
+    f = fopen(name, "w");
     if (!f) {
         gi.cprintf(NULL, PRINT_HIGH, "Couldn't open %s\n", name);
         return;
@@ -411,12 +488,14 @@ void G_WriteIP_f(void)
 
     gi.cprintf(NULL, PRINT_HIGH, "Writing %s.\n", name);
 
-    //fprintf(f, "set filterban %d\n", (int)filterban->value);
-
     FOR_EACH_IPFILTER(ip) {
         if (!ip->duration) {
-            *(unsigned *)b = ip->compare;
-            fprintf(f, "sv addip %d.%d.%d.%d\n", b[0], b[1], b[2], b[3]);
+            char *s = filter_to_string(ip->family, &ip->addr, &ip->mask);
+            if (ip->action == IPA_BAN) {
+                fprintf(f, "sv addip %s\n", s);
+            } else {
+                fprintf(f, "sv addip %s %s\n", s, action_to_string(ip->action));
+            }
         }
     }
 
