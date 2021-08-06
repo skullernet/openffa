@@ -60,6 +60,7 @@ cvar_t  *g_protection_time;
 cvar_t  *g_log_stats;
 cvar_t  *g_skins_file;
 cvar_t  *g_motd_file;
+cvar_t  *g_highscore_path;
 cvar_t  *dedicated;
 
 cvar_t  *sv_maxvelocity;
@@ -296,13 +297,13 @@ static void G_SaveScores(void)
         return;
     }
 
-    len = Q_concat(path, sizeof(path), game.dir, "/highscores", NULL);
+    len = Q_concat(path, sizeof(path), game.dir, "/", g_highscore_path->string, NULL);
     if (len >= sizeof(path)) {
         return;
     }
     os_mkdir(path);
 
-    len = Q_concat(path, sizeof(path), game.dir, "/highscores/",
+    len = Q_concat(path, sizeof(path), game.dir, "/", g_highscore_path->string, "/",
                    level.mapname, ".txt", NULL);
     if (len >= sizeof(path)) {
         return;
@@ -380,7 +381,7 @@ void G_LoadScores(void)
     load_file_t *f;
     int i;
 
-    f = G_LoadFile("highscores", level.mapname);
+    f = G_LoadFile(g_highscore_path->string, level.mapname);
     if (!f) {
         return;
     }
@@ -1198,6 +1199,7 @@ static void G_Init(void)
     g_protection_time = gi.cvar("g_protection_time", "0", 0);
     g_skins_file = gi.cvar("g_skins_file", "", CVAR_LATCH);
     g_motd_file = gi.cvar("g_motd_file", "", CVAR_LATCH);
+    g_highscore_path = gi.cvar("g_highscore_path", "highscores", CVAR_LATCH);
 
     run_pitch = gi.cvar("run_pitch", "0.002", 0);
     run_roll = gi.cvar("run_roll", "0.005", 0);

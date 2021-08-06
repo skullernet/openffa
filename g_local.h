@@ -674,6 +674,7 @@ extern  cvar_t  *g_spawn_mode;
 extern  cvar_t  *g_team_chat;
 extern  cvar_t  *g_mute_chat;
 extern  cvar_t  *g_protection_time;
+extern  cvar_t  *g_highscore_path;
 extern  cvar_t  *dedicated;
 
 extern  cvar_t  *sv_gravity;

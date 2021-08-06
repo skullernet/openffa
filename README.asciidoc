@@ -153,6 +153,10 @@ g_motd_file::
     Specifies name of the file to load MOTD from. Should not include any
     extenstion part or slashes. Default value is empty (no MOTD set).
 
+g_highscore_path::
+    The directory that holds the highscore files. Useful when running multiple
+    OpenFFA servers from the same mod directory. Default is "highscores".
+
 g_bugs::
     Specifies whether some known Quake 2 gameplay bugs are enabled or not.
     Default value is 0.
