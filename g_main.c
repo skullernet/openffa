@@ -296,14 +296,14 @@ static void G_SaveScores(void)
         return;
     }
 
-    len = Q_concat(path, sizeof(path), game.dir, "/highscores", NULL);
+    len = Q_concat(path, sizeof(path), game.dir, "/highscores");
     if (len >= sizeof(path)) {
         return;
     }
     os_mkdir(path);
 
     len = Q_concat(path, sizeof(path), game.dir, "/highscores/",
-                   level.mapname, ".txt", NULL);
+                   level.mapname, ".txt");
     if (len >= sizeof(path)) {
         return;
     }
@@ -1245,7 +1245,7 @@ static void G_Init(void)
         cvar_t *gamedir = gi.cvar("game", NULL, 0);
         if (basedir && gamedir) {
             len = Q_concat(game.dir, sizeof(game.dir),
-                           basedir->string, "/", gamedir->string, NULL);
+                           basedir->string, "/", gamedir->string);
         } else {
             len = 0;
         }

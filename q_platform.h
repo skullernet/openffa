@@ -31,12 +31,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #endif
 
 #ifdef _WIN32
-#define PRIz    "Iu"
-#else
-#define PRIz    "zu"
-#endif
-
-#ifdef _WIN32
 #define LIBSUFFIX   ".dll"
 #else
 #define LIBSUFFIX   ".so"
@@ -81,8 +75,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #ifdef __GNUC__
 
+#if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4)
+#define q_printf(f, a)      __attribute__((format(gnu_printf, f, a)))
+#else
 #define q_printf(f, a)      __attribute__((format(printf, f, a)))
+#endif
 #define q_noreturn          __attribute__((noreturn))
+#define q_noinline          __attribute__((noinline))
 #define q_malloc            __attribute__((malloc))
 #if __GNUC__ >= 4
 #define q_sentinel          __attribute__((sentinel))
@@ -98,7 +97,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define q_offsetof(t, m)    ((size_t)&((t *)0)->m)
 #endif
 
-#ifdef _WIN32
+#if USE_GAME_ABI_HACK
 #define q_gameabi           __attribute__((callee_pop_aggregate_return(0)))
 #else
 #define q_gameabi
@@ -116,6 +115,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #define q_printf(f, a)
 #define q_noreturn
+#define q_noinline
 #define q_malloc
 #define q_sentinel
 

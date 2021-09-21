@@ -575,7 +575,7 @@ void G_SpawnEntities(const char *mapname, const char *entities, const char *spaw
 
         // combine name and skin into a configstring
         Q_concat(playerskin, sizeof(playerskin),
-                 client->pers.netname, "\\", client->pers.skin, NULL);
+                 client->pers.netname, "\\", client->pers.skin);
         gi.configstring(CS_PLAYERSKINS + i, playerskin);
         gi.configstring(CS_PLAYERNAMES + i, client->pers.netname);
     }

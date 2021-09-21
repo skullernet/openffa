@@ -1402,10 +1402,10 @@ static bool parse_skin(char *out, const char *in)
         }
 
         // empty directory = wildcard
-        len = Q_concat(out, MAX_SKINNAME, m->name, "/", p + 1, NULL);
+        len = Q_concat(out, MAX_SKINNAME, m->name, "/", p + 1);
     } else {
         s = find_skin(m->down, p + 1);
-        len = Q_concat(out, MAX_SKINNAME, m->name, "/", s->name, NULL);
+        len = Q_concat(out, MAX_SKINNAME, m->name, "/", s->name);
     }
 
     if (len >= MAX_SKINNAME) {
@@ -1474,7 +1474,7 @@ void ClientUserinfoChanged(edict_t *ent, char *userinfo)
             G_StuffText(ent, va("set name \"%s\"\n", client->pers.netname));
         } else {
             // combine name and skin into a configstring
-            Q_concat(playerskin, sizeof(playerskin), name, "\\", skin, NULL);
+            Q_concat(playerskin, sizeof(playerskin), name, "\\", skin);
             playernum = (ent - g_edicts) - 1;
             gi.configstring(CS_PLAYERSKINS + playernum, playerskin);
             gi.configstring(CS_PLAYERNAMES + playernum, name);

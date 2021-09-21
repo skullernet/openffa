@@ -232,6 +232,7 @@ extern vec3_t vec3_origin;
 #define Vector4Clear(a)         ((a)[0]=(a)[1]=(a)[2]=(a)[3]=0)
 #define Vector4Negate(a,b)      ((b)[0]=-(a)[0],(b)[1]=-(a)[1],(b)[2]=-(a)[2],(b)[3]=-(a)[3])
 #define Vector4Set(v, a, b, c, d)   ((v)[0]=(a),(v)[1]=(b),(v)[2]=(c),(v)[3]=(d))
+#define Vector4Compare(v1,v2)    ((v1)[0]==(v2)[0]&&(v1)[1]==(v2)[1]&&(v1)[2]==(v2)[2]&&(v1)[3]==(v2)[3])
 
 void AngleVectors(vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
 vec_t VectorNormalize(vec3_t v);        // returns vector length
@@ -470,12 +471,15 @@ int SortStrcmp(const void *p1, const void *p2);
 int SortStricmp(const void *p1, const void *p2);
 
 size_t COM_strclr(char *s);
+char *COM_StripQuotes(char *s);
 
 // buffer safe operations
 size_t Q_strlcpy(char *dst, const char *src, size_t size);
 size_t Q_strlcat(char *dst, const char *src, size_t size);
 
-size_t Q_concat(char *dest, size_t size, ...) q_sentinel;
+#define Q_concat(dest, size, ...) \
+    Q_concat_array(dest, size, (const char *[]){__VA_ARGS__, NULL})
+size_t Q_concat_array(char *dest, size_t size, const char **arr);
 
 size_t Q_vsnprintf(char *dest, size_t size, const char *fmt, va_list argptr);
 size_t Q_vscnprintf(char *dest, size_t size, const char *fmt, va_list argptr);
