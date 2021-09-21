@@ -21,9 +21,8 @@ WINDRES ?= windres
 STRIP ?= strip
 RM ?= rm -f
 
-CFLAGS ?= -std=gnu99 -O2 -g -Wall -MMD $(INCLUDES)
-LDFLAGS ?= -shared
-LIBS ?=
+CFLAGS += -std=gnu99 -O2 -g -Wall -MMD $(INCLUDES)
+LDFLAGS += -shared
 
 ifdef CONFIG_WINDOWS
     CFLAGS += -D_WIN32_WINNT=0x0600
