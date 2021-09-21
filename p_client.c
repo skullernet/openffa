@@ -1342,23 +1342,6 @@ static skin_entry_t *find_skin(skin_entry_t *head, const char *name)
     return head; // use default
 }
 
-static bool validate_skin(const char *s)
-{
-    if (!*s) {
-        // empty skin is no good
-        return false;
-    }
-
-    do {
-        if (!Q_ispath(*s)) {
-            // any non-path chars are bad also
-            return false;
-        }
-    } while (*++s);
-
-    return true;
-}
-
 static bool parse_skin(char *out, const char *in)
 {
     char *p;
@@ -1379,13 +1362,13 @@ static bool parse_skin(char *out, const char *in)
     *p = 0;
 
     // validate the model part
-    if (!validate_skin(out)) {
+    if (!COM_IsPath(out)) {
         goto bad;
     }
 
     if (!game.skins) {
         // validate the skin part
-        if (!validate_skin(p + 1)) {
+        if (!COM_IsPath(p + 1)) {
             goto bad;
         }
 
@@ -1397,7 +1380,7 @@ static bool parse_skin(char *out, const char *in)
     m = find_skin(game.skins, out);
     if (!m->down) {
         // validate the skin part
-        if (!validate_skin(p + 1)) {
+        if (!COM_IsPath(p + 1)) {
             goto bad;
         }
 
