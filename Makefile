@@ -26,6 +26,7 @@ LDFLAGS += -shared
 
 ifdef CONFIG_WINDOWS
     CFLAGS += -D_WIN32_WINNT=0x0600
+    CFLAGS += -D__USE_MINGW_ANSI_STDIO=1
     LDFLAGS += -mconsole
     LDFLAGS += -Wl,--nxcompat,--dynamicbase
 else
