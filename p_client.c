@@ -1095,6 +1095,55 @@ void G_SetDeltaAngles(edict_t *ent, vec3_t angles)
     }
 }
 
+static void InitClientInventory(edict_t *ent)
+{
+    gclient_t *client = ent->client;
+    int weapon_initial = (int)g_weapon_initial->value;
+    int weapon_have = (int)g_weapon_have->value | weapon_initial;
+    int i;
+    gitem_t *it;
+
+    client->inventory[ITEM_BLASTER] = 1;
+
+    for (i = WEAP_SHOTGUN; i < WEAP_TOTAL; i++) {
+        if (weapon_have & (1 << (i - WEAP_SHOTGUN))) {
+            it = FindItemByWeaponModel(i);
+            client->inventory[ITEM_INDEX(it)] = 1;
+        }
+    }
+
+    client->selected_item = ITEM_BLASTER;
+    client->weapon = INDEX_ITEM(ITEM_BLASTER);
+
+    for (i = WEAP_SHOTGUN; i < WEAP_TOTAL; i++) {
+        if (weapon_initial & (1 << (i - WEAP_SHOTGUN))) {
+            it = FindItemByWeaponModel(i);
+            client->selected_item = ITEM_INDEX(it);
+            client->weapon = it;
+            break;
+        }
+    }
+
+    client->max_shells      = G_ClampCvar(g_max_shells,   1, 999);
+    client->max_bullets     = G_ClampCvar(g_max_bullets,  1, 999);
+    client->max_cells       = G_ClampCvar(g_max_cells,    1, 999);
+    client->max_grenades    = G_ClampCvar(g_max_grenades, 1, 999);
+    client->max_rockets     = G_ClampCvar(g_max_rockets,  1, 999);
+    client->max_slugs       = G_ClampCvar(g_max_slugs,    1, 999);
+
+    client->inventory[ITEM_SHELLS]   = G_ClampCvar(g_start_shells,   0, 999);
+    client->inventory[ITEM_BULLETS]  = G_ClampCvar(g_start_bullets,  0, 999);
+    client->inventory[ITEM_CELLS]    = G_ClampCvar(g_start_cells,    0, 999);
+    client->inventory[ITEM_GRENADES] = G_ClampCvar(g_start_grenades, 0, 999);
+    client->inventory[ITEM_ROCKETS]  = G_ClampCvar(g_start_rockets,  0, 999);
+    client->inventory[ITEM_SLUGS]    = G_ClampCvar(g_start_slugs,    0, 999);
+
+    it = FindItemByArmorType(ARMOR_JACKET + G_ClampCvar(g_start_armortype, 0, 2));
+    client->inventory[ITEM_INDEX(it)] = G_ClampCvar(g_start_armor, 0, ((gitem_armor_t *)it->info)->max_count);
+
+    ent->max_health         = G_ClampCvar(g_max_health,   1, 999);
+    ent->health             = G_ClampCvar(g_start_health, 1, 999);
+}
 
 /*
 ===========
@@ -1144,19 +1193,7 @@ void PutClientInServer(edict_t *ent)
     client->edict = ent;
     client->clientNum = index;
 
-    client->selected_item = ITEM_BLASTER;
-    client->inventory[ITEM_BLASTER] = 1;
-    client->weapon = INDEX_ITEM(ITEM_BLASTER);
-
-    client->max_bullets     = 200;
-    client->max_shells      = 100;
-    client->max_rockets     = 50;
-    client->max_grenades    = 50;
-    client->max_cells       = 200;
-    client->max_slugs       = 50;
-
-    ent->health             = 100;
-    ent->max_health         = 100;
+    InitClientInventory(ent);
 
     // clear entity values
     ent->groundentity = NULL;

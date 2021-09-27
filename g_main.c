@@ -92,6 +92,27 @@ cvar_t  *flood_infos;
 cvar_t  *flood_perinfo;
 cvar_t  *flood_infodelay;
 
+cvar_t  *g_weapon_initial;
+cvar_t  *g_weapon_have;
+
+cvar_t  *g_start_shells;
+cvar_t  *g_start_bullets;
+cvar_t  *g_start_cells;
+cvar_t  *g_start_grenades;
+cvar_t  *g_start_rockets;
+cvar_t  *g_start_slugs;
+cvar_t  *g_start_health;
+cvar_t  *g_start_armor;
+cvar_t  *g_start_armortype;
+
+cvar_t  *g_max_shells;
+cvar_t  *g_max_bullets;
+cvar_t  *g_max_cells;
+cvar_t  *g_max_grenades;
+cvar_t  *g_max_rockets;
+cvar_t  *g_max_slugs;
+cvar_t  *g_max_health;
+
 LIST_DECL(g_map_list);
 LIST_DECL(g_map_queue);
 
@@ -1123,6 +1144,19 @@ void G_CheckFilenameVariable(cvar_t *cv)
     }
 }
 
+int G_ClampCvar(cvar_t *var, int min, int max)
+{
+    if (var->value < min) {
+        gi.cvar_set(var->name, va("%d", min));
+        return min;
+    }
+    if (var->value > max) {
+        gi.cvar_set(var->name, va("%d", max));
+        return max;
+    }
+    return var->value;
+}
+
 /*
 ============
 InitGame
@@ -1219,6 +1253,28 @@ static void G_Init(void)
     flood_infos = gi.cvar("flood_infos", "4", 0);
     flood_perinfo = gi.cvar("flood_perinfo", "30", 0);
     flood_infodelay = gi.cvar("flood_infodelay", "60", 0);
+
+    // inventory
+    g_weapon_initial = gi.cvar("g_weapon_initial", "0", 0);
+    g_weapon_have = gi.cvar("g_weapon_have", "0", 0);
+
+    g_start_shells = gi.cvar("g_start_shells", "0", 0);
+    g_start_bullets = gi.cvar("g_start_bullets", "0", 0);
+    g_start_cells = gi.cvar("g_start_cells", "0", 0);
+    g_start_grenades = gi.cvar("g_start_grenades", "0", 0);
+    g_start_rockets = gi.cvar("g_start_rockets", "0", 0);
+    g_start_slugs = gi.cvar("g_start_slugs", "0", 0);
+    g_start_health = gi.cvar("g_start_health", "100", 0);
+    g_start_armor = gi.cvar("g_start_armor", "0", 0);
+    g_start_armortype = gi.cvar("g_start_armortype", "0", 0);
+
+    g_max_shells = gi.cvar("g_max_shells", "100", 0);
+    g_max_bullets = gi.cvar("g_max_bullets", "200", 0);
+    g_max_cells = gi.cvar("g_max_cells", "200", 0);
+    g_max_grenades = gi.cvar("g_max_grenades", "50", 0);
+    g_max_rockets = gi.cvar("g_max_rockets", "50", 0);
+    g_max_slugs = gi.cvar("g_max_slugs", "50", 0);
+    g_max_health = gi.cvar("g_max_health", "100", 0);
 
     // force deathmatch
     //gi.cvar_set( "coop", "0" ); //atu

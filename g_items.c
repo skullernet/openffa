@@ -94,6 +94,50 @@ gitem_t *FindItem(char *pickup_name)
     return NULL;
 }
 
+/*
+===============
+FindItemByWeaponModel
+
+===============
+*/
+gitem_t *FindItemByWeaponModel(int weap)
+{
+    int     i;
+    gitem_t *it;
+
+    for (i = 0; i < ITEM_TOTAL; i++) {
+        it = INDEX_ITEM(i);
+        if (!(it->flags & IT_WEAPON))
+            continue;
+        if (it->weapmodel == weap)
+            return it;
+    }
+
+    return NULL;
+}
+
+/*
+===============
+FindItemByArmorType
+
+===============
+*/
+gitem_t *FindItemByArmorType(int armortype)
+{
+    int     i;
+    gitem_t *it;
+
+    for (i = 0; i < ITEM_TOTAL; i++) {
+        it = INDEX_ITEM(i);
+        if (!(it->flags & IT_ARMOR))
+            continue;
+        if (it->tag == armortype)
+            return it;
+    }
+
+    return NULL;
+}
+
 //======================================================================
 
 static edict_t *PickMate(edict_t *ent)
@@ -406,7 +450,7 @@ bool Add_Ammo(edict_t *ent, gitem_t *item, int count)
 
     index = ITEM_INDEX(item);
 
-    if (ent->client->inventory[index] == max)
+    if (ent->client->inventory[index] >= max)
         return false;
 
     ent->client->inventory[index] += count;

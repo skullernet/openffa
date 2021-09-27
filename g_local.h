@@ -705,6 +705,27 @@ extern  cvar_t  *flood_infos;
 extern  cvar_t  *flood_perinfo;
 extern  cvar_t  *flood_infodelay;
 
+extern  cvar_t  *g_weapon_initial;
+extern  cvar_t  *g_weapon_have;
+
+extern  cvar_t  *g_start_shells;
+extern  cvar_t  *g_start_bullets;
+extern  cvar_t  *g_start_cells;
+extern  cvar_t  *g_start_grenades;
+extern  cvar_t  *g_start_rockets;
+extern  cvar_t  *g_start_slugs;
+extern  cvar_t  *g_start_health;
+extern  cvar_t  *g_start_armor;
+extern  cvar_t  *g_start_armortype;
+
+extern  cvar_t  *g_max_shells;
+extern  cvar_t  *g_max_bullets;
+extern  cvar_t  *g_max_cells;
+extern  cvar_t  *g_max_grenades;
+extern  cvar_t  *g_max_rockets;
+extern  cvar_t  *g_max_slugs;
+extern  cvar_t  *g_max_health;
+
 extern  list_t  g_map_list;
 extern  list_t  g_map_queue;
 
@@ -747,6 +768,8 @@ void InitItems(void);
 void SetItemNames(void);
 gitem_t *FindItem(char *pickup_name);
 gitem_t *FindItemByClassname(char *classname);
+gitem_t *FindItemByWeaponModel(int weap);
+gitem_t *FindItemByArmorType(int armortype);
 edict_t *Drop_Item(edict_t *ent, gitem_t *item);
 void SetRespawn(edict_t *ent, float delay);
 void ChangeWeapon(edict_t *ent);
@@ -895,6 +918,7 @@ void G_RunFrame(void);
 void G_LoadScores(void);
 map_entry_t *G_FindMap(const char *name);
 void G_CheckFilenameVariable(cvar_t *cv);
+int G_ClampCvar(cvar_t *var, int min, int max);
 
 //
 // g_spawn.c
