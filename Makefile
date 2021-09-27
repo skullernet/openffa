@@ -29,6 +29,7 @@ ifdef CONFIG_WINDOWS
     CFLAGS += -D__USE_MINGW_ANSI_STDIO=1
     LDFLAGS += -mconsole
     LDFLAGS += -Wl,--nxcompat,--dynamicbase
+    LDFLAGS += -static-libgcc
 else
     CFLAGS += -fPIC -fvisibility=hidden
     LDFLAGS += -Wl,--no-undefined
