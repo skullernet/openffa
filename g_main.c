@@ -1332,11 +1332,11 @@ static void G_Init(void)
 
     // obtain game path
     cv = gi.cvar("fs_gamedir", NULL, 0);
-    if (cv && cv->string[0]) {
+    if (cv && cv->flags & 128 && cv->string[0]) {
         len = Q_strlcpy(game.dir, cv->string, sizeof(game.dir));
     } else {
         cvar_t *basedir = gi.cvar("basedir", NULL, 0);
-        cvar_t *gamedir = gi.cvar("game", NULL, 0);
+        cvar_t *gamedir = gi.cvar("gamedir", NULL, 0);
         if (basedir && gamedir) {
             len = Q_concat(game.dir, sizeof(game.dir),
                            basedir->string, "/", gamedir->string);
