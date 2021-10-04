@@ -60,6 +60,7 @@ cvar_t  *g_protection_time;
 cvar_t  *g_log_stats;
 cvar_t  *g_skins_file;
 cvar_t  *g_motd_file;
+cvar_t  *g_highscores_dir;
 cvar_t  *dedicated;
 
 cvar_t  *sv_maxvelocity;
@@ -196,17 +197,19 @@ typedef struct {
     char path[1];
 } load_file_t;
 
-static load_file_t *G_LoadFile(const char *dir, const char *name)
+q_printf(1, 2)
+static load_file_t *G_LoadFile(const char *fmt, ...)
 {
+    char path[MAX_OSPATH];
+    size_t pathlen;
+    va_list argptr;
     int err = 0;
 
-    if (!game.dir[0] || !*name)
-        return NULL;
+    va_start(argptr, fmt);
+    pathlen = Q_vsnprintf(path, sizeof(path), fmt, argptr);
+    va_end(argptr);
 
-    char *path = dir ? va("%s/%s/%s.txt", game.dir, dir, name) :
-                       va("%s/%s.txt",    game.dir,      name);
-    size_t pathlen = strlen(path);
-    if (pathlen >= MAX_OSPATH) {
+    if (pathlen >= sizeof(path)) {
         err = ENAMETOOLONG;
         goto fail0;
     }
@@ -285,6 +288,28 @@ static void G_FreeFile(load_file_t *f)
     G_Free(f);
 }
 
+static int G_CreatePath(char *path)
+{
+    char *p;
+    int ret;
+
+    // skip leading slash(es)
+    for (p = path; *p == '/'; p++)
+        ;
+
+    for (; *p; p++) {
+        if (*p == '/') {
+            // create the directory
+            *p = 0;
+            ret = os_mkdir(path);
+            *p = '/';
+            if (ret == -1 && errno != EEXIST)
+                return -1;
+        }
+    }
+    return 0;
+}
+
 static int ScoreCmp(const void *p1, const void *p2)
 {
     score_t *a = (score_t *)p1;
@@ -305,6 +330,8 @@ static int ScoreCmp(const void *p1, const void *p2)
     return 0;
 }
 
+#define SD(s)   *s ? "/" : "", s
+
 static void G_SaveScores(void)
 {
     char path[MAX_OSPATH];
@@ -317,19 +344,17 @@ static void G_SaveScores(void)
         return;
     }
 
-    len = Q_concat(path, sizeof(path), game.dir, "/highscores");
+    len = Q_snprintf(path, sizeof(path), "%s/highscores%s%s/%s.txt",
+                     game.dir, SD(g_highscores_dir->string), level.mapname);
     if (len >= sizeof(path)) {
         return;
     }
-    os_mkdir(path);
 
-    len = Q_concat(path, sizeof(path), game.dir, "/highscores/",
-                   level.mapname, ".txt");
-    if (len >= sizeof(path)) {
-        return;
-    }
+    G_CreatePath(path);
+
     fp = fopen(path, "w");
     if (!fp) {
+        gi.dprintf("Couldn't open '%s': %s\n", path, strerror(errno));
         return;
     }
 
@@ -401,7 +426,10 @@ void G_LoadScores(void)
     load_file_t *f;
     int i;
 
-    f = G_LoadFile("highscores", level.mapname);
+    if (!game.dir[0]) {
+        return;
+    }
+    f = G_LoadFile("%s/highscores%s%s/%s.txt", game.dir, SD(g_highscores_dir->string), level.mapname);
     if (!f) {
         return;
     }
@@ -551,7 +579,10 @@ static void G_LoadMapList(void)
     size_t len;
     int i, nummaps;
 
-    f = G_LoadFile("mapcfg", g_maps_file->string);
+    if (!game.dir[0] || !g_maps_file->string[0]) {
+        return;
+    }
+    f = G_LoadFile("%s/mapcfg/%s.txt", game.dir, g_maps_file->string);
     if (!f) {
         return;
     }
@@ -622,7 +653,10 @@ static void G_LoadSkinList(void)
     size_t len;
     int i, numskins, numdirs;
 
-    f = G_LoadFile(NULL, g_skins_file->string);
+    if (!game.dir[0] || !g_skins_file->string[0]) {
+        return;
+    }
+    f = G_LoadFile("%s/%s.txt", game.dir, g_skins_file->string);
     if (!f) {
         return;
     }
@@ -778,7 +812,10 @@ static void G_LoadMotd(void)
     char  *text = game.motd;
     size_t size = sizeof(game.motd);
 
-    load_file_t *f = G_LoadFile("motd", g_motd_file->string);
+    if (!game.dir[0] || !g_motd_file->string[0])
+        return;
+
+    load_file_t *f = G_LoadFile("%s/motd/%s.txt", game.dir, g_motd_file->string);
     if (!f)
         return;
 
@@ -1232,6 +1269,7 @@ static void G_Init(void)
     g_protection_time = gi.cvar("g_protection_time", "0", 0);
     g_skins_file = gi.cvar("g_skins_file", "", CVAR_LATCH);
     g_motd_file = gi.cvar("g_motd_file", "", CVAR_LATCH);
+    g_highscores_dir = gi.cvar("g_highscores_dir", "", CVAR_LATCH);
 
     run_pitch = gi.cvar("run_pitch", "0.002", 0);
     run_roll = gi.cvar("run_roll", "0.005", 0);
@@ -1318,6 +1356,7 @@ static void G_Init(void)
     G_CheckFilenameVariable(g_defaults_file);
     G_CheckFilenameVariable(g_skins_file);
     G_CheckFilenameVariable(g_motd_file);
+    G_CheckFilenameVariable(g_highscores_dir);
 
     G_LoadMapList();
     G_LoadSkinList();

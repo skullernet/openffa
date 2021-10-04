@@ -153,6 +153,11 @@ g_motd_file::
     Specifies name of the file to load MOTD from. Should not include any
     extenstion part or slashes. Default value is empty (no MOTD set).
 
+g_highscores_dir::
+    Specifies name of the subdirectory under highscores/ to save high scores
+    into. Should not include any slashes. Default value is empty (save under
+    highscores/).
+
 g_bugs::
     Specifies whether some known Quake 2 gameplay bugs are enabled or not.
     Default value is 0.
