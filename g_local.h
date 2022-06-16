@@ -1269,7 +1269,7 @@ struct edict_s {
     char        *classname;
     int         spawnflags;
 
-    float       timestamp;
+    int         timestamp;
 
     float       angle;          // set in qe3, -1 = up, -2 = down
     char        *target;
@@ -1309,7 +1309,7 @@ struct edict_s {
     int         touch_debounce_framenum;        // are all these legit?  do we need more/less of them?
     int         pain_debounce_framenum;
     int         fly_sound_debounce_framenum;    //move to clientinfo
-    float       last_move_time;
+    int         last_move_framenum;
 
     int         health;
     int         max_health;

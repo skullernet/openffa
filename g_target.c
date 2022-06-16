@@ -537,9 +537,9 @@ static void target_earthquake_think(edict_t *self)
     int     i;
     edict_t *e;
 
-    if (self->last_move_time < level.time) {
+    if (self->last_move_framenum < level.framenum) {
         gi.positioned_sound(self->s.origin, self, CHAN_AUTO, self->noise_index, 1.0f, ATTN_NONE, 0);
-        self->last_move_time = level.time + 0.5f;
+        self->last_move_framenum = level.framenum + 0.5f * HZ;
     }
 
     for (i = 1, e = g_edicts + i; i < globals.num_edicts; i++, e++) {
@@ -556,16 +556,16 @@ static void target_earthquake_think(edict_t *self)
         e->velocity[2] = self->speed * (100.0f / e->mass);
     }
 
-    if (level.time < self->timestamp)
+    if (level.framenum < self->timestamp)
         self->nextthink = level.framenum + 0.1f * HZ;
 }
 
 static void target_earthquake_use(edict_t *self, edict_t *other, edict_t *activator)
 {
-    self->timestamp = level.time + self->count;
+    self->timestamp = level.framenum + self->count * HZ;
     self->nextthink = level.framenum + 0.1f * HZ;
     self->activator = activator;
-    self->last_move_time = 0;
+    self->last_move_framenum = 0;
 }
 
 void SP_target_earthquake(edict_t *self)
