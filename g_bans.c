@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifdef _WIN32
 #include <ws2tcpip.h>
 #else
+#include <sys/socket.h>
 #include <arpa/inet.h>
 #endif
 
