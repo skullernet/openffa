@@ -503,7 +503,7 @@ void G_TouchSolids(edict_t *ent)
 void G_ShuffleArray(void *base, size_t n)
 {
     size_t i, j;
-    void *temp, **array;
+    void **array;
 
     if (n < 2)
         return;
@@ -511,9 +511,7 @@ void G_ShuffleArray(void *base, size_t n)
     array = base;
     for (i = n - 1; i > 0; i--) {
         j = Q_rand_uniform(i + 1);
-        temp = array[j];
-        array[j] = array[i];
-        array[i] = temp;
+        SWAP(void *, array[i], array[j]);
     }
 }
 
