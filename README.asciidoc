@@ -53,18 +53,19 @@ muteall::
 unmuteall::
     Globally enable chat during the match.
 
-ban <ip-mask> [duration] [action]::
-    Add IP address specified by _ip-mask_ into the ban list.  Optional
-    _duration_ parameter specifies how long this address should stay in the
-    list. Default duration is 1 hour.  Maximum duration is 12 hours. Default
-    units for specifying _duration_ are minutes. Add ‘h’ or ‘H’ suffix to
-    specify hours. Add ‘d’ or ‘D’ suffix to specify days. Optional _action_
+ban <ip/mask> [action] [duration]::
+    Add IP address specified by _ip/mask_ into the ban list. Optional _action_
     parameter specifies ban type. It can be _ban_ (prevent player from
     connecting) or _mute_ (allow player to connect and enter the game, but
-    disallow chat during the match). Default action is _ban_.
+    disallow chat during the match). Default action is _ban_. Optional
+    _duration_ parameter specifies how long this address should stay in the
+    list. Default duration is 1 hour. Maximum duration is 12 hours. Default
+    units for specifying _duration_ are minutes. Add ‘h’ or ‘H’ suffix to
+    specify hours. Add ‘d’ or ‘D’ suffix to specify days (server operator
+    only). Order of _action_ and _duration_ arguments is not important.
 
-unban <ip-mask>::
-    Remove IP address specified by _ip-mask_ from the ban list. Permanent bans
+unban <ip/mask>::
+    Remove IP address specified by _ip/mask_ from the ban list. Permanent bans
     added by server operator can't be removed.
 
 bans::
@@ -78,6 +79,51 @@ kickban::
 
 acommands::
     Show administrator commands list.
+
+
+Server operator commands
+------------------------
+
+Commands below are available from server console when issued with ‘sv’ command.
+
+addip <ip/mask> [action] [duration]::
+    Equivalent to ‘ban’ admin command, except that ban duration longer than 12
+    hours is allowed. If _duration_ argument is omitted, creates permanent ban.
+    Order of _action_ and _duration_ arguments is not important.
+
+removeip <ip/mask>::
+    Equivalent to ‘unban’ admin command, except that removing any ban is allowed.
+
+listip::
+    Show the current ban list.
+
+writeip::
+    Write current ban list to ‘listip.cfg’.
+
+reset::
+    Reset current map to its initial state and respawn all players.
+
+nextmap <map>::
+    Override map queue and manually set next map to _map_.
+
+maplist::
+    Show current map list.
+
+mapqueue::
+    Show current map queue.
+
+players::
+    List players.
+
+highscores::
+    Show high scores.
+
+stats <player>::
+    Show stats for specified player.
+
+settings::
+    Show match settings.
+
 
 Server configuration
 --------------------
@@ -166,8 +212,8 @@ g_bugs::
        - 2 - original Quake 2 behaviour
 
 g_teleporter_nofreeze::
-    Enables ‘no freeze’ (aka ‘Q3’) teleporter behaviour. Default value is 0
-    (disabled).
+    Enables ‘no freeze’ (aka ‘Quake 3’) teleporter behaviour. Default value is
+    0 (disabled).
 
 g_spawn_mode::
     Specifies deathmatch spawn point selection mode. Default value is 1.
