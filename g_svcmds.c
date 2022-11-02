@@ -25,6 +25,25 @@ static void Svcmd_Test_f(void)
     gi.cprintf(NULL, PRINT_HIGH, "Svcmd_Test_f()\n");
 }
 
+static void Svcmd_Help_f(void)
+{
+    Com_Printf("Available server operator commands:\n"
+        "addip      Add IP address to ban list\n"
+        "removeip   Remove IP address from ban list\n"
+        "listip     Show ban list\n"
+        "writeip    Write ban list to listip.cfg\n"
+        "reset      Reset map to initial state\n"
+        "nextmap    Manually set next map\n"
+        "maplist    Show map list\n"
+        "mapqueue   Show map queue\n"
+        "players    Show players on server\n"
+        "highscores Show the best results on map\n"
+        "stats      Show player statistics\n"
+        "settings   Show game settings\n"
+        "help       Show this help message\n"
+      );
+}
+
 static void Svcmd_Reset_f(void)
 {
     G_ResetLevel();
@@ -102,6 +121,8 @@ void G_ServerCommand(void)
     cmd = gi.argv(1);
     if (!strcmp(cmd, "test"))
         Svcmd_Test_f();
+    else if (!strcmp(cmd, "help"))
+        Svcmd_Help_f();
     else if (!strcmp(cmd, "addip"))
         G_AddIP_f(NULL);
     else if (!strcmp(cmd, "removeip"))
@@ -127,5 +148,5 @@ void G_ServerCommand(void)
     else if (!strcmp(cmd, "settings") || !strcmp(cmd, "matchinfo"))
         Cmd_Settings_f(NULL);
     else
-        Com_Printf("Unknown server command \"%s\"\n", cmd);
+        Com_Printf("Unknown server command \"%s\". Try \"%s help\".\n", cmd, gi.argv(0));
 }
