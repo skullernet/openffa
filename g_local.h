@@ -417,6 +417,12 @@ typedef struct {
     time_t time;
 } score_t;
 
+typedef enum {
+    MS_WARMUP,
+    MS_COUNTDOWN,
+    MS_PLAYING,
+    MS_INTERMISSION
+} match_state_t;
 
 //
 // this structure is cleared as each map is entered
@@ -432,15 +438,8 @@ typedef struct {
     edict_t     *spawns[MAX_SPAWNS];
     int         numspawns;
 
-#if 0
-//  int         status;
-    int         warmup_framenum;        // time the warmup was started
+    match_state_t   match_state;
     int         countdown_framenum;     // time the countdown was started
-    int         match_framenum;         // time the match was started
-    int         pause_framenum;         // time the pause was started
-
-//  int         frames_remaining;       // timelimit
-#endif
     int         activity_framenum;      // time the last client has been active
 
     // intermission state
@@ -664,6 +663,8 @@ extern  cvar_t  *g_vote_treshold;
 extern  cvar_t  *g_vote_limit;
 extern  cvar_t  *g_vote_flags;
 
+extern  cvar_t  *g_warmup;
+extern  cvar_t  *g_countdown_time;
 extern  cvar_t  *g_intermission_time;
 extern  cvar_t  *g_admin_password;
 extern  cvar_t  *g_item_ban;
@@ -751,6 +752,7 @@ void Cmd_HighScores_f(edict_t *ent);
 void Cmd_Stats_f(edict_t *ent, bool check_other);
 void Cmd_Settings_f(edict_t *ent);
 void Cmd_Motd_f(edict_t *ent);
+void Cmd_Menu_f(edict_t *ent);
 edict_t *G_SetPlayer(edict_t *ent, int arg);
 edict_t *G_SetVictim(edict_t *ent, int start);
 void ValidateSelectedItem(edict_t *ent);
@@ -919,6 +921,7 @@ void G_LoadScores(void);
 map_entry_t *G_FindMap(const char *name);
 void G_CheckFilenameVariable(cvar_t *cv);
 int G_ClampCvar(cvar_t *var, int min, int max);
+void G_CheckMatchStart(void);
 
 //
 // g_spawn.c
@@ -939,7 +942,9 @@ void G_ResetLevel(void);
 #define CS_SPECMODE         (CS_GENERAL + 3)
 #define CS_PREGAME          (CS_GENERAL + 4)
 #define CS_VOTE_PROPOSAL    (CS_GENERAL + 5)
-#define CS_VOTE_COUNT       (CS_GENERAL + 6 )
+#define CS_VOTE_COUNT       (CS_GENERAL + 6)
+#define CS_WARMUP           (CS_GENERAL + 7)
+#define CS_COUNTDOWN        (CS_GENERAL + 8)
 #define CS_PLAYERNAMES      (CS_GENERAL + 10)
 #define CS_PRIVATE          (CS_GENERAL + MAX_GENERAL - PCS_TOTAL)
 
@@ -1089,8 +1094,10 @@ typedef struct {
 typedef struct {
     int         enter_framenum;     // level.framenum the client entered the game
     int         activity_framenum;  // level.framenum last activity was seen
+    int         ready_framenum;     // level.framenum last ready command was issued
     int         score;              // frags, etc
     int         deaths;
+    bool        ready;
     fragstat_t  frags[FRAG_TOTAL];
     itemstat_t  items[ITEM_TOTAL];
     int         damage_given, damage_recvd;

@@ -321,6 +321,7 @@ void BeginIntermission(void)
         return;        // already activated
 
     level.intermission_framenum = level.framenum;
+    level.match_state = MS_INTERMISSION;
 
     G_FinishVote();
 
@@ -726,30 +727,37 @@ void G_SetStats(edict_t *ent)
         ent->client->ps.stats[STAT_RANK_STRING] = 0;
         ent->client->ps.stats[STAT_VIEWID] = 0;
     } else {
-        if (timelimit->value > 0) {
+        if ((timelimit->value > 0 && level.match_state == MS_PLAYING) || level.match_state == MS_COUNTDOWN)
             ent->client->ps.stats[STAT_TIME_STRING] = CS_TIME;
-        } else {
+        else
             ent->client->ps.stats[STAT_TIME_STRING] = 0;
-        }
-        if (PlayerSpawned(ent)) {
+
+        if (level.match_state == MS_COUNTDOWN)
+            ent->client->ps.stats[STAT_FRAGS_STRING] = CS_COUNTDOWN;
+        else if (level.match_state == MS_WARMUP)
+            ent->client->ps.stats[STAT_FRAGS_STRING] = CS_WARMUP;
+        else if (!PlayerSpawned(ent))
+            ent->client->ps.stats[STAT_FRAGS_STRING] = CS_OBSERVE;
+        else
+            ent->client->ps.stats[STAT_FRAGS_STRING] = CS_PRIVATE + PCS_FRAGS;
+
+        if (level.match_state == MS_PLAYING && PlayerSpawned(ent)) {
             ent->client->ps.stats[STAT_FRAGS_STRING] = CS_PRIVATE + PCS_FRAGS;
             ent->client->ps.stats[STAT_DELTA_STRING] = CS_PRIVATE + PCS_DELTA;
-            ent->client->ps.stats[STAT_RANK_STRING] = CS_PRIVATE + PCS_RANK;
         } else {
-            ent->client->ps.stats[STAT_FRAGS_STRING] = CS_OBSERVE;
             ent->client->ps.stats[STAT_DELTA_STRING] = 0;
             ent->client->ps.stats[STAT_RANK_STRING] = 0;
-            if (ent->client->pers.connected == CONN_SPECTATOR) {
-                ent->client->ps.stats[STAT_SPECTATOR] = CS_SPECMODE;
-            } else {
-                ent->client->ps.stats[STAT_SPECTATOR] = CS_PREGAME;
-            }
         }
-        if (ent->client->pers.noviewid || ent->client->layout == LAYOUT_MOTD) {
+
+        if (ent->client->pers.connected == CONN_SPECTATOR)
+            ent->client->ps.stats[STAT_SPECTATOR] = CS_SPECMODE;
+        else if (ent->client->pers.connected == CONN_PREGAME)
+            ent->client->ps.stats[STAT_SPECTATOR] = CS_PREGAME;
+
+        if (ent->client->pers.noviewid || ent->client->layout == LAYOUT_MOTD)
             ent->client->ps.stats[STAT_VIEWID] = 0;
-        } else {
+        else
             ent->client->ps.stats[STAT_VIEWID] = G_GetPlayerIdView(ent);
-        }
     }
 
     if (level.vote.proposal && VF(SHOW)) {

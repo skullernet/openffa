@@ -551,6 +551,7 @@ void G_SpawnEntities(const char *mapname, const char *entities, const char *spaw
     memset(g_edicts, 0, game.maxentities * sizeof(g_edicts[0]));
 
     Q_strlcpy(level.mapname, mapname, sizeof(level.mapname));
+    level.match_state = (int)g_warmup->value ? MS_WARMUP : MS_PLAYING;
 
     G_LoadScores();
 
@@ -630,6 +631,7 @@ void G_ResetLevel(void)
     level.nextmap[0] = 0;
     level.record = 0;
     level.players_in = level.players_out = 0;
+    level.match_state = (int)g_warmup->value ? MS_WARMUP : MS_PLAYING;
 
     // free all edicts
     for (i = game.maxclients + 1; i < globals.num_edicts; i++) {
@@ -664,13 +666,6 @@ void G_ResetLevel(void)
     }
 
     G_UpdateRanks();
-
-    if (timelimit->value > 0) {
-        int remaining = timelimit->value * 60 - level.time;
-
-        G_WriteTime(remaining);
-        gi.multicast(NULL, MULTICAST_ALL);
-    }
 
     // allow everything to settle
     G_RunFrame();
@@ -875,6 +870,8 @@ void SP_worldspawn(edict_t *ent)
     gi.configstring(CS_STATUSBAR, dm_statusbar);
 
     gi.configstring(CS_OBSERVE, "SPECT");
+    gi.configstring(CS_WARMUP, "WRMUP");
+    gi.configstring(CS_COUNTDOWN, "CNTDN");
 
     G_HighlightStr(buffer, "SPECTATOR MODE", sizeof(buffer));
     gi.configstring(CS_SPECMODE, buffer);

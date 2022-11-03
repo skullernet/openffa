@@ -1081,6 +1081,7 @@ void spectator_respawn(edict_t *ent, int connected)
     ent->client->respawn_framenum = level.framenum;
 
     G_CheckVote();
+    G_CheckMatchStart();
 }
 
 //==============================================================
@@ -1331,20 +1332,30 @@ void ClientBegin(edict_t *ent)
     memset(&ent->client->resp, 0, sizeof(ent->client->resp));
 
     ent->client->resp.enter_framenum = level.framenum;
-
-    ent->client->pers.connected = (level.intermission_framenum ||
-                                   ent->client->pers.mvdspec) ? CONN_SPECTATOR : CONN_PREGAME;
+    ent->client->pers.connected = CONN_PREGAME;
 
     // locate ent at a spawn point
     PutClientInServer(ent);
 
+    if (ent->client->pers.mvdspec || level.intermission_framenum || (int)g_warmup->value)
+        ent->client->pers.connected = CONN_SPECTATOR;
+
     if (level.intermission_framenum) {
         MoveClientToIntermission(ent);
-    } else if (timelimit->value > 0) {
-        int remaining = timelimit->value * 60 - level.time;
+    } else {
+        int remaining = 0;
 
-        G_WriteTime(remaining);
-        gi.unicast(ent, true);
+        if (timelimit->value > 0 && level.match_state == MS_PLAYING) {
+            remaining = timelimit->value * 60 - level.time;
+        } else if (level.match_state == MS_COUNTDOWN) {
+            int delta = level.framenum - level.countdown_framenum;
+            remaining = (int)g_countdown_time->value - delta / HZ;
+        }
+
+        if (remaining > 0) {
+            G_WriteTime(remaining);
+            gi.unicast(ent, true);
+        }
     }
 
     if (ent->client->level.first_time) {
@@ -1360,6 +1371,11 @@ void ClientBegin(edict_t *ent)
         gi.unicast(ent, false);
 
         ent->client->level.first_time = false;
+    }
+
+    if (!ent->client->pers.mvdspec && !level.intermission_framenum && (int)g_warmup->value) {
+        Cmd_Menu_f(ent);
+        ent->client->resp.enter_framenum -= 5 * HZ; // hack for G_SpecRateLimited()
     }
 
     // make sure all view stuff is valid
@@ -1667,6 +1683,7 @@ void ClientDisconnect(edict_t *ent)
 
     // check vote after this client has been completely disconnected
     G_CheckVote();
+    G_CheckMatchStart();
 }
 
 

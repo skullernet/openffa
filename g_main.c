@@ -45,6 +45,8 @@ cvar_t  *g_vote_time;
 cvar_t  *g_vote_treshold;
 cvar_t  *g_vote_limit;
 cvar_t  *g_vote_flags;
+cvar_t  *g_warmup;
+cvar_t  *g_countdown_time;
 cvar_t  *g_intermission_time;
 cvar_t  *g_admin_password;
 cvar_t  *g_maps_random;
@@ -880,7 +882,10 @@ void G_StuffText(edict_t *ent, const char *text)
 {
     gi.WriteByte(svc_stufftext);
     gi.WriteString(text);
-    gi.unicast(ent, true);
+    if (ent)
+        gi.unicast(ent, true);
+    else
+        gi.multicast(NULL, MULTICAST_ALL_R);
 }
 
 static void G_SetTimeVar(int remaining)
@@ -889,6 +894,41 @@ static void G_SetTimeVar(int remaining)
     int min = remaining / 60;
 
     gi.cvar_set("time_remaining", va("%d:%02d", min, sec));
+}
+
+void G_CheckMatchStart(void)
+{
+    gclient_t *c;
+    int i, ready;
+
+    if (level.match_state >= MS_PLAYING)
+        return;
+
+    for (i = ready = 0, c = game.clients; i < game.maxclients; i++, c++) {
+        if (c->pers.connected != CONN_SPAWNED)
+            continue;
+        if (!c->resp.ready) {
+            ready = 0;
+            break;
+        }
+        ready++;
+    }
+
+    if (ready >= 2) {
+        if (level.match_state == MS_WARMUP) {
+            G_FinishVote();
+            gi.bprintf (PRINT_HIGH, "All players ready! Countdown starts...\n");
+            level.match_state = MS_COUNTDOWN;
+            level.countdown_framenum = level.framenum;
+        }
+    } else {
+        if (level.match_state == MS_COUNTDOWN) {
+            G_StuffText(NULL, "stopsound\n");
+            gi.bprintf(PRINT_CHAT, "Countdown aborted!\n");
+            level.match_state = MS_WARMUP;
+            level.countdown_framenum = 0;
+        }
+    }
 }
 
 /*
@@ -915,6 +955,9 @@ static void CheckDMRules(void)
         g_vote_flags->modified = false;
     }
 
+    if (level.match_state < MS_PLAYING)
+        goto done;
+
     if (timelimit->value > 0) {
         if (level.time >= timelimit->value * 60) {
             gi.bprintf(PRINT_HIGH, "Timelimit hit.\n");
@@ -923,8 +966,7 @@ static void CheckDMRules(void)
             return;
         }
         if (timelimit->modified || (level.framenum % HZ) == 0) {
-            int delta = level.framenum /*- level.match_framenum*/;
-            int remaining = timelimit->value * 60 - delta / HZ;
+            int remaining = timelimit->value * 60 - level.framenum / HZ;
 
             G_WriteTime(remaining);
             gi.multicast(NULL, MULTICAST_ALL);
@@ -977,7 +1019,7 @@ static void CheckDMRules(void)
         G_UpdateRanks();
     }
 
-
+done:
     timelimit->modified = false;
     fraglimit->modified = false;
 }
@@ -1100,37 +1142,29 @@ void G_RunFrame(void)
                 }
             }
         }
-    } else {
-#if 0
-        if (level.warmup_framenum) {
-            delta = level.framenum - level.warmup_framenum;
-        } else if (level.countdown_framenum) {
-            delta = level.framenum - level.countdown_framenum;
-            if ((level.framenum % HZ) == 0) {
-                int remaining = 15 * HZ - delta;
+    } else if (level.match_state == MS_COUNTDOWN) {
+        delta = level.framenum - level.countdown_framenum;
+        if ((delta % HZ) == 0) {
+            int remaining = (int)g_countdown_time->value - delta / HZ;
 
-                if (remaining) {
-                    G_WriteTime(remaining);
-                    if (remaining == 10 * HZ) {
-                        G_StartSound(level.sounds.count);
-                    }
-                } else {
-                    gi.bprintf(PRINT_HIGH, "Match has started!\n");
-                    level.countdown_framenum = 0;
-                    level.match_framenum = level.framenum;
+            if (remaining > 0) {
+                G_WriteTime(remaining);
+                gi.multicast(NULL, MULTICAST_ALL);
+                if (remaining == 10) {
+                    G_StartSound(level.sounds.count);
                 }
+            } else {
+                gi.bprintf(PRINT_HIGH, "Match has started!\n");
+                G_ResetLevel();
+                level.match_state = MS_PLAYING;
             }
-        } else
-#endif
-        {
-            // see if it is time to end a deathmatch
-            CheckDMRules();
         }
+    } else {
+        // see if it is time to end a deathmatch
+        CheckDMRules();
 
         // check vote timeout
-        if (level.vote.proposal) {
-            G_UpdateVote();
-        }
+        G_UpdateVote();
     }
 
     // build the playerstate_t structures for all players
@@ -1255,6 +1289,8 @@ static void G_Init(void)
     g_vote_treshold = gi.cvar("g_vote_treshold", "50", 0);
     g_vote_limit = gi.cvar("g_vote_limit", "3", 0);
     g_vote_flags = gi.cvar("g_vote_flags", "11", 0);
+    g_warmup = gi.cvar("g_warmup", "0", 0);
+    g_countdown_time = gi.cvar("g_countdown_time", "15", 0);
     g_intermission_time = gi.cvar("g_intermission_time", "10", 0);
     g_admin_password = gi.cvar("g_admin_password", "", 0);
     g_maps_random = gi.cvar("g_maps_random", "2", 0);

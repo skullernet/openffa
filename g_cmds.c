@@ -20,8 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "g_local.h"
 #include "m_player.h"
 
-static void Cmd_Menu_f(edict_t *ent);
-
 static void SelectNextItem(edict_t *ent, int itflags)
 {
     gclient_t   *cl;
@@ -738,7 +736,7 @@ static void Cmd_Say_f(edict_t *ent, chat_t chat)
     }
 
     // stop flood during the match
-    if (!cl->pers.admin && !level.intermission_framenum) {
+    if (!cl->pers.admin && level.match_state != MS_WARMUP && level.match_state != MS_INTERMISSION) {
         if (cl->pers.muted) {
             gi.cprintf(ent, PRINT_HIGH, "You are not allowed to talk.\n");
             return;
@@ -1505,6 +1503,35 @@ void Cmd_Motd_f(edict_t *ent)
     gi.unicast(ent, true);
 }
 
+static void Cmd_Ready_f(edict_t *ent, bool ready)
+{
+    if (!PlayerSpawned(ent)) {
+        gi.cprintf(ent, PRINT_HIGH, "You must be in game to be ready.\n");
+        return;
+    }
+
+    if (level.match_state >= MS_PLAYING) {
+        gi.cprintf(ent, PRINT_HIGH, "Match already in progress.\n");
+        return;
+    }
+
+    if (ent->client->resp.ready == ready) {
+        gi.cprintf(ent, PRINT_HIGH, "You are already %sready.\n", ready ? "" : "not ");
+        return;
+    }
+
+    if (level.framenum - ent->client->resp.ready_framenum < 3 * HZ) {
+        gi.cprintf(ent, PRINT_HIGH, "You may not change readyness too soon.\n");
+        return;
+    }
+
+    ent->client->resp.ready = ready;
+    ent->client->resp.ready_framenum = level.framenum;
+    gi.bprintf(PRINT_HIGH, "%s is %sready!\n", ent->client->pers.netname, ready ? "" : "not ");
+
+    G_CheckMatchStart();
+}
+
 /*
 =================
 ClientCommand
@@ -1673,6 +1700,10 @@ void ClientCommand(edict_t *ent)
         Cmd_CastVote_f(ent, false);
     else if (Q_stricmp(cmd, "menu") == 0)
         Cmd_Menu_f(ent);
+    else if (Q_stricmp(cmd, "ready") == 0)
+        Cmd_Ready_f(ent, true);
+    else if (Q_stricmp(cmd, "notready") == 0 || Q_stricmp(cmd, "unready") == 0 || Q_stricmp(cmd, "noready") == 0)
+        Cmd_Ready_f(ent, false);
     else    // anything that doesn't match a command will be a chat
         Cmd_Say_f(ent, CHAT_MISC);
 }

@@ -262,6 +262,14 @@ g_vote_flags::
         - 4 - spectators are also allowed to vote
         - 8 - players are allowed to change their votes
 
+g_warmup::
+    Enables warmup period before match, and requires all players to be ready
+    for match to start. Default value is 0.
+
+g_countdown_time::
+    Specifies countdown time before match starts, in seconds. Only effective if
+    ‘g_warmup’ is enabled. Default value is 15.
+
 g_intermission_time::
     Time, in seconds, for the final scoreboard and high scores to be visible
     before automatically changing to the next map. Default value is 10.

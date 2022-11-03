@@ -213,6 +213,9 @@ void Think_Weapon(edict_t *ent)
         ChangeWeapon(ent);
     }
 
+    if (level.match_state == MS_COUNTDOWN)
+        return;
+
     // call active weapon think routine
     if (ent->client->weapon && ent->client->weapon->weaponthink) {
         is_quad = (ent->client->quad_framenum > level.framenum);

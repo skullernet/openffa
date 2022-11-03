@@ -632,6 +632,11 @@ void Cmd_Vote_f(edict_t *ent)
         return;
     }
 
+    if (level.match_state == MS_COUNTDOWN) {
+        gi.cprintf(ent, PRINT_HIGH, "You may not initiate votes during countdown.\n");
+        return;
+    }
+
     if (level.intermission_framenum) {
         gi.cprintf(ent, PRINT_HIGH, "You may not initiate votes during intermission.\n");
         return;
