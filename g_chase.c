@@ -261,13 +261,13 @@ bool GetChaseTarget(edict_t *ent, chase_mode_t mode)
         }
     }
 
+    ent->client->chase_mode = mode;
     if (!found) {
         gi.cprintf(ent, PRINT_HIGH, "No players to chase.\n");
         return false;
     }
 
     SetChaseTarget(ent, found);
-    ent->client->chase_mode = mode;
     return true;
 }
 
