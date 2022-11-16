@@ -1815,10 +1815,6 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
         // perform a pmove
         gi.Pmove(&pm);
 
-        // save results of pmove
-        client->ps.pmove = pm.s;
-        client->old_pmove = pm.s;
-
         for (i = 0; i < 3; i++) {
             ent->s.origin[i] = SHORT2COORD(pm.s.origin[i]);
             ent->velocity[i] = SHORT2COORD(pm.s.velocity[i]);
@@ -1827,9 +1823,12 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
         VectorCopy(pm.mins, ent->mins);
         VectorCopy(pm.maxs, ent->maxs);
 
-        if (ent->groundentity && !pm.groundentity && (pm.cmd.upmove >= 10) && (pm.waterlevel == 0)) {
+        if (~client->ps.pmove.pm_flags & pm.s.pm_flags & PMF_JUMP_HELD)
             gi.sound(ent, CHAN_VOICE, level.sounds.jump, 1, ATTN_NORM, 0);
-        }
+
+        // save results of pmove
+        client->ps.pmove = pm.s;
+        client->old_pmove = pm.s;
 
         ent->viewheight = pm.viewheight;
         ent->waterlevel = pm.waterlevel;
