@@ -1823,7 +1823,7 @@ void ClientThink(edict_t *ent, usercmd_t *ucmd)
         VectorCopy(pm.mins, ent->mins);
         VectorCopy(pm.maxs, ent->maxs);
 
-        if (~client->ps.pmove.pm_flags & pm.s.pm_flags & PMF_JUMP_HELD)
+        if (~client->ps.pmove.pm_flags & pm.s.pm_flags & PMF_JUMP_HELD && pm.waterlevel == 0)
             gi.sound(ent, CHAN_VOICE, level.sounds.jump, 1, ATTN_NORM, 0);
 
         // save results of pmove
