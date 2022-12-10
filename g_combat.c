@@ -107,7 +107,7 @@ static void Killed(edict_t *targ, edict_t *inflictor, edict_t *attacker, int dam
 SpawnDamage
 ================
 */
-static void SpawnDamage(int type, vec3_t origin, vec3_t normal)
+static void SpawnDamage(int type, const vec3_t origin, const vec3_t normal)
 {
     gi.WriteByte(svc_temp_entity);
     gi.WriteByte(type);
@@ -141,7 +141,7 @@ dflags      these flags are used to control how T_Damage works
     DAMAGE_NO_PROTECTION    kills godmode, armor, everything
 ============
 */
-static int CheckPowerArmor(edict_t *ent, vec3_t point, vec3_t normal, int damage, int dflags)
+static int CheckPowerArmor(edict_t *ent, const vec3_t point, const vec3_t normal, int damage, int dflags)
 {
     gclient_t   *client;
     int         save;
@@ -207,7 +207,7 @@ static int CheckPowerArmor(edict_t *ent, vec3_t point, vec3_t normal, int damage
     return save;
 }
 
-static int CheckArmor(edict_t *ent, vec3_t point, vec3_t normal, int damage, int te_sparks, int dflags)
+static int CheckArmor(edict_t *ent, const vec3_t point, const vec3_t normal, int damage, int te_sparks, int dflags)
 {
     gclient_t   *client;
     int         save;
@@ -254,7 +254,7 @@ static bool CheckTeamDamage(edict_t *targ, edict_t *attacker)
     return false;
 }
 
-void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod)
+void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t dir, vec3_t point, const vec3_t normal, int damage, int knockback, int dflags, int mod)
 {
     gclient_t   *client;
     int         take;
@@ -288,16 +288,15 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir, 
     else
         te_sparks = TE_SPARKS;
 
-    VectorNormalize(dir);
-
     if (targ->flags & FL_NO_KNOCKBACK)
         knockback = 0;
 
     // figure momentum add
     if (!(dflags & DAMAGE_NO_KNOCKBACK)) {
         if ((knockback) && (targ->movetype != MOVETYPE_NONE) && (targ->movetype != MOVETYPE_BOUNCE) && (targ->movetype != MOVETYPE_PUSH) && (targ->movetype != MOVETYPE_STOP)) {
+            vec3_t  temp;
             float   mass;
-            float push;
+            float   push;
 
             if (targ->mass < 50)
                 mass = 50;
@@ -309,7 +308,8 @@ void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir, 
             else
                 push = 500.0f * ((float)knockback / mass);
 
-            VectorMA(targ->velocity, push, dir, targ->velocity);
+            VectorNormalize2(dir, temp);
+            VectorMA(targ->velocity, push, temp, targ->velocity);
         }
     }
 

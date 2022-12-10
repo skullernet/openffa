@@ -1694,7 +1694,7 @@ void ClientDisconnect(edict_t *ent)
 static edict_t  *pm_passent;
 static int      pm_mask;
 
-static trace_t q_gameabi PM_trace(vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end)
+static trace_t q_gameabi PM_trace(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end)
 {
     return gi.trace(start, mins, maxs, end, pm_passent, pm_mask);
 }

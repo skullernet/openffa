@@ -18,9 +18,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "q_shared.h"
 
-vec3_t vec3_origin = { 0, 0, 0 };
+const vec3_t vec3_origin = { 0, 0, 0 };
 
-void AngleVectors(vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
+void AngleVectors(const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
 {
     float        angle;
     float        sr, sp, sy, cr, cp, cy;
@@ -69,7 +69,7 @@ vec_t VectorNormalize(vec3_t v)
 
 }
 
-vec_t VectorNormalize2(vec3_t v, vec3_t out)
+vec_t VectorNormalize2(const vec3_t v, vec3_t out)
 {
     float    length, ilength;
 
@@ -104,7 +104,7 @@ void AddPointToBounds(const vec3_t v, vec3_t mins, vec3_t maxs)
     }
 }
 
-void UnionBounds(vec3_t a[2], vec3_t b[2], vec3_t c[2])
+void UnionBounds(const vec3_t a[2], const vec3_t b[2], vec3_t c[2])
 {
     int        i;
 
@@ -145,9 +145,7 @@ char *COM_SkipPath(const char *pathname)
 {
     char    *last;
 
-    if (!pathname) {
-        Com_Error(ERR_FATAL, "%s: NULL", __func__);
-    }
+    Q_assert(pathname);
 
     last = (char *)pathname;
     while (*pathname) {
@@ -185,9 +183,7 @@ char *COM_FileExtension(const char *in)
 {
     const char *last, *s;
 
-    if (!in) {
-        Com_Error(ERR_FATAL, "%s: NULL", __func__);
-    }
+    Q_assert(in);
 
     for (last = s = in + strlen(in); s != in; s--) {
         if (*s == '/') {
@@ -373,6 +369,25 @@ char *va(const char *format, ...)
     va_end(argptr);
 
     return buffers[index];
+}
+
+/*
+=============
+vtos
+
+This is just a convenience function for printing vectors.
+=============
+*/
+char *vtos(const vec3_t v)
+{
+    static char str[8][32];
+    static int  index;
+
+    index = (index + 1) & 7;
+
+    Q_snprintf(str[index], sizeof(str[0]), "(%.f %.f %.f)", v[0], v[1], v[2]);
+
+    return str[index];
 }
 
 static char     com_token[4][MAX_TOKEN_CHARS];
@@ -672,9 +687,7 @@ size_t Q_strlcat(char *dst, const char *src, size_t size)
 {
     size_t len = strlen(dst);
 
-    if (len >= size) {
-        Com_Error(ERR_FATAL, "%s: already overflowed", __func__);
-    }
+    Q_assert(len < size);
 
     return len + Q_strlcpy(dst + len, src, size - len);
 }
@@ -723,12 +736,9 @@ size_t Q_vsnprintf(char *dest, size_t size, const char *fmt, va_list argptr)
 {
     int ret;
 
-    if (size > INT_MAX)
-        Com_Error(ERR_FATAL, "%s: bad buffer size", __func__);
-
+    Q_assert(size <= INT_MAX);
     ret = vsnprintf(dest, size, fmt, argptr);
-    if (ret < 0)
-        Com_Error(ERR_FATAL, "%s: bad return value", __func__);
+    Q_assert(ret >= 0);
 
     return ret;
 }

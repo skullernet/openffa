@@ -809,9 +809,6 @@ size_t  G_HighlightStr(char *dst, const char *src, size_t size);
 #define G_Free(x)   gi.TagFree(x)
 char    *G_CopyString(const char *in);
 
-float   *tv(float x, float y, float z);
-char    *vtos(vec3_t v);
-
 float vectoyaw(vec3_t vec);
 void vectoangles(vec3_t vec, vec3_t angles);
 
@@ -820,7 +817,7 @@ void vectoangles(vec3_t vec, vec3_t angles);
 //
 bool OnSameTeam(edict_t *ent1, edict_t *ent2);
 bool CanDamage(edict_t *targ, edict_t *inflictor);
-void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, vec3_t dir, vec3_t point, vec3_t normal, int damage, int knockback, int dflags, int mod);
+void T_Damage(edict_t *targ, edict_t *inflictor, edict_t *attacker, const vec3_t dir, vec3_t point, const vec3_t normal, int damage, int knockback, int dflags, int mod);
 void T_RadiusDamage(edict_t *inflictor, edict_t *attacker, float damage, edict_t *ignore, float radius, int mod);
 
 // damage flags
