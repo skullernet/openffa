@@ -339,7 +339,7 @@ typedef struct gitem_s {
     const void  *info;
     int         tag;
 
-    char        *precaches;     // string of all models, sounds, and images this item will use
+    const char *const   *precaches;     // array of all models, sounds, and images this item will use
 } gitem_t;
 
 typedef struct skin_entry_s {
