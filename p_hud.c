@@ -91,6 +91,7 @@ static void BuildDeathmatchScoreboard(char *text, gclient_t *client)
     gclient_t   *c;
     time_t      t;
     struct tm   *tm;
+    const char  *s;
 
     if (client && client->pers.extended_layout && (client->pers.uf & UF_EXTENDED_LAYOUT))
         size = MAX_NET_STRING;
@@ -137,10 +138,16 @@ static void BuildDeathmatchScoreboard(char *text, gclient_t *client)
             Q_snprintf(status, sizeof(status), "%d", sec / 60);
         }
 
-        APPEND("yv %d string%s \"%2d %-15s %3d %3d %3d %4d %4s %4d\"",
-               y, c == client ? "" : "2", i + 1,
+        if (level.match_state == MS_WARMUP && c->resp.ready) {
+            s = " \xD2\xC5\xC1\xC4\xD9";
+        } else {
+            s = "";
+        }
+
+        APPEND("yv %d string%s \"%2d %-15s %3d %3d %3d %4d %4s %4d%s\"",
+               y, c == client ? "2" : "2", i + 1,
                c->pers.netname, c->resp.score, c->resp.deaths, eff,
-               c->resp.score * 3600 / sec, status, c->ping);
+               c->resp.score * 3600 / sec, status, c->ping, s);
         y += 8;
     }
 
@@ -160,7 +167,7 @@ static void BuildDeathmatchScoreboard(char *text, gclient_t *client)
         }
 
         if (c->chase_target) {
-            char *s = c->chase_target->client->pers.netname;
+            s = c->chase_target->client->pers.netname;
             while (*s && *s == 32)
                 s++;
             Q_snprintf(status, sizeof(status), "(-> %.13s)", s);
