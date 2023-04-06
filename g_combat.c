@@ -52,7 +52,7 @@ bool CanDamage(edict_t *targ, edict_t *inflictor)
         return true;
 
     if ((int)g_bugs->value < 1) {
-        vec_t *bounds[] = { targ->absmin, targ->absmax };
+        const vec_t *bounds[2] = { targ->absmin, targ->absmax };
 
         for (i = 0; i < 8; i++) {
             dest[0] = bounds[(i >> 0) & 1][0];
@@ -64,18 +64,12 @@ bool CanDamage(edict_t *targ, edict_t *inflictor)
                 return true;
         }
     } else {
+        static const vec_t offsets[2] = { -15.0f, 15.0f };
+
         dest[2] = targ->s.origin[2];
         for (i = 0; i < 4; i++) {
-            if (i & 1) {
-                dest[0] = targ->s.origin[0] - 15.0f;
-            } else {
-                dest[0] = targ->s.origin[0] + 15.0f;
-            }
-            if (i & 2) {
-                dest[1] = targ->s.origin[1] - 15.0f;
-            } else {
-                dest[1] = targ->s.origin[1] + 15.0f;
-            }
+            dest[0] = targ->s.origin[0] + offsets[(i >> 0) & 1];
+            dest[1] = targ->s.origin[1] + offsets[(i >> 1) & 1];
 
             trace = gi.trace(inflictor->s.origin, vec3_origin, vec3_origin, dest, inflictor, MASK_SOLID);
             if (trace.fraction == 1.0f)
