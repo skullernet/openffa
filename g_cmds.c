@@ -1532,6 +1532,27 @@ static void Cmd_Ready_f(edict_t *ent, bool ready)
     G_CheckMatchStart();
 }
 
+static void Cmd_ForceReady_f(edict_t *ent, bool ready)
+{
+    gclient_t *c;
+    int i;
+
+    if (level.match_state >= MS_PLAYING) {
+        gi.cprintf(ent, PRINT_HIGH, "Match already in progress.\n");
+        return;
+    }
+
+    for (i = 0; i < game.maxclients; i++) {
+        c = &game.clients[i];
+        if (c->pers.connected == CONN_SPAWNED) {
+            c->resp.ready = ready;
+            c->resp.ready_framenum = 0;
+        }
+    }
+
+    G_CheckMatchStart();
+}
+
 /*
 =================
 ClientCommand
@@ -1591,6 +1612,14 @@ void ClientCommand(edict_t *ent)
         }
         if (Q_stricmp(cmd, "acommands") == 0) {
             Cmd_AdminCommands_f(ent);
+            return;
+        }
+        if (!Q_stricmp(cmd, "forceready") || Q_stricmp(cmd, "allready") == 0 || !Q_stricmp(cmd, "readyall")) {
+            Cmd_ForceReady_f(ent, true);
+            return;
+        }
+        if (!Q_stricmp(cmd, "unreadyall") || Q_stricmp(cmd, "allnotready") == 0 || !Q_stricmp(cmd, "notreadyall")) {
+            Cmd_ForceReady_f(ent, false);
             return;
         }
     }
