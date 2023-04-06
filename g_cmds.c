@@ -1167,7 +1167,7 @@ void Cmd_Settings_f(edict_t *ent)
     gi.cprintf(ent, PRINT_HIGH, "Fraglimit:          %s\n", s);
 
     v = (int)g_item_ban->value;
-    if (v & (ITB_QUAD | ITB_INVUL | ITB_BFG)) {
+    if (v & (ITB_QUAD | ITB_INVUL | ITB_BFG | ITB_PS)) {
         buffer[0] = 0;
         if (v & ITB_QUAD) {
             strcat(buffer, "quad ");
