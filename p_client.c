@@ -989,7 +989,7 @@ static void CopyToBodyQue(edict_t *ent)
     body->s.event = EV_OTHER_TELEPORT;
 
     // start with dead player frame
-    if (ent->s.modelindex == 255 && ent->client && ent->client->anim_priority == ANIM_DEATH)
+    if (ent->s.modelindex == 255 && ent->client->anim_priority == ANIM_DEATH)
         body->s.frame = ent->client->anim_end;
 
     body->svflags = ent->svflags;
