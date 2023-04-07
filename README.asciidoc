@@ -30,6 +30,8 @@ stats:: Show accuracy stats
 players:: Show players on server
 highscores:: Show the best results on map
 id:: Toggle player ID display
+ready:: Toggle player status to be "ready", if there is warmup
+notready (unready/noready):: Toggle player status to be "not ready", if there is warmup
 commands:: Show custom client commands list
 
 Admin commands
@@ -76,6 +78,12 @@ kick <player>::
 
 kickban::
     Kick _player_ from the server and ban his IP address for 1 hour.
+
+forceready (allready/readyall)::
+    Force all players to become "ready". Starts the countdown.
+
+unreadyall (allnotready/notreadyall)::
+    Force all players to become "not ready". Aborts the countdown.
 
 acommands::
     Show administrator commands list.
@@ -264,7 +272,7 @@ g_vote_flags::
 
 g_warmup::
     Enables warmup period before match, and requires all players to be ready
-    for match to start. Default value is 0.
+    for match to start. Works for 2 players, at least. Default value is 0.
 
 g_countdown_time::
     Specifies countdown time before match starts, in seconds. Only effective if
