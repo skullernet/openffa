@@ -30,6 +30,8 @@ stats:: Show accuracy stats
 players:: Show players on server
 highscores:: Show the best results on map
 id:: Toggle player ID display
+ready:: Become ready during warmup
+unready:: Become not ready during warmup
 commands:: Show custom client commands list
 
 Admin commands
@@ -76,6 +78,14 @@ kick <player>::
 
 kickban::
     Kick _player_ from the server and ban his IP address for 1 hour.
+
+readyall::
+    Force all players to be ready. Starts the countdown if ‘g_warmup’ is
+    enabled.
+
+unreadyall::
+    Force all players to be not ready. Aborts the countdown if ‘g_warmup’ is
+    enabled.
 
 acommands::
     Show administrator commands list.

@@ -1325,6 +1325,8 @@ static void Cmd_AdminCommands_f(edict_t *ent)
                "bans        List bans\n"
                "kick        Kick a player\n"
                "kickban     Kick a player and ban him for 1 hour\n"
+               "readyall    Force all players to be ready\n"
+               "unreadyall  Force all players to be not ready\n"
               );
 }
 
@@ -1342,6 +1344,8 @@ static void Cmd_Commands_f(edict_t *ent)
                "players    Show players on server\n"
                "highscores Show the best results on map\n"
                "id         Toggle player ID display\n"
+               "ready      Become ready during warmup\n"
+               "unready    Become not ready during warmup\n"
               );
 }
 
