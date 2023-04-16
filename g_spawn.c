@@ -614,7 +614,8 @@ void G_ResetLevel(void)
 {
     gclient_t *client;
     edict_t *ent;
-    int i;
+    edict_t *ents[MAX_CLIENTS];
+    int i, count;
 
     gi.FreeTags(TAG_LEVEL);
 
@@ -634,7 +635,7 @@ void G_ResetLevel(void)
     level.match_state = (int)g_warmup->value ? MS_WARMUP : MS_PLAYING;
 
     // free all edicts
-    for (i = game.maxclients + 1; i < globals.num_edicts; i++) {
+    for (i = 0; i < globals.num_edicts; i++) {
         ent = &g_edicts[i];
         if (ent->inuse) {
             G_FreeEdict(ent);
@@ -649,7 +650,8 @@ void G_ResetLevel(void)
     G_FindTeams();
     //G_UpdateItemBans();
 
-    // respawn all clients
+    // respawn all clients in random order
+    count = 0;
     for (i = 0; i < game.maxclients; i++) {
         client = &game.clients[i];
         if (!client->pers.connected) {
@@ -661,15 +663,20 @@ void G_ResetLevel(void)
             ent = client->edict;
             G_ScoreChanged(ent);
             ent->movetype = MOVETYPE_NOCLIP; // do not leave body
-            respawn(ent);
+            ent->health = 0; // do not skew spawn point selection
+            ents[count++] = ent;
         }
     }
-
-    G_UpdateRanks();
 
     // allow everything to settle
     G_RunFrame();
     G_RunFrame();
+
+    G_ShuffleArray(ents, count);
+    for (i = 0; i < count; i++)
+        respawn(ents[i]);
+
+    G_UpdateRanks();
 
     // make sure movers are not interpolated
     for (i = game.maxclients + 1; i < globals.num_edicts; i++) {
