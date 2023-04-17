@@ -1618,11 +1618,13 @@ void ClientCommand(edict_t *ent)
             Cmd_AdminCommands_f(ent);
             return;
         }
-        if (!Q_stricmp(cmd, "forceready") || Q_stricmp(cmd, "allready") == 0 || !Q_stricmp(cmd, "readyall")) {
+        if (Q_stricmp(cmd, "forceready") == 0 ||
+            Q_stricmp(cmd, "allready") == 0 || Q_stricmp(cmd, "readyall") == 0) {
             Cmd_ForceReady_f(ent, true);
             return;
         }
-        if (!Q_stricmp(cmd, "unreadyall") || Q_stricmp(cmd, "allnotready") == 0 || !Q_stricmp(cmd, "notreadyall")) {
+        if (Q_stricmp(cmd, "unreadyall") == 0 ||
+            Q_stricmp(cmd, "allnotready") == 0 || Q_stricmp(cmd, "notreadyall") == 0) {
             Cmd_ForceReady_f(ent, false);
             return;
         }
