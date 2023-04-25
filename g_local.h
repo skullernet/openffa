@@ -497,7 +497,6 @@ typedef struct {
         int     meat;
         int     skull;
         int     head;
-        int     arm, leg, chest, bones[2];
     } models;
 
     struct {

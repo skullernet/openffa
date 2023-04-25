@@ -993,11 +993,7 @@ void SP_worldspawn(edict_t *ent)
 
     // gibs
     level.models.meat = gi.modelindex("models/objects/gibs/sm_meat/tris.md2");
-    /*level.models.arm = gi.modelindex("models/objects/gibs/arm/tris.md2");
-    level.models.bones[0] = gi.modelindex("models/objects/gibs/bone/tris.md2");
-    level.models.bones[1] = gi.modelindex("models/objects/gibs/bone2/tris.md2");
-    level.models.chest = gi.modelindex("models/objects/gibs/chest/tris.md2");
-    level.models.skull = gi.modelindex("models/objects/gibs/skull/tris.md2");*/
+    level.models.skull = gi.modelindex("models/objects/gibs/skull/tris.md2");
     level.models.head = gi.modelindex("models/objects/gibs/head2/tris.md2");
 
 //
