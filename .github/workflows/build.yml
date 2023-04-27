@@ -1,0 +1,76 @@
+name: build
+
+on:
+  push:
+    branches: [master, ci]
+  pull_request:
+    branches: [master]
+
+env:
+  MESON_ARGS: >-
+    --fatal-meson-warnings
+    -Dvariable-fps=true
+    -Dwerror=true
+
+  MESON_ARGS_LINUX: >-
+    --auto-features=enabled
+
+jobs:
+  mingw:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: ["i686", "x86_64"]
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64 meson
+
+      - name: Build
+        run: |
+          meson setup --cross-file=.ci/${{ matrix.arch }}-w64-mingw32.txt \
+          ${{ env.MESON_ARGS }} builddir
+          meson compile -C builddir
+
+  msvc:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: ["x86", "x64"]
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Install dependencies
+        run: pip3 install --no-input meson ninja
+
+      - name: Build
+        run: |
+          meson setup ${{ env.MESON_ARGS }} builddir
+          meson compile -C builddir
+
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cc: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson zlib1g-dev libcurl4-gnutls-dev libsqlite3-dev
+
+      - name: Build
+        run: |
+          meson setup ${{ env.MESON_ARGS }} ${{ env.MESON_ARGS_LINUX }} builddir
+          meson compile -C builddir
+        env:
+          CC: ${{ matrix.cc }}
