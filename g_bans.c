@@ -353,7 +353,7 @@ static char *filter_to_string(int family, ipaddr_t *addr, ipaddr_t *mask)
     int i;
     for (i = 0; i < ADDR_BITS(family) && mask->u8[i >> 3] & (1 << (7 - (i & 7))); i++)
         ;
-    return va("%s/%d", inet_ntop(family, addr, (char [MAX_IPSTR]){}, MAX_IPSTR), i);
+    return va("%s/%d", inet_ntop(family, addr, (char [MAX_IPSTR]){ 0 }, MAX_IPSTR), i);
 }
 
 /*
