@@ -207,21 +207,21 @@ static void start_upload(void)
     if (!curl_easy)
         curl_easy = curl_easy_init();
 
-    curl_easy_setopt(curl_easy, CURLOPT_NOPROGRESS, 1);
-    curl_easy_setopt(curl_easy, CURLOPT_VERBOSE, (bool)(int)g_http_debug->value);
+    curl_easy_setopt(curl_easy, CURLOPT_NOPROGRESS, 1L);
+    curl_easy_setopt(curl_easy, CURLOPT_VERBOSE, (long)g_http_debug->value);
     curl_easy_setopt(curl_easy, CURLOPT_WRITEDATA, NULL);
     curl_easy_setopt(curl_easy, CURLOPT_WRITEFUNCTION, recv_func);
     curl_easy_setopt(curl_easy, CURLOPT_READDATA, NULL);
     curl_easy_setopt(curl_easy, CURLOPT_READFUNCTION, send_func);
-    curl_easy_setopt(curl_easy, CURLOPT_FAILONERROR, 1);
+    curl_easy_setopt(curl_easy, CURLOPT_FAILONERROR, 1L);
     curl_easy_setopt(curl_easy, CURLOPT_USERAGENT, GAMEVERSION " (" OPENFFA_VERSION ")");
     curl_easy_setopt(curl_easy, CURLOPT_REFERER, sv_hostname->string);
-    curl_easy_setopt(curl_easy, CURLOPT_POST, 1);
+    curl_easy_setopt(curl_easy, CURLOPT_POST, 1L);
     curl_easy_setopt(curl_easy, CURLOPT_POSTFIELDSIZE, frag_remaining);
     curl_easy_setopt(curl_easy, CURLOPT_HTTPHEADER, curl_headers);
     curl_easy_setopt(curl_easy, CURLOPT_URL, g_http_url->string);
-    curl_easy_setopt(curl_easy, CURLOPT_DNS_CACHE_TIMEOUT, 24 * 60 * 60);
-    curl_easy_setopt(curl_easy, CURLOPT_FORBID_REUSE, 1);
+    curl_easy_setopt(curl_easy, CURLOPT_DNS_CACHE_TIMEOUT, 24L * 60 * 60);
+    curl_easy_setopt(curl_easy, CURLOPT_FORBID_REUSE, 1L);
 
     ret = curl_multi_add_handle(curl_multi, curl_easy);
     if (ret != CURLM_OK) {
