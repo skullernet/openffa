@@ -114,6 +114,8 @@ static unsigned     upload_backoff;
 static unsigned     upload_framenum;
 static unsigned     current_framenum;
 
+static void         http_close(void);
+
 static size_t recv_func(void *ptr, size_t size, size_t nmemb, void *userdata)
 {
     size_t bytes;
@@ -224,7 +226,7 @@ static void start_upload(void)
     ret = curl_multi_add_handle(curl_multi, curl_easy);
     if (ret != CURLM_OK) {
         gi.dprintf("[HTTP] Failed to add download handle: %s\n", curl_multi_strerror(ret));
-        G_CloseDatabase();
+        http_close();
         return;
     }
 
@@ -452,22 +454,8 @@ static void log_client(gclient_t *c)
     append_fmt("},");
 }
 
-void G_LogClient(gclient_t *c)
+static void http_log(gclient_t *c)
 {
-    if (!curl_multi)
-        return;
-
-    if (frag_total > 2 * 1024 * 1024)
-        return;
-
-    begin_clients();
-    log_client(c);
-    end_clients();
-}
-
-void G_LogClients(void)
-{
-    gclient_t *c;
     int i;
 
     if (!curl_multi)
@@ -478,6 +466,13 @@ void G_LogClients(void)
 
     if (!game.clients)
         return;
+
+    if (c) {
+        begin_clients();
+        log_client(c);
+        end_clients();
+        return;
+    }
 
     for (i = 0, c = game.clients; i < game.maxclients; i++, c++)
         if (c->pers.connected == CONN_SPAWNED)
@@ -492,7 +487,7 @@ void G_LogClients(void)
     end_clients();
 }
 
-void G_OpenDatabase(void)
+static void http_open(void)
 {
     g_http_url = gi.cvar("g_http_url", "", CVAR_LATCH);
     g_http_interval = gi.cvar("g_http_interval", "15", 0);
@@ -515,7 +510,7 @@ void G_OpenDatabase(void)
     List_Init(&frag_list);
 }
 
-void G_CloseDatabase(void)
+static void http_close(void)
 {
     List_Init(&frag_list);
     frag_cursor = &frag_list;
@@ -545,7 +540,7 @@ void G_CloseDatabase(void)
     gi.FreeTags(TAG_HTTP);
 }
 
-void G_RunDatabase(void)
+static void http_run(void)
 {
     CURLMcode   ret;
     int         new_count;
@@ -566,9 +561,17 @@ void G_RunDatabase(void)
 
     if (ret != CURLM_OK) {
         gi.dprintf("[HTTP] Error running uploads: %s\n", curl_multi_strerror(ret));
-        G_CloseDatabase();
+        http_close();
         return;
     }
 
     current_framenum++;
 }
+
+const database_t g_db_http = {
+    .name = "http",
+    .open = http_open,
+    .close = http_close,
+    .run = http_run,
+    .log = http_log,
+};

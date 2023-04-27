@@ -1054,7 +1054,8 @@ void spectator_respawn(edict_t *ent, int connected)
 
         TossClientWeapon(ent);
 
-        G_LogClient(ent->client);
+        if (g_db)
+            g_db->log(ent->client);
 
         // clear client on respawn
         memset(&ent->client->resp, 0, sizeof(ent->client->resp));
@@ -1629,8 +1630,8 @@ void ClientDisconnect(edict_t *ent)
     ent->client->pers.connected = CONN_DISCONNECTED;
     ent->client->ps.stats[STAT_FRAGS] = 0;
 
-    if (connected == CONN_SPAWNED) {
-        G_LogClient(ent->client);
+    if (g_db && connected == CONN_SPAWNED) {
+        g_db->log(ent->client);
     }
 
     if (connected == CONN_SPAWNED && !level.intermission_framenum) {

@@ -1423,16 +1423,12 @@ void G_WriteIP_f(void);
 //
 // g_sqlite.c / g_curl.c / g_udp.c
 //
-#if USE_SQLITE || USE_CURL || USE_UDP
-void G_LogClient(gclient_t *c);
-void G_LogClients(void);
-void G_OpenDatabase(void);
-void G_CloseDatabase(void);
-void G_RunDatabase(void);
-#else
-#define G_LogClient(c)      (void)0
-#define G_LogClients()      (void)0
-#define G_OpenDatabase()    (void)0
-#define G_CloseDatabase()   (void)0
-#define G_RunDatabase()     (void)0
-#endif
+typedef struct {
+    const char *name;
+    void (*open)(void);
+    void (*close)(void);
+    void (*run)(void);
+    void (*log)(gclient_t *c);
+} database_t;
+
+extern const database_t *g_db;

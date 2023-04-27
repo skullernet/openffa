@@ -153,25 +153,8 @@ static time_t normalize_timestamp(time_t t)
     return mktime(tm);
 }
 
-void G_LogClient(gclient_t *c)
+static void sql_log(gclient_t *c)
 {
-    if (!db)
-        return;
-
-    last_timestamp = time(NULL);
-    norm_timestamp = normalize_timestamp(last_timestamp);
-
-    if (db_execute("BEGIN TRANSACTION"))
-        return;
-
-    log_client(c);
-
-    db_execute(errors ? "ROLLBACK" : "COMMIT");
-}
-
-void G_LogClients(void)
-{
-    gclient_t *c;
     int i;
 
     if (!db)
@@ -185,6 +168,12 @@ void G_LogClients(void)
 
     if (db_execute("BEGIN TRANSACTION"))
         return;
+
+    if (c) {
+        log_client(c);
+        db_execute(errors ? "ROLLBACK" : "COMMIT");
+        return;
+    }
 
     for (i = 0, c = game.clients; i < game.maxclients; i++, c++) {
         if (c->pers.connected != CONN_SPAWNED)
@@ -248,7 +237,7 @@ static const char schema[] =
 
 "COMMIT;\n";
 
-void G_OpenDatabase(void)
+static void sql_open(void)
 {
     char buffer[MAX_OSPATH];
     char *err = NULL;
@@ -293,7 +282,7 @@ fail:
     }
 }
 
-void G_CloseDatabase(void)
+static void sql_close(void)
 {
     if (db) {
         gi.dprintf("Closing SQLite database\n");
@@ -302,6 +291,9 @@ void G_CloseDatabase(void)
     }
 }
 
-void G_RunDatabase(void)
-{
-}
+const database_t g_db_sqlite = {
+    .name = "sqlite",
+    .open = sql_open,
+    .close = sql_close,
+    .log = sql_log,
+};

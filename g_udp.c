@@ -182,14 +182,6 @@ static void log_client(gclient_t *c)
     write_u8(0xff);
 }
 
-void G_LogClient(gclient_t *c)
-{
-    if (sock_fd == -1)
-        return;
-
-    log_client(c);
-}
-
 static void resolve(void)
 {
     char buffer[INET_ADDRSTRLEN];
@@ -219,9 +211,8 @@ static void resolve(void)
                ntohs(sv_addr.sin_port));
 }
 
-void G_LogClients(void)
+static void udp_log(gclient_t *c)
 {
-    gclient_t *c;
     int i;
 
     if (sock_fd == -1)
@@ -230,6 +221,11 @@ void G_LogClients(void)
     if (!game.clients)
         return;
 
+    if (c) {
+        log_client(c);
+        return;
+    }
+
     resolve();
 
     for (i = 0, c = game.clients; i < game.maxclients; i++, c++)
@@ -237,7 +233,7 @@ void G_LogClients(void)
             log_client(c);
 }
 
-void G_OpenDatabase(void)
+static void udp_open(void)
 {
     int val;
 
@@ -272,7 +268,7 @@ void G_OpenDatabase(void)
     transmit_backoff = 1 * HZ;
 }
 
-void G_CloseDatabase(void)
+static void udp_close(void)
 {
     if (sock_fd != -1) {
         close(sock_fd);
@@ -376,7 +372,7 @@ static void transmit(void)
         gi.dprintf("[UDP] Error sending packet: %s\n", strerror(errno));
 }
 
-void G_RunDatabase(void)
+static void udp_run(void)
 {
     if (sock_fd == -1)
         return;
@@ -387,3 +383,11 @@ void G_RunDatabase(void)
 
     current_framenum++;
 }
+
+const database_t g_db_udp = {
+    .name = "udp",
+    .open = udp_open,
+    .close = udp_close,
+    .run = udp_run,
+    .log = udp_log,
+};

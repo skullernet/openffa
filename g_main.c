@@ -119,6 +119,8 @@ cvar_t  *g_max_health;
 LIST_DECL(g_map_list);
 LIST_DECL(g_map_queue);
 
+const database_t *g_db;
+
 //cvar_t  *sv_features;
 
 void ClientThink(edict_t *ent, usercmd_t *cmd);
@@ -1181,7 +1183,9 @@ void G_RunFrame(void)
             VectorCopy(ent->s.origin, ent->old_origin);
     }
 
-    G_RunDatabase();
+    // run database
+    if (g_db && g_db->run)
+        g_db->run();
 
     // advance for next frame
     level.framenum++;
@@ -1193,7 +1197,10 @@ static void G_Shutdown(void)
 {
     gi.dprintf("==== ShutdownGame ====\n");
 
-    G_CloseDatabase();
+    if (g_db) {
+        g_db->close();
+        g_db = NULL;
+    }
 
     gi.FreeTags(TAG_LEVEL);
     gi.FreeTags(TAG_GAME);
@@ -1226,6 +1233,62 @@ int G_ClampCvar(cvar_t *var, int min, int max)
         return max;
     }
     return var->value;
+}
+
+#if USE_SQLITE
+extern const database_t g_db_sqlite;
+#endif
+
+#if USE_CURL
+extern const database_t g_db_http;
+#endif
+
+#if USE_UDP
+extern const database_t g_db_udp;
+#endif
+
+static const database_t *const db_drivers[] = {
+#if USE_SQLITE
+    &g_db_sqlite,
+#endif
+#if USE_CURL
+    &g_db_http,
+#endif
+#if USE_UDP
+    &g_db_udp,
+#endif
+    NULL
+};
+
+static void G_OpenDatabase(void)
+{
+    cvar_t *g_database = gi.cvar("g_database", "", CVAR_LATCH);
+    int i;
+
+    if (!g_database->string[0])
+        return;
+
+    if (!db_drivers[0]) {
+        gi.dprintf("No database drivers available\n");
+        return;
+    }
+
+    for (i = 0; db_drivers[i]; i++) {
+        if (!strcmp(db_drivers[i]->name, g_database->string)) {
+            g_db = db_drivers[i];
+            g_db->open();
+            return;
+        }
+    }
+
+    gi.dprintf("No such database driver: %s.\n"
+               "Available database drivers: ", g_database->string);
+    for (i = 0; db_drivers[i]; i++) {
+        if (i)
+            gi.dprintf(", ");
+        gi.dprintf("%s", db_drivers[i]->name);
+    }
+    gi.dprintf(".\n");
 }
 
 /*
