@@ -1,0 +1,4 @@
+option('libcurl', type: 'feature', value: 'auto', description: 'libcurl support')
+option('sqlite3', type: 'feature', value: 'auto', description: 'sqlite3 support')
+option('udp-logger', type: 'feature', value: 'auto', description: 'UDP statistics logger support')
+option('variable-fps', type: 'boolean', value: false, description: 'Variable server FPS support')

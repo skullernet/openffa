@@ -31,7 +31,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define GAME_INCLUDE
 #include "g_public.h"
 
-#if USE_FPS
+#ifdef USE_FPS
 #define G_GMF_VARIABLE_FPS GMF_VARIABLE_FPS
 #else
 #define G_GMF_VARIABLE_FPS 0
@@ -102,7 +102,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define FL_RESPAWN              0x80000000  // used for item respawning
 
 // variable server FPS
-#if USE_FPS
+#ifdef USE_FPS
 #define HZ              game.framerate
 #define FRAMETIME       game.frametime
 #define FRAMEDIV        game.framediv
@@ -367,7 +367,7 @@ typedef struct {
     int         serverflags;
     int         serverFeatures;
 
-#if USE_FPS
+#ifdef USE_FPS
     int         framerate;
     float       frametime;
     int         framediv;

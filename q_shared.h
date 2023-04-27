@@ -546,7 +546,7 @@ static inline float FloatSwap(float f)
      (b)[1]=LittleFloat((a)[1]),\
      (b)[2]=LittleFloat((a)[2]))
 
-#if USE_BGRA
+#ifdef USE_BGRA
 #define MakeColor(r, g, b, a)   MakeRawLong(b, g, r, a)
 #else
 #define MakeColor(r, g, b, a)   MakeRawLong(r, g, b, a)

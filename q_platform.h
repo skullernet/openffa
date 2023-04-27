@@ -97,7 +97,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #define q_offsetof(t, m)    ((size_t)&((t *)0)->m)
 #endif
 
-#if USE_GAME_ABI_HACK
+#ifdef USE_GAME_ABI_HACK
 #define q_gameabi           __attribute__((callee_pop_aggregate_return(0)))
 #else
 #define q_gameabi

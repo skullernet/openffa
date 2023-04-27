@@ -341,7 +341,7 @@ static void plat_Accelerate(moveinfo_t *moveinfo)
 
 static void AccelMove_Think(edict_t *ent)
 {
-#if USE_FPS
+#ifdef USE_FPS
     vec3_t  move;
 
     if (ent->moveinfo.state == STATE_UP)

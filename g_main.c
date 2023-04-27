@@ -1235,26 +1235,26 @@ int G_ClampCvar(cvar_t *var, int min, int max)
     return var->value;
 }
 
-#if USE_SQLITE
+#ifdef USE_SQLITE
 extern const database_t g_db_sqlite;
 #endif
 
-#if USE_CURL
+#ifdef USE_CURL
 extern const database_t g_db_http;
 #endif
 
-#if USE_UDP
+#ifdef USE_UDP
 extern const database_t g_db_udp;
 #endif
 
 static const database_t *const db_drivers[] = {
-#if USE_SQLITE
+#ifdef USE_SQLITE
     &g_db_sqlite,
 #endif
-#if USE_CURL
+#ifdef USE_CURL
     &g_db_http,
 #endif
-#if USE_UDP
+#ifdef USE_UDP
     &g_db_udp,
 #endif
     NULL
@@ -1468,7 +1468,7 @@ static void G_Init(void)
         game.serverFeatures = (int)cv->value;
     }
 
-#if USE_FPS
+#ifdef USE_FPS
     // setup framerate parameters
     if (game.serverFeatures & GMF_VARIABLE_FPS) {
         int framediv;

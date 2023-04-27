@@ -1,18 +1,18 @@
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <windows.h>
 
 #pragma code_page(65001)
 
-#ifdef _DEBUG
+#ifdef USE_DEBUG
 #define VER_FILEFLAGS   VS_FF_DEBUG
 #else
 #define VER_FILEFLAGS   0x0L
 #endif
 
-#ifdef _WIN64
-#define VER_ORIGINALFILENAME_STR    "gamex86_64.dll"
-#else
-#define VER_ORIGINALFILENAME_STR    "gamex86.dll"
-#endif
+#define VER_ORIGINALFILENAME_STR    "game" CPUSTRING ".dll"
 
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 
@@ -35,7 +35,7 @@ BEGIN
             VALUE "OriginalFilename", VER_ORIGINALFILENAME_STR
             VALUE "FileVersion", OPENFFA_VERSION
             VALUE "InternalName", "openffa"
-            VALUE "LegalCopyright", "Copyright © 2013 skuller.net"
+            VALUE "LegalCopyright", "Copyright © 2023 skuller.net"
             VALUE "ProductName", "OpenFFA"
             VALUE "ProductVersion", OPENFFA_VERSION
         END
